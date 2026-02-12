@@ -5,7 +5,6 @@
 
   /* --- Spectrum Colors (Adobe Red Theme) --- */
   --spectrum-gray-50: #fff;
-  --spectrum-gray-50: #ffffff;
   --spectrum-gray-75: #fafafa;
   --spectrum-gray-100: #f5f5f5;
   --spectrum-gray-200: #e1e1e1;
@@ -31,15 +30,10 @@
   --spectrum-spacing-600: 24px;
   --spectrum-border-radius-100: 4px;
   --spectrum-border-radius-200: 8px;
-  --spectrum-border-width-100: 1px;
-  --spectrum-border-width-200: 2px;
 
   /* --- Typography --- */
   --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
-  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
-
-  /* Old CSS Font Sizes */
   --body-font-size-m: 18px;
   --body-font-size-s: 16px;
   --body-font-size-xs: 14px;
@@ -49,8 +43,6 @@
   --heading-font-size-m: 22px;
   --heading-font-size-s: 20px;
   --heading-font-size-xs: 18px;
-
-  /* Old CSS misc colors */
   --light-color: #f5f5f5;
   --background-color: var(--spectrum-gray-75);
   --text-color: var(--spectrum-gray-900);
@@ -58,18 +50,7 @@
   --link-hover-color: var(--spectrum-accent-color-1000);
 }
 
-@font-face {
-  font-family: roboto-condensed-fallback;
-  size-adjust: 88.82%;
-  src: local('Arial');
-}
-
-@font-face {
-  font-family: roboto-fallback;
-  size-adjust: 99.529%;
-  src: local('Arial');
-}
-
+/* Global Resets */
 * {
   box-sizing: border-box;
 }
@@ -84,24 +65,21 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-
-  /* --- App Grid Layout --- */
   display: grid;
-  grid-template: 
-      "header header" var(--header-height) "sidebar content" 1fr / var(--nav-width) 1fr;
-  grid-template-areas: 
-      "header header"
-      "sidebar content";
-  grid-template-columns: var(--nav-width) 1fr;
-  grid-template-rows: var(--header-height) 1fr;
+
+  /* Defining the areas for the app layout */
+  grid-template:
+    "header header" var(--header-height)
+    "sidebar content" 1fr
+    / var(--nav-width) 1fr;
 }
 
+/* Header & Sidebar Positioning */
 header {
   grid-area: header;
   background-color: var(--spectrum-gray-50);
   border-bottom: 1px solid var(--spectrum-gray-200);
   z-index: 20;
-  position: relative;
 }
 
 aside.sidebar-wrapper {
@@ -110,7 +88,6 @@ aside.sidebar-wrapper {
   border-right: 1px solid var(--spectrum-gray-200);
   overflow-y: auto;
   z-index: 10;
-  height: 100%;
 }
 
 main {
@@ -118,188 +95,72 @@ main {
   background-color: var(--background-color);
   overflow-y: auto;
   padding: 40px;
-  position: relative;
 }
 
+/* Typography & Elements */
 h1, h2, h3, h4, h5, h6 {
   margin-top: 0.8em;
   margin-bottom: 0.25em;
   font-family: var(--heading-font-family);
   font-weight: 600;
   line-height: 1.25;
-  scroll-margin: 40px;
-  color: var(--text-color);
 }
 
-h1 { font-size: var(--heading-font-size-xxl); }
-h2 { font-size: var(--heading-font-size-xl); }
-h3 { font-size: var(--heading-font-size-l); }
-h4 { font-size: var(--heading-font-size-m); }
-h5 { font-size: var(--heading-font-size-s); }
-h6 { font-size: var(--heading-font-size-xs); }
-
-p, dl, ol, ul, pre, blockquote {
-  margin-top: 0.8em;
-  margin-bottom: 0.25em;
+h1 {
+  font-size: var(--heading-font-size-xxl);
 }
 
-code, pre {
-  font-size: var(--body-font-size-s);
-}
-
-pre {
-  padding: 16px;
-  border-radius: var(--spectrum-border-radius-200);
-  background-color: var(--light-color);
-  overflow-x: auto;
-  white-space: pre;
+h2 {
+  font-size: var(--heading-font-size-xl);
 }
 
 a {
   color: var(--link-color);
   text-decoration: none;
-  overflow-wrap: break-word;
 }
 
 a:hover {
-  color: var(--link-hover-color);
   text-decoration: underline;
+  color: var(--link-hover-color);
 }
 
-a.button, button {
-  box-sizing: border-box;
+.button, button {
   display: inline-block;
-  max-width: 100%;
-  margin: 12px 0;
-  border: 2px solid transparent;
   border-radius: 2.4em;
   padding: 0.5em 1.2em;
-  font-family: var(--body-font-family);
-  font-style: normal;
-  font-weight: 500;
-  line-height: 1.25;
-  text-align: center;
-  text-decoration: none;
   background-color: var(--link-color);
-  color: var(--background-color);
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-a.button:hover, a.button:focus,
-button:hover, button:focus {
-  background-color: var(--link-hover-color);
+  color: white;
+  border: none;
   cursor: pointer;
 }
 
-button:disabled, button:disabled:hover {
-  background-color: var(--light-color);
-  cursor: unset;
-}
-
-a.button.secondary, button.secondary {
-  background-color: unset;
-  border: 2px solid currentcolor;
-  color: var(--text-color);
-}
-
-main img {
-  max-width: 100%;
-  width: auto;
-  height: auto;
-}
-
-.icon {
-  display: inline-block;
-  height: 24px;
-  width: 24px;
-}
-
-.icon img {
-  height: 100%;
-  width: 100%;
-}
-
-main > .section {
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  background-color: var(--light-color);
-}
-
-main > .section > div {
-  max-width: 1200px;
-  margin: auto;
-  padding: 0 24px;
-}
-
-main > .section:first-of-type {
-  margin-top: 0;
-}
-
+/* Blocks & Sections */
 main .block {
   margin: 0;
 }
 
 footer {
   display: flex;
-  place-items: center center;
-}
-
-@media (width >= 900px) {
-  justify-items: center;
+  justify-content: center;
   align-items: center;
+  padding: 20px;
 }
 
-@media (min-width: 900px) {
-  :root {
-    --body-font-size-m: 18px;
-    --body-font-size-s: 16px;
-    --body-font-size-xs: 14px;
-
-    --heading-font-size-xxl: 45px;
-    --heading-font-size-xl: 36px;
-    --heading-font-size-l: 28px;
-    --heading-font-size-m: 22px;
-    --heading-font-size-s: 20px;
-    --heading-font-size-xs: 18px;
+/* --- Responsive Layout Adjustments --- */
+@media (width <= 900px) {
+  body {
+    /* Stack the sidebar on mobile or hide it */
+    grid-template-areas:
+      "header"
+      "content";
+    grid-template-columns: 1fr;
+  }
+  
+  aside.sidebar-wrapper {
+    display: none; /* Hide sidebar on mobile by default */
   }
 
-  main > .section > div {
-    padding: 0 32px;
-  }
-}
-
-/* section metadata */
-main .section.light,
-main .section.highlight {
-  background-color: var(--light-color);
-  margin: 0;
-  padding: 40px 0;
-}
-
-
-
-
-
-
-
-
-/* Add onby nehal might delete later  */
-/* Push main content to the right so the sidebar doesn't overlap */
-main {
-  margin-left: 260px; /* Adjust this number to match your sidebar's width */
-  padding: 24px;
-  width: calc(100% - 260px); 
-  box-sizing: border-box;
-}
-
-/* Remove the margin on mobile screens where the sidebar is hidden or stacked */
-@media (width < 900px) {
   main {
-    margin-left: 0;
-    width: 100%;
+    padding: 20px;
   }
 }

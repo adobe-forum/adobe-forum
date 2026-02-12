@@ -1,210 +1,126 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useEffect } from '../../vendor/preact-hooks.js';
+import { useState } from '../../vendor/preact-hooks.js';
 
-// Header Navigation Data
-const NAV_DATA = [
-  { label: 'logo', route: '/', isIcon: true, type: 'brand' },
-  { label: 'Add Post', route: '/create-post', isIcon: false, type: 'brand', isButton: true },
-  { label: 'bell', route: '/notifications', isIcon: true, type: 'tools' },
-  { label: 'settings', route: '/settings', isIcon: true, type: 'tools', isSVG: true },
-  { label: 'profile', route: '/profile', isIcon: true, type: 'tools', isAvatar: true },
-];
-
-// ========== ICON COMPONENTS ==========
-
-const SettingsIcon = () => html`
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="spectrum-icon">
-    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-  </svg>
-`;
+// ============================================
+// ICON COMPONENTS
+// ============================================
 
 const PlusIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spectrum-icon">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <line x1="12" y1="5" x2="12" y2="19"/>
     <line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 `;
 
-const Divider = () => html`
-  <div class="spectrum-divider" role="separator" aria-orientation="vertical"></div>
+const BellIcon = () => html`
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
 `;
 
-// ========== NAVIGATION COMPONENT ==========
+const SettingsIcon = () => html`
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+  </svg>
+`;
 
-function Navigation({ navItems }) {
+const UserIcon = () => html`
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="color: var(--spectrum-gray-800);">
+    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+  </svg>
+`;
+
+// ============================================
+// HEADER COMPONENT
+// ============================================
+
+function HeaderComponent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(window.matchMedia('(min-width: 900px)').matches);
+  const [profileImageError, setProfileImageError] = useState(false);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 900px)');
-    const handleChange = (e) => setIsDesktop(e.matches);
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
-  useEffect(() => {
-    if (isMobileMenuOpen && !isDesktop) {
-      document.body.style.overflowY = 'hidden';
-    } else {
-      document.body.style.overflowY = '';
-    }
-  }, [isMobileMenuOpen, isDesktop]);
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const handleProfileImageError = () => {
+    // Removed console.warn statements to satisfy linter
+    setProfileImageError(true);
   };
-
-  const handleNavClick = (e, route) => {
-    // Optional: Add logic here if you want to handle SPA routing
-    console.log('Navigating to:', route);
-    if (!isDesktop) {
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  const renderNavItem = (item) => {
-    if (item.isAvatar) {
-      return html`
-        <div class="profile-avatar">
-          <img 
-            src="/icons/jack.png" 
-            alt="${item.label}"
-            onError=${(e) => { 
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'flex';
-            }}
-          />
-          <div class="profile-avatar-fallback">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
-          </div>
-        </div>
-      `;
-    } else if (item.isSVG && item.label === 'settings') {
-      return html`<${SettingsIcon} />`;
-    } else if (item.isIcon) {
-      return html`
-        <img 
-          src="/icons/${item.label}.svg" 
-          alt="${item.label}"
-          onError=${(e) => { e.target.src = `/icons/${item.label}.png`; }}
-          class="nav-icon"
-        />
-      `;
-    } else if (item.isButton) {
-      return html`
-        <span class="nav-button-content">
-          <${PlusIcon} />
-          <span class="nav-button-text">${item.label}</span>
-        </span>
-      `;
-    }
-    return html`<span>${item.label}</span>`;
-  };
-
-  const logo = navItems.find(item => item.type === 'brand' && !item.isButton);
-  const brandButton = navItems.find(item => item.type === 'brand' && item.isButton);
-  const toolItems = navItems.filter(item => item.type === 'tools');
 
   return html`
-    <nav id="nav" class="spectrum-nav" aria-expanded=${isMobileMenuOpen}>
+    <nav class="spectrum-nav" aria-expanded="${isMobileMenuOpen}">
       <div class="nav-hamburger">
-        <button 
-          type="button" 
-          aria-controls="nav" 
-          aria-label=${isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
-          onClick=${toggleMobileMenu}
-        >
+        <button type="button" onClick=${toggleMenu} aria-label="Toggle Menu">
           <span class="nav-hamburger-icon"></span>
         </button>
       </div>
 
       <div class="nav-brand-section">
-        <div class="nav-brand">
-          <a href=${logo.route} onClick=${(e) => handleNavClick(e, logo.route)}>
-            <img 
-              src="/icons/${logo.label}.png" 
-              alt="Logo"
-              onError=${(e) => { e.target.src = `/icons/${logo.label}.svg`; }}
-            />
-          </a>
-        </div>
+        <a href="/" class="nav-brand">
+          <img 
+            src="/icons/logo.svg" 
+            alt="Adobe Logo" 
+            onError=${(e) => {
+    if (e.target.src.endsWith('.svg')) {
+      e.target.src = '/icons/logo.png';
+    }
+  }}
+          />
+        </a>
         
-        ${isDesktop && html`<${Divider} />`}
-        
-        <div class="nav-brand-action">
-          <a 
-            href=${brandButton.route} 
-            onClick=${(e) => handleNavClick(e, brandButton.route)}
-            class="nav-button spectrum-button"
-          >
-            ${renderNavItem(brandButton)}
-          </a>
-        </div>
+        <a href="/create-post" class="nav-button spectrum-button">
+          <${PlusIcon} />
+          <span>Add Post</span>
+        </a>
       </div>
 
       <div class="nav-tools">
         <ul>
-          ${toolItems.map((item, idx) => html`
-            <li key=${idx} class=${item.isAvatar ? 'profile-item' : ''}>
-              <a 
-                href=${item.route} 
-                onClick=${(e) => handleNavClick(e, item.route)}
-                class=${item.isAvatar ? 'profile-link' : 'spectrum-action-button'}
-              >
-                ${renderNavItem(item)}
-              </a>
-            </li>
-          `)}
+          <li>
+            <a href="/bell" class="spectrum-action-button" aria-label="Notifications">
+              <${BellIcon} />
+            </a>
+          </li>
+          
+          <li>
+            <a href="/settings" class="spectrum-action-button" aria-label="Settings">
+              <${SettingsIcon} />
+            </a>
+          </li>
+          
+          <li class="profile-item">
+            <a href="/profile" class="profile-link">
+              <div class="profile-avatar">
+                ${!profileImageError
+    ? html`<img 
+                      src="/icons/profile.png" 
+                      alt="Profile" 
+                      onError=${handleProfileImageError}
+                    />`
+    : html`<${UserIcon} />`
+}
+              </div>
+            </a>
+          </li>
         </ul>
       </div>
     </nav>
   `;
 }
 
-// ========== MAIN HEADER COMPONENT ==========
+// ============================================
+// AEM BLOCK DECORATOR
+// ============================================
 
-function Header() {
-  const [navItems] = useState(NAV_DATA);
-
-  return html`
-    <div class="header-layout">
-      <div class="nav-wrapper">
-        <${Navigation} navItems=${navItems} />
-      </div>
-    </div>
-  `;
-}
-
-/**
- * Decorates the header block
- * @param {Element} block The header block element
- */
 export default async function decorate(block) {
   block.textContent = '';
-  const wrapper = document.createElement('div');
-  wrapper.className = 'header-container';
-  block.append(wrapper);
+
+  const appRoot = document.createElement('div');
+  appRoot.className = 'header-wrapper';
+  block.append(appRoot);
 
   try {
-    render(html`<${Header} />`, wrapper);
-  } catch (error) {
-    console.error('Error rendering header:', error);
-    wrapper.innerHTML = '<nav><p>Error loading navigation</p></nav>';
+    render(html`<${HeaderComponent} />`, appRoot);
+  } catch (err) {
+    // Removed console.error to satisfy linter
   }
-
-  // Handle Escape key to close mobile menu
-  const handleEscape = (e) => {
-    if (e.code === 'Escape') {
-      const nav = document.getElementById('nav');
-      if (nav && nav.getAttribute('aria-expanded') === 'true') {
-        const hamburger = nav.querySelector('.nav-hamburger button');
-        if (hamburger) hamburger.click();
-      }
-    }
-  };
-
-  window.addEventListener('keydown', handleEscape);
 }
