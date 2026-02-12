@@ -87,6 +87,35 @@
   border-left: 1px solid #e0e0e0;
 }
 
+/* Font size dropdown */
+.font-size-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.font-size-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgb(0 0 0 / 10%);
+  z-index: 20;
+  min-width: 100px;
+}
+
+.font-size-option {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.font-size-option:hover {
+  background: #f0f0f0;
+}
+
 .toolbar-btn {
   all: unset;
   display: inline-flex;
@@ -632,5 +661,104 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Preview modal */
+.preview-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.preview-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 20%);
+}
+
+.preview-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.preview-modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.preview-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.preview-field {
+  margin-bottom: 20px;
+}
+
+.preview-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.preview-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.preview-category {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #e8f0fe;
+  color: var(--link-color);
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.preview-body-content {
+  font-size: 14px;
+  line-height: 1.6;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preview-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #e8e8e8;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.preview-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px;
   border-top: 1px solid #e0e0e0;
 }
