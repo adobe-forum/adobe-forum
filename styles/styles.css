@@ -5,6 +5,7 @@
 
   /* --- Spectrum Colors (Adobe Red Theme) --- */
   --spectrum-gray-50: #fff;
+  --spectrum-gray-50: #fff;
   --spectrum-gray-75: #fafafa;
   --spectrum-gray-100: #f5f5f5;
   --spectrum-gray-200: #e1e1e1;
@@ -30,10 +31,9 @@
   --spectrum-spacing-600: 24px;
   --spectrum-border-radius-100: 4px;
   --spectrum-border-radius-200: 8px;
-  --spectrum-border-width-100: 1px;
-  --spectrum-border-width-200: 2px;
 
   /* --- Typography --- */
+  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
   --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
   --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
 
@@ -56,18 +56,7 @@
   --link-hover-color: var(--spectrum-accent-color-1000);
 }
 
-@font-face {
-  font-family: roboto-condensed-fallback;
-  size-adjust: 88.82%;
-  src: local('Arial');
-}
-
-@font-face {
-  font-family: roboto-fallback;
-  size-adjust: 99.529%;
-  src: local('Arial');
-}
-
+/* Global Resets */
 * {
   box-sizing: border-box;
 }
@@ -98,7 +87,6 @@ header {
   background-color: var(--spectrum-gray-50);
   border-bottom: 1px solid var(--spectrum-gray-200);
   z-index: 20;
-  position: relative;
 }
 
 aside.sidebar-wrapper {
@@ -127,71 +115,35 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--heading-font-family);
   font-weight: 600;
   line-height: 1.25;
-  scroll-margin: 40px;
-  color: var(--text-color);
 }
 
-h1 { font-size: var(--heading-font-size-xxl); }
-h2 { font-size: var(--heading-font-size-xl); }
-h3 { font-size: var(--heading-font-size-l); }
-h4 { font-size: var(--heading-font-size-m); }
-h5 { font-size: var(--heading-font-size-s); }
-h6 { font-size: var(--heading-font-size-xs); }
-
-p, dl, ol, ul, pre, blockquote {
-  margin-top: 0.8em;
-  margin-bottom: 0.25em;
+h1 {
+  font-size: var(--heading-font-size-xxl);
 }
 
-code, pre {
-  font-size: var(--body-font-size-s);
-}
-
-pre {
-  padding: 16px;
-  border-radius: var(--spectrum-border-radius-200);
-  background-color: var(--light-color);
-  overflow-x: auto;
-  white-space: pre;
+h2 {
+  font-size: var(--heading-font-size-xl);
 }
 
 a {
   color: var(--link-color);
   text-decoration: none;
-  overflow-wrap: break-word;
 }
 
 a:hover {
-  color: var(--link-hover-color);
   text-decoration: underline;
+  color: var(--link-hover-color);
 }
 
 /* --- Buttons --- */
 a.button, button {
   box-sizing: border-box;
   display: inline-block;
-  max-width: 100%;
-  margin: 12px 0;
-  border: 2px solid transparent;
   border-radius: 2.4em;
   padding: 0.5em 1.2em;
-  font-family: var(--body-font-family);
-  font-style: normal;
-  font-weight: 500;
-  line-height: 1.25;
-  text-align: center;
-  text-decoration: none;
   background-color: var(--link-color);
-  color: var(--background-color);
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-a.button:hover, a.button:focus,
-button:hover, button:focus {
-  background-color: var(--link-hover-color);
+  color: white;
+  border: none;
   cursor: pointer;
 }
 
@@ -270,7 +222,7 @@ footer {
     --heading-font-size-xs: 18px;
   }
 
-  main > .section > div {
-    padding: 0 32px;
+  main {
+    padding: 20px;
   }
 }
