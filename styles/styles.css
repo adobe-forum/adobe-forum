@@ -1,46 +1,63 @@
-/*
- * Copyright 2020 Adobe. All rights reserved.
- * This file is licensed to you under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy
- * of the License at http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under
- * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
- * OF ANY KIND, either express or implied. See the License for the specific language
- * governing permissions and limitations under the License.
- */
-
 :root {
-  /* colors */
-  --background-color: white;
-  --light-color: #f8f8f8;
-  --dark-color: #505050;
-  --text-color: #131313;
-  --link-color: #3b63fb;
-  --link-hover-color: #1d3ecf;
+  /* --- App Layout Dimensions --- */
+  --nav-width: 256px;
+  --header-height: 64px;
 
-  /* fonts */
-  --body-font-family: roboto, roboto-fallback, sans-serif;
-  --heading-font-family: roboto-condensed, roboto-condensed-fallback, sans-serif;
+  /* --- Spectrum Colors (Adobe Red Theme) --- */
+  --spectrum-gray-50: #fff;
+  --spectrum-gray-50: #ffffff;
+  --spectrum-gray-75: #fafafa;
+  --spectrum-gray-100: #f5f5f5;
+  --spectrum-gray-200: #e1e1e1;
+  --spectrum-gray-300: #d3d3d3;
+  --spectrum-gray-400: #bcbcbc;
+  --spectrum-gray-500: #a0a0a0;
+  --spectrum-gray-600: #7b7b7b;
+  --spectrum-gray-700: #5a5a5a;
+  --spectrum-gray-800: #3e3e3e;
+  --spectrum-gray-900: #2c2c2c;
 
-  /* body sizes */
-  --body-font-size-m: 22px;
-  --body-font-size-s: 19px;
-  --body-font-size-xs: 17px;
+  /* Brand Colors */
+  --spectrum-accent-color-900: #DA1F26; /* Adobe Red */
+  --spectrum-accent-color-1000: #B81219; /* Darker Red */
+  --nav-active-bg: #F5F5F5;
 
-  /* heading sizes */
-  --heading-font-size-xxl: 55px;
-  --heading-font-size-xl: 44px;
-  --heading-font-size-l: 34px;
-  --heading-font-size-m: 27px;
-  --heading-font-size-s: 24px;
-  --heading-font-size-xs: 22px;
+  /* --- Spacing & Borders --- */
+  --spectrum-spacing-100: 4px;
+  --spectrum-spacing-200: 8px;
+  --spectrum-spacing-300: 12px;
+  --spectrum-spacing-400: 16px;
+  --spectrum-spacing-500: 20px;
+  --spectrum-spacing-600: 24px;
+  --spectrum-border-radius-100: 4px;
+  --spectrum-border-radius-200: 8px;
+  --spectrum-border-width-100: 1px;
+  --spectrum-border-width-200: 2px;
 
-  /* nav height */
-  --nav-height: 64px;
+  /* --- Typography --- */
+  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
+  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
+
+  /* Old CSS Font Sizes */
+  --body-font-size-m: 18px;
+  --body-font-size-s: 16px;
+  --body-font-size-xs: 14px;
+  --heading-font-size-xxl: 45px;
+  --heading-font-size-xl: 36px;
+  --heading-font-size-l: 28px;
+  --heading-font-size-m: 22px;
+  --heading-font-size-s: 20px;
+  --heading-font-size-xs: 18px;
+
+  /* Old CSS misc colors */
+  --light-color: #f5f5f5;
+  --background-color: var(--spectrum-gray-75);
+  --text-color: var(--spectrum-gray-900);
+  --link-color: var(--spectrum-accent-color-900);
+  --link-hover-color: var(--spectrum-accent-color-1000);
 }
 
-/* fallback fonts */
 @font-face {
   font-family: roboto-condensed-fallback;
   size-adjust: 88.82%;
@@ -53,63 +70,65 @@
   src: local('Arial');
 }
 
-@media (width >= 900px) {
-  :root {
-    /* body sizes */
-    --body-font-size-m: 18px;
-    --body-font-size-s: 16px;
-    --body-font-size-xs: 14px;
-
-    /* heading sizes */
-    --heading-font-size-xxl: 45px;
-    --heading-font-size-xl: 36px;
-    --heading-font-size-l: 28px;
-    --heading-font-size-m: 22px;
-    --heading-font-size-s: 20px;
-    --heading-font-size-xs: 18px;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  display: none;
   margin: 0;
-  background-color: var(--background-color);
-  color: var(--text-color);
+  padding: 0;
   font-family: var(--body-font-family);
   font-size: var(--body-font-size-m);
-  line-height: 1.6;
-}
+  background-color: var(--background-color);
+  color: var(--text-color);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 
-body.appear {
-  display: block;
+  /* --- App Grid Layout --- */
+  display: grid;
+  grid-template: 
+      "header header" var(--header-height) "sidebar content" 1fr / var(--nav-width) 1fr;
+  grid-template-areas: 
+      "header header"
+      "sidebar content";
+  grid-template-columns: var(--nav-width) 1fr;
+  grid-template-rows: var(--header-height) 1fr;
 }
 
 header {
-  height: var(--nav-height);
+  grid-area: header;
+  background-color: var(--spectrum-gray-50);
+  border-bottom: 1px solid var(--spectrum-gray-200);
+  z-index: 20;
+  position: relative;
 }
 
-header .header,
-footer .footer {
-  visibility: hidden;
+aside.sidebar-wrapper {
+  grid-area: sidebar;
+  background-color: var(--spectrum-gray-50);
+  border-right: 1px solid var(--spectrum-gray-200);
+  overflow-y: auto;
+  z-index: 10;
+  height: 100%;
 }
 
-header .header[data-block-status="loaded"],
-footer .footer[data-block-status="loaded"] {
-  visibility: visible;
+main {
+  grid-area: content;
+  background-color: var(--background-color);
+  overflow-y: auto;
+  padding: 40px;
+  position: relative;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
   margin-top: 0.8em;
   margin-bottom: 0.25em;
   font-family: var(--heading-font-family);
   font-weight: 600;
   line-height: 1.25;
   scroll-margin: 40px;
+  color: var(--text-color);
 }
 
 h1 { font-size: var(--heading-font-size-xxl); }
@@ -119,42 +138,24 @@ h4 { font-size: var(--heading-font-size-m); }
 h5 { font-size: var(--heading-font-size-s); }
 h6 { font-size: var(--heading-font-size-xs); }
 
-p,
-dl,
-ol,
-ul,
-pre,
-blockquote {
+p, dl, ol, ul, pre, blockquote {
   margin-top: 0.8em;
   margin-bottom: 0.25em;
 }
 
-code,
-pre {
+code, pre {
   font-size: var(--body-font-size-s);
 }
 
 pre {
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--spectrum-border-radius-200);
   background-color: var(--light-color);
   overflow-x: auto;
   white-space: pre;
 }
 
-main > div {
-  margin: 40px 16px;
-}
-
-input,
-textarea,
-select,
-button {
-  font: inherit;
-}
-
-/* links */
-a:any-link {
+a {
   color: var(--link-color);
   text-decoration: none;
   overflow-wrap: break-word;
@@ -165,9 +166,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* buttons */
-a.button:any-link,
-button {
+a.button, button {
   box-sizing: border-box;
   display: inline-block;
   max-width: 100%;
@@ -189,22 +188,18 @@ button {
   white-space: nowrap;
 }
 
-a.button:hover,
-a.button:focus,
-button:hover,
-button:focus {
+a.button:hover, a.button:focus,
+button:hover, button:focus {
   background-color: var(--link-hover-color);
   cursor: pointer;
 }
 
-button:disabled,
-button:disabled:hover {
+button:disabled, button:disabled:hover {
   background-color: var(--light-color);
   cursor: unset;
 }
 
-a.button.secondary,
-button.secondary {
+a.button.secondary, button.secondary {
   background-color: unset;
   border: 2px solid currentcolor;
   color: var(--text-color);
@@ -227,9 +222,11 @@ main img {
   width: 100%;
 }
 
-/* sections */
 main > .section {
-  margin: 40px 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background-color: var(--light-color);
 }
 
 main > .section > div {
@@ -242,7 +239,34 @@ main > .section:first-of-type {
   margin-top: 0;
 }
 
+main .block {
+  margin: 0;
+}
+
+footer {
+  display: flex;
+  place-items: center center;
+}
+
 @media (width >= 900px) {
+  justify-items: center;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --body-font-size-m: 18px;
+    --body-font-size-s: 16px;
+    --body-font-size-xs: 14px;
+
+    --heading-font-size-xxl: 45px;
+    --heading-font-size-xl: 36px;
+    --heading-font-size-l: 28px;
+    --heading-font-size-m: 22px;
+    --heading-font-size-s: 20px;
+    --heading-font-size-xs: 18px;
+  }
+
   main > .section > div {
     padding: 0 32px;
   }

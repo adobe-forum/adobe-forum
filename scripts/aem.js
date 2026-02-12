@@ -700,10 +700,42 @@ async function loadSections(element) {
   }
 }
 
+/**
+ * Checks if preact modules are present in the vendor folder
+ * @returns {Promise<boolean>} True if all preact modules are available
+ */
+async function checkPreactModules() {
+  const preactModules = [
+    './vendor/preact.js',
+    './vendor/preact-hooks.js',
+    './vendor/htm.js',
+    './vendor/htm-preact.js',
+  ];
+
+  const codeBasePath = window.hlx?.codeBasePath || '';
+
+  try {
+    const results = await Promise.allSettled(
+      preactModules.map(async (module) => {
+        const response = await fetch(`${codeBasePath}${module}`, { method: 'HEAD' });
+        return response.ok;
+      }),
+    );
+
+    const allPresent = results.every((result) => result.status === 'fulfilled' && result.value);
+    return allPresent;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error checking preact modules:', error);
+    return false;
+  }
+}
+
 init();
 
 export {
   buildBlock,
+  checkPreactModules,
   createOptimizedPicture,
   decorateBlock,
   decorateBlocks,
