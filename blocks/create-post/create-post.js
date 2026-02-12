@@ -44,20 +44,42 @@ function ToolbarIcon({ svgMarkup }) {
 
 function RichTextToolbar({ onFormat, activeFormats }) {
   const [icons, setIcons] = useState({});
+  const [fontSizeOpen, setFontSizeOpen] = useState(false);
+  const fontSizeRef = useRef(null);
 
   useEffect(() => {
     const iconNames = [
       'font-size', 'bold', 'italic', 'strikethrough',
       'code', 'code-block', 'superscript', 'link', 'quote', 'image', 'table',
       'ordered-list', 'unordered-list', 'indent',
-      'more', 'help',
-      'preview', 'markdown', 'html-mode',
+      'help',
+      'preview',
     ];
     loadIcons(iconNames).then(setIcons);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (fontSizeRef.current
+        && !fontSizeRef.current.contains(e.target)) {
+        setFontSizeOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener(
+      'mousedown',
+      handleClickOutside,
+    );
+  }, []);
+
+  const fontSizes = [
+    { label: 'Small', value: '2' },
+    { label: 'Normal', value: '3' },
+    { label: 'Large', value: '4' },
+    { label: 'Huge', value: '5' },
+  ];
+
   const formatButtons = [
-    { iconName: 'font-size', command: 'fontSize', label: 'Font Size' },
     { iconName: 'bold', command: 'bold', label: 'Bold' },
     { iconName: 'italic', command: 'italic', label: 'Italic' },
     { iconName: 'strikethrough', command: 'strikeThrough', label: 'Strikethrough' },
@@ -80,14 +102,11 @@ function RichTextToolbar({ onFormat, activeFormats }) {
   ];
 
   const moreButtons = [
-    { iconName: 'more', command: 'more', label: 'More Options' },
     { iconName: 'help', command: 'help', label: 'Help' },
   ];
 
   const viewButtons = [
     { iconName: 'preview', command: 'preview', label: 'Preview' },
-    { iconName: 'markdown', command: 'markdown', label: 'Markdown Mode' },
-    { iconName: 'html-mode', command: 'html', label: 'HTML Mode' },
   ];
 
   const renderButtons = (buttons) => buttons.map((btn) => html`
@@ -104,7 +123,35 @@ function RichTextToolbar({ onFormat, activeFormats }) {
 
   return html`
     <div className="editor-toolbar">
-      <div className="toolbar-group">${renderButtons(formatButtons)}</div>
+      <div className="toolbar-group">
+        <div className="font-size-wrapper" ref=${fontSizeRef}>
+          <button
+            type="button"
+            className=${`toolbar-btn ${fontSizeOpen ? 'active' : ''}`}
+            onClick=${() => setFontSizeOpen(!fontSizeOpen)}
+            title="Font Size"
+          >
+            <${ToolbarIcon} svgMarkup=${icons['font-size']} />
+          </button>
+          ${fontSizeOpen && html`
+            <div className="font-size-dropdown">
+              ${fontSizes.map((fs) => html`
+                <div
+                  key=${fs.value}
+                  className="font-size-option"
+                  onClick=${() => {
+    onFormat(`fontSize:${fs.value}`);
+    setFontSizeOpen(false);
+  }}
+                >
+                  <span style=${{ fontSize: `${fs.value * 4 + 6}px` }}>${fs.label}</span>
+                </div>
+              `)}
+            </div>
+          `}
+        </div>
+        ${renderButtons(formatButtons)}
+      </div>
       <div className="toolbar-group">${renderButtons(insertButtons)}</div>
       <div className="toolbar-group">${renderButtons(listButtons)}</div>
       <div className="toolbar-group">${renderButtons(moreButtons)}</div>
@@ -308,6 +355,12 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
   };
 
   const handleFormat = (command) => {
+    if (command.startsWith('fontSize:')) {
+      const size = command.split(':')[1];
+      document.execCommand('fontSize', false, size);
+      handleInput();
+      return;
+    }
     if (command === 'link') {
       // eslint-disable-next-line no-alert
       const url = prompt('Enter URL:');
@@ -322,6 +375,37 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
       return;
     } else if (command === 'image') {
       fileInputRef.current?.click();
+      return;
+    } else if (command === 'indent') {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      const anchor = selection.anchorNode;
+      const editor = editorRef.current;
+      if (!editor) return;
+      let node = anchor?.nodeType === 3
+        ? anchor.parentElement : anchor;
+      if (node === editor) {
+        document.execCommand('formatBlock', false, 'p');
+        node = selection.anchorNode?.nodeType === 3
+          ? selection.anchorNode.parentElement
+          : selection.anchorNode;
+      }
+      let block = null;
+      while (node && node !== editor) {
+        if (node.parentElement === editor) {
+          block = node;
+          break;
+        }
+        node = node.parentElement;
+      }
+      if (block) {
+        const current = parseInt(
+          block.style.marginLeft || '0',
+          10,
+        );
+        block.style.marginLeft = `${current + 40}px`;
+      }
+      handleInput();
       return;
     } else if (command === 'quote') {
       const selection = window.getSelection();
@@ -670,39 +754,75 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   `;
 }
 
+function PreviewModal({
+  title, category, body, tags, onBack, onPost,
+}) {
+  return html`
+    <div className="preview-modal-overlay" onClick=${onBack}>
+      <div className="preview-modal" onClick=${(e) => e.stopPropagation()}>
+        <div className="preview-modal-header">
+          <h2>Preview Your Question</h2>
+        </div>
+        <div className="preview-modal-body">
+          <div className="preview-field">
+            <span className="preview-label">Title</span>
+            <h3 className="preview-title">${title}</h3>
+          </div>
+          <div className="preview-field">
+            <span className="preview-label">Category</span>
+            <span className="preview-category">${category}</span>
+          </div>
+          <div className="preview-field">
+            <span className="preview-label">Body</span>
+            <div
+              className="preview-body-content"
+              dangerouslySetInnerHTML=${{ __html: body }}
+            />
+          </div>
+          <div className="preview-field">
+            <span className="preview-label">Tags</span>
+            <div className="preview-tags">
+              ${tags.map((tag) => html`
+                <span key=${tag} className="preview-tag">${tag}</span>
+              `)}
+            </div>
+          </div>
+        </div>
+        <div className="preview-modal-footer">
+          <button type="button" className="btn btn-cancel" onClick=${onBack}>
+            Back to Edit
+          </button>
+          <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
+            Post
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const missingFields = [];
+  if (title.length < 15) missingFields.push('Title (min 15 characters)');
+  if (!category) missingFields.push('Category');
+  if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
+  if (tags.length === 0) missingFields.push('Tags (at least 1)');
+  const isFormValid = missingFields.length === 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
+    setShowPreview(true);
+  };
 
-    // Validation
-    if (!title || title.length < 15) {
-      // eslint-disable-next-line no-alert
-      alert('Title must be at least 15 characters');
-      return;
-    }
-    if (!category) {
-      // eslint-disable-next-line no-alert
-      alert('Please select or create a category');
-      return;
-    }
-    if (!body || body.replace(/<[^>]*>/g, '').length < 20) {
-      // eslint-disable-next-line no-alert
-      alert('Body must be at least 20 characters');
-      return;
-    }
-    if (tags.length === 0) {
-      // eslint-disable-next-line no-alert
-      alert('Please add at least one tag');
-      return;
-    }
-
-    // Submit data
+  const handlePost = () => {
     const postData = {
       title,
       category,
@@ -712,7 +832,8 @@ function CreatePost() {
 
     // eslint-disable-next-line no-console
     console.log('Submitting post:', postData);
-    // Add your submission logic here
+    // Add your DB submission logic here
+    setShowPreview(false);
   };
 
   const handleCancel = () => {
@@ -724,13 +845,6 @@ function CreatePost() {
       setTags([]);
     }
   };
-
-  const missingFields = [];
-  if (title.length < 15) missingFields.push('Title (min 15 characters)');
-  if (!category) missingFields.push('Category');
-  if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
-  if (tags.length === 0) missingFields.push('Tags (at least 1)');
-  const isFormValid = missingFields.length === 0;
 
   return html`
     <div className="create-post">
@@ -841,6 +955,16 @@ function CreatePost() {
           </div>
         </div>
       </form>
+      ${showPreview && html`
+        <${PreviewModal}
+          title=${title}
+          category=${category}
+          body=${body}
+          tags=${tags}
+          onBack=${() => setShowPreview(false)}
+          onPost=${handlePost}
+        />
+      `}
     </div>
   `;
 }
