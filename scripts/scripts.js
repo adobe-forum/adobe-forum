@@ -127,7 +127,7 @@ async function loadLazy(doc) {
   if (hash && element) element.scrollIntoView();
 
   loadHeader(doc.querySelector('header'));
-  
+
   // REMOVED: loadSidebar();
 
   loadFooter(doc.querySelector('footer'));
