@@ -4,6 +4,7 @@
   --header-height: 64px;
 
   /* --- Spectrum Colors (Adobe Red Theme) --- */
+  --spectrum-gray-50: #fff;
   --spectrum-gray-50: #ffffff;
   --spectrum-gray-75: #fafafa;
   --spectrum-gray-100: #f5f5f5;
@@ -34,6 +35,7 @@
   --spectrum-border-width-200: 2px;
 
   /* --- Typography --- */
+  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
   --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
 
@@ -85,6 +87,8 @@ body {
 
   /* --- App Grid Layout --- */
   display: grid;
+  grid-template: 
+      "header header" var(--header-height) "sidebar content" 1fr / var(--nav-width) 1fr;
   grid-template-areas: 
       "header header"
       "sidebar content";
@@ -241,6 +245,10 @@ main .block {
 
 footer {
   display: flex;
+  place-items: center center;
+}
+
+@media (width >= 900px) {
   justify-items: center;
   align-items: center;
 }
