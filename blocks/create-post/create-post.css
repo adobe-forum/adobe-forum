@@ -398,8 +398,9 @@
   line-height: 1.6;
 }
 
-/* Blockquote styling in editor */
-.editor-content blockquote {
+/* Blockquote styling in editor and preview */
+.editor-content blockquote,
+.preview-body-content blockquote {
   border-left: 4px solid #3b63fb;
   margin: 8px 0;
   padding: 12px 40px;
@@ -409,7 +410,8 @@
   font-style: italic;
 }
 
-.editor-content blockquote::before {
+.editor-content blockquote::before,
+.preview-body-content blockquote::before {
   content: "\201C";
   position: absolute;
   left: 10px;
@@ -420,7 +422,8 @@
   line-height: 1;
 }
 
-.editor-content blockquote::after {
+.editor-content blockquote::after,
+.preview-body-content blockquote::after {
   content: "\201D";
   position: absolute;
   right: 10px;
@@ -431,8 +434,9 @@
   line-height: 1;
 }
 
-/* Inline code styling in editor */
-.editor-content code {
+/* Inline code styling in editor and preview */
+.editor-content code,
+.preview-body-content code {
   background: #f0f0f0;
   padding: 2px 6px;
   border-radius: 3px;
@@ -440,7 +444,8 @@
   font-size: 13px;
 }
 
-.editor-content pre {
+.editor-content pre,
+.preview-body-content pre {
   background: #1e1e1e;
   color: #d4d4d4;
   padding: 16px 16px 16px 0;
@@ -451,7 +456,8 @@
   counter-reset: line;
 }
 
-.editor-content pre .code-lang-label {
+.editor-content pre .code-lang-label,
+.preview-body-content pre .code-lang-label {
   position: absolute;
   top: 8px;
   right: 12px;
@@ -462,7 +468,8 @@
   user-select: none;
 }
 
-.editor-content pre code {
+.editor-content pre code,
+.preview-body-content pre code {
   background: none;
   padding: 0;
   color: inherit;
@@ -471,7 +478,8 @@
   display: block;
 }
 
-.editor-content pre code .code-line {
+.editor-content pre code .code-line,
+.preview-body-content pre code .code-line {
   counter-increment: line;
   display: block;
   padding-left: 56px;
@@ -479,7 +487,8 @@
   min-height: 1.5em;
 }
 
-.editor-content pre code .code-line::before {
+.editor-content pre code .code-line::before,
+.preview-body-content pre code .code-line::before {
   content: counter(line);
   position: absolute;
   left: 0;
@@ -493,8 +502,9 @@
   box-sizing: border-box;
 }
 
-/* Uploaded images in editor */
-.editor-content img {
+/* Uploaded images in editor and preview */
+.editor-content img,
+.preview-body-content img {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
