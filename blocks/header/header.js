@@ -56,9 +56,9 @@ function HeaderComponent() {
 
       <div class="nav-brand-section">
         <a href="/" class="nav-brand">
-          <img 
-            src="/icons/logo.svg" 
-            alt="Adobe Logo" 
+          <img
+            src="/icons/logo.svg"
+            alt="Adobe Logo"
             onError=${(e) => {
     if (e.target.src.endsWith('.svg')) {
       e.target.src = '/icons/logo.png';
@@ -66,7 +66,7 @@ function HeaderComponent() {
   }}
           />
         </a>
-        
+
         <a href="/create-post" class="nav-button spectrum-button">
           <${PlusIcon} />
           <span>Add Post</span>
