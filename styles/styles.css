@@ -255,3 +255,27 @@ main .section.highlight {
   margin: 0;
   padding: 40px 0;
 }
+
+
+
+
+
+
+
+
+/* Add onby nehal might delete later  */
+/* Push main content to the right so the sidebar doesn't overlap */
+main {
+  margin-left: 260px; /* Adjust this number to match your sidebar's width */
+  padding: 24px;
+  width: calc(100% - 260px); 
+  box-sizing: border-box;
+}
+
+/* Remove the margin on mobile screens where the sidebar is hidden or stacked */
+@media (width < 900px) {
+  main {
+    margin-left: 0;
+    width: 100%;
+  }
+}

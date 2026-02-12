@@ -13,6 +13,9 @@ import {
   loadCSS,
 } from './aem.js';
 
+// 1. IMPORT SIDEBAR HERE
+import loadSidebar from '../blocks/sidebar/sidebar.js';
+
 /**
  * Builds hero block and prepends to main in a new section.
  * @param {Element} main The container element
@@ -50,7 +53,6 @@ async function loadFonts() {
  */
 function buildAutoBlocks(main) {
   try {
-    // auto load `*/fragments/*` references
     const fragments = [...main.querySelectorAll('a[href*="/fragments/"]')].filter((f) => !f.closest('.fragment'));
     if (fragments.length > 0) {
       // eslint-disable-next-line import/no-cycle
@@ -119,6 +121,9 @@ async function loadEager(doc) {
  */
 async function loadLazy(doc) {
   loadHeader(doc.querySelector('header'));
+
+  // 2. LOAD SIDEBAR HERE
+  loadSidebar();
 
   const main = doc.querySelector('main');
   await loadSections(main);
