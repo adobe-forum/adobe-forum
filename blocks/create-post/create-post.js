@@ -15,7 +15,7 @@ const EXISTING_CATEGORIES = [
   'react',
   'node.js',
   'css',
-  'html'
+  'html',
 ];
 
 const ICON_BASE_PATH = '/icons';
@@ -27,7 +27,7 @@ async function loadIcon(name) {
 
 async function loadIcons(names) {
   const entries = await Promise.all(
-    names.map(async (name) => [name, await loadIcon(name)])
+    names.map(async (name) => [name, await loadIcon(name)]),
   );
   return Object.fromEntries(entries);
 }
@@ -90,7 +90,7 @@ function RichTextToolbar({ onFormat, activeFormats }) {
     { iconName: 'html-mode', command: 'html', label: 'HTML Mode' },
   ];
 
-  const renderButtons = (buttons) => buttons.map(btn => html`
+  const renderButtons = (buttons) => buttons.map((btn) => html`
     <button
       key=${btn.command}
       className=${`toolbar-btn ${activeFormats.includes(btn.command) ? 'active' : ''}`}
@@ -153,7 +153,7 @@ function CodeBlockModal({ onInsert, onClose }) {
       const ta = textareaRef.current;
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
-      const newCode = code.substring(0, start) + '  ' + code.substring(end);
+      const newCode = `${code.substring(0, start)}  ${code.substring(end)}`;
       setCode(newCode);
       requestAnimationFrame(() => {
         ta.selectionStart = start + 2;
@@ -183,7 +183,7 @@ function CodeBlockModal({ onInsert, onClose }) {
               </button>
               ${langOpen && html`
                 <div className="lang-select-dropdown">
-                  ${languages.map(lang => html`
+                  ${languages.map((lang) => html`
                     <div
                       key=${lang}
                       className=${`lang-select-option ${language === lang ? 'selected' : ''}`}
@@ -221,22 +221,63 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const updateActiveFormats = () => {
+    const formats = [];
+    if (document.queryCommandState('bold')) formats.push('bold');
+    if (document.queryCommandState('italic')) formats.push('italic');
+    if (document.queryCommandState('strikeThrough')) {
+      formats.push('strikeThrough');
+    }
+    if (document.queryCommandState('superscript')) {
+      formats.push('superscript');
+    }
+    if (document.queryCommandState('insertOrderedList')) {
+      formats.push('insertOrderedList');
+    }
+    if (document.queryCommandState('insertUnorderedList')) {
+      formats.push('insertUnorderedList');
+    }
+
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+      const anchor = selection.anchorNode?.parentElement;
+      if (anchor) {
+        const codeParent = anchor.closest('code');
+        if (codeParent && !codeParent.closest('pre')) {
+          formats.push('code');
+        }
+        if (codeParent && codeParent.closest('pre')) {
+          formats.push('codeBlock');
+        }
+        if (anchor.closest('a')) formats.push('link');
+        if (anchor.closest('blockquote')) formats.push('quote');
+      }
+    }
+    setActiveFormats(formats);
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+      updateActiveFormats();
+    }
+  };
+
   const toggleInlineCode = () => {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
 
     const range = selection.getRangeAt(0);
-    const codeParent = selection.anchorNode?.parentElement?.closest('code');
+    const codeParent = selection
+      .anchorNode?.parentElement?.closest('code');
 
     if (codeParent && !codeParent.closest('pre')) {
-      // Already inside inline <code> — unwrap it
       const parent = codeParent.parentNode;
       while (codeParent.firstChild) {
         parent.insertBefore(codeParent.firstChild, codeParent);
       }
       parent.removeChild(codeParent);
     } else if (!range.collapsed) {
-      // Has selection — wrap it in <code>
       const code = document.createElement('code');
       range.surroundContents(code);
     }
@@ -245,18 +286,30 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
 
   const insertCodeBlock = (code, language) => {
     editorRef.current?.focus();
-    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const langAttr = language ? ` class="language-${language}"` : '';
+    const escaped = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const langAttr = language
+      ? ` class="language-${language}"`
+      : '';
     const lines = escaped.split('\n');
-    const numberedLines = lines.map((line) => `<div class="code-line">${line || ' '}</div>`).join('');
-    const langLabel = language ? `<div class="code-lang-label">${language}</div>` : '';
-    const blockHtml = `<pre>${langLabel}<code${langAttr}>${numberedLines}</code></pre><p><br></p>`;
+    const numberedLines = lines
+      .map((line) => `<div class="code-line">${line || ' '}</div>`)
+      .join('');
+    const langLabel = language
+      ? `<div class="code-lang-label">${language}</div>`
+      : '';
+    const blockHtml = `<pre>${langLabel}`
+      + `<code${langAttr}>${numberedLines}</code>`
+      + '</pre><p><br></p>';
     document.execCommand('insertHTML', false, blockHtml);
     handleInput();
   };
 
   const handleFormat = (command) => {
     if (command === 'link') {
+      // eslint-disable-next-line no-alert
       const url = prompt('Enter URL:');
       if (url) {
         document.execCommand('createLink', false, url);
@@ -272,14 +325,18 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
       return;
     } else if (command === 'quote') {
       const selection = window.getSelection();
-      const anchor = selection.rangeCount && selection.anchorNode;
-      const el = anchor?.nodeType === 3 ? anchor.parentElement : anchor;
+      const anchor = selection.rangeCount
+        && selection.anchorNode;
+      const el = anchor?.nodeType === 3
+        ? anchor.parentElement : anchor;
       const blockquote = el?.closest('blockquote');
       if (blockquote) {
-        // Toggle off — exit blockquote and move cursor to new line below
         const p = document.createElement('p');
         p.innerHTML = '<br>';
-        blockquote.parentNode.insertBefore(p, blockquote.nextSibling);
+        blockquote.parentNode.insertBefore(
+          p,
+          blockquote.nextSibling,
+        );
         const range = document.createRange();
         range.setStart(p, 0);
         range.collapse(true);
@@ -287,35 +344,16 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
         selection.addRange(range);
         handleInput();
       } else {
-        document.execCommand('formatBlock', false, 'blockquote');
+        document.execCommand(
+          'formatBlock',
+          false,
+          'blockquote',
+        );
       }
     } else {
       document.execCommand(command, false, null);
     }
     updateActiveFormats();
-  };
-
-  const updateActiveFormats = () => {
-    const formats = [];
-    if (document.queryCommandState('bold')) formats.push('bold');
-    if (document.queryCommandState('italic')) formats.push('italic');
-    if (document.queryCommandState('strikeThrough')) formats.push('strikeThrough');
-    if (document.queryCommandState('superscript')) formats.push('superscript');
-    if (document.queryCommandState('insertOrderedList')) formats.push('insertOrderedList');
-    if (document.queryCommandState('insertUnorderedList')) formats.push('insertUnorderedList');
-
-    const selection = window.getSelection();
-    if (selection.rangeCount) {
-      const anchor = selection.anchorNode?.parentElement;
-      if (anchor) {
-        const codeParent = anchor.closest('code');
-        if (codeParent && !codeParent.closest('pre')) formats.push('code');
-        if (codeParent && codeParent.closest('pre')) formats.push('codeBlock');
-        if (anchor.closest('a')) formats.push('link');
-        if (anchor.closest('blockquote')) formats.push('quote');
-      }
-    }
-    setActiveFormats(formats);
   };
 
   const handleImageUpload = (e) => {
@@ -324,7 +362,10 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
     const reader = new FileReader();
     reader.onload = () => {
       editorRef.current?.focus();
-      const imgHtml = `<img src="${reader.result}" alt="${file.name}" style="max-width:100%;height:auto;" /><p><br></p>`;
+      const imgHtml = '<img src="'
+        + `${reader.result}" alt="${file.name}"`
+        + ' style="max-width:100%;height:auto;" />'
+        + '<p><br></p>';
       document.execCommand('insertHTML', false, imgHtml);
       handleInput();
     };
@@ -361,13 +402,6 @@ function RichTextEditor({ value, onChange, minChars = 20 }) {
       normalizeCodeBlocks();
       handleInput();
     }, 0);
-  };
-
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-      updateActiveFormats();
-    }
   };
 
   const handleEditorKeyDown = (e) => {
@@ -461,10 +495,12 @@ function CategorySearch({ value, onChange, onSelect }) {
   const handleInputChange = (e) => {
     const searchValue = e.target.value;
     onChange(searchValue);
-    
+
     if (searchValue.trim()) {
-      const filtered = EXISTING_CATEGORIES.filter(cat =>
-        cat.toLowerCase().includes(searchValue.toLowerCase())
+      const filtered = EXISTING_CATEGORIES.filter(
+        (cat) => cat.toLowerCase().includes(
+          searchValue.toLowerCase(),
+        ),
       );
       setFilteredCategories(filtered);
       setIsOpen(true);
@@ -486,8 +522,8 @@ function CategorySearch({ value, onChange, onSelect }) {
     setIsOpen(false);
   };
 
-  const showAddButton = value.trim() && 
-    !EXISTING_CATEGORIES.some(cat => cat.toLowerCase() === value.toLowerCase());
+  const showAddButton = value.trim()
+    && !EXISTING_CATEGORIES.some((cat) => cat.toLowerCase() === value.toLowerCase());
 
   return html`
     <div className="category-search-wrapper" ref=${wrapperRef}>
@@ -501,7 +537,7 @@ function CategorySearch({ value, onChange, onSelect }) {
       />
       ${isOpen && (filteredCategories.length > 0 || showAddButton) && html`
         <div className="category-dropdown">
-          ${filteredCategories.map(category => html`
+          ${filteredCategories.map((category) => html`
             <div
               key=${category}
               className="category-option"
@@ -532,7 +568,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const TAG_SUGGESTIONS = [
     'sql-server', 'objective-c', 'ajax', 'javascript', 'python',
     'java', 'react', 'node.js', 'css', 'html', 'angular',
-    'vue', 'typescript', 'mongodb', 'postgresql'
+    'vue', 'typescript', 'mongodb', 'postgresql',
   ];
 
   useEffect(() => {
@@ -547,13 +583,14 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   }, []);
 
   const handleInputChange = (e) => {
-    const value = e.target.value;
+    const { value } = e.target;
     setInputValue(value);
 
     if (value.trim()) {
-      const filtered = TAG_SUGGESTIONS.filter(tag =>
-        tag.toLowerCase().includes(value.toLowerCase()) &&
-        !tags.includes(tag)
+      const filtered = TAG_SUGGESTIONS.filter(
+        (tag) => tag.toLowerCase().includes(
+          value.toLowerCase(),
+        ) && !tags.includes(tag),
       );
       setSuggestions(filtered);
       setIsOpen(true);
@@ -573,7 +610,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   };
 
   const removeTag = (tagToRemove) => {
-    onTagsChange(tags.filter(tag => tag !== tagToRemove));
+    onTagsChange(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleKeyDown = (e) => {
@@ -588,7 +625,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   return html`
     <div className="tags-wrapper" ref=${wrapperRef}>
       <div className="tags-input-container">
-        ${tags.map(tag => html`
+        ${tags.map((tag) => html`
           <span key=${tag} className="tag-chip">
             ${tag}
             <button
@@ -615,7 +652,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
       </div>
       ${isOpen && suggestions.length > 0 && html`
         <div className="tags-dropdown">
-          ${suggestions.map(tag => html`
+          ${suggestions.map((tag) => html`
             <div
               key=${tag}
               className="tag-option"
@@ -642,21 +679,25 @@ function CreatePost() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Validation
     if (!title || title.length < 15) {
+      // eslint-disable-next-line no-alert
       alert('Title must be at least 15 characters');
       return;
     }
     if (!category) {
+      // eslint-disable-next-line no-alert
       alert('Please select or create a category');
       return;
     }
     if (!body || body.replace(/<[^>]*>/g, '').length < 20) {
+      // eslint-disable-next-line no-alert
       alert('Body must be at least 20 characters');
       return;
     }
     if (tags.length === 0) {
+      // eslint-disable-next-line no-alert
       alert('Please add at least one tag');
       return;
     }
@@ -666,14 +707,16 @@ function CreatePost() {
       title,
       category,
       body,
-      tags
+      tags,
     };
-    
+
+    // eslint-disable-next-line no-console
     console.log('Submitting post:', postData);
     // Add your submission logic here
   };
 
   const handleCancel = () => {
+    // eslint-disable-next-line no-alert, no-restricted-globals
     if (confirm('Are you sure you want to discard this post?')) {
       setTitle('');
       setCategory('');
@@ -791,7 +834,7 @@ function CreatePost() {
               <div className="submit-tooltip">
                 <strong>Missing fields:</strong>
                 <ul>
-                  ${missingFields.map(f => html`<li key=${f}>${f}</li>`)}
+                  ${missingFields.map((f) => html`<li key=${f}>${f}</li>`)}
                 </ul>
               </div>
             `}

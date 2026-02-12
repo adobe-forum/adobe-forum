@@ -129,7 +129,7 @@
 .toolbar-icon svg {
   width: 20px;
   height: 20px;
-  fill: currentColor;
+  fill: currentcolor;
 }
 
 /* Editor content area */
@@ -327,10 +327,6 @@
   position: relative;
 }
 
-.submit-btn-wrapper:hover .submit-tooltip {
-  display: block;
-}
-
 .submit-tooltip {
   display: none;
   position: absolute;
@@ -344,6 +340,10 @@
   white-space: nowrap;
   z-index: 20;
   box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+}
+
+.submit-btn-wrapper:hover .submit-tooltip {
+  display: block;
 }
 
 .submit-tooltip::after {
@@ -476,10 +476,7 @@
 /* Code block modal */
 .code-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgb(0 0 0 / 50%);
   display: flex;
   align-items: center;
