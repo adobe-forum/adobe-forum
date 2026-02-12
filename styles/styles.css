@@ -4,7 +4,7 @@
   --header-height: 64px;
 
   /* --- Spectrum Colors (Adobe Red Theme) --- */
-  --spectrum-gray-50: #ffffff;
+  --spectrum-gray-50: #fff;
   --spectrum-gray-75: #fafafa;
   --spectrum-gray-100: #f5f5f5;
   --spectrum-gray-200: #e1e1e1;
@@ -34,7 +34,7 @@
   --spectrum-border-width-200: 2px;
 
   /* --- Typography --- */
-  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
   --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
 
   /* Old CSS Font Sizes */
@@ -85,11 +85,8 @@ body {
 
   /* --- App Grid Layout --- */
   display: grid;
-  grid-template-areas: 
-      "header header"
-      "sidebar content";
-  grid-template-columns: var(--nav-width) 1fr;
-  grid-template-rows: var(--header-height) 1fr;
+  grid-template: 
+      "header header" var(--header-height) "sidebar content" 1fr / var(--nav-width) 1fr;
 }
 
 header {
@@ -241,16 +238,14 @@ main .block {
 
 footer {
   display: flex;
-  justify-items: center;
-  align-items: center;
+  place-items: center center;
 }
 
-@media (min-width: 900px) {
+@media (width >= 900px) {
   :root {
     --body-font-size-m: 18px;
     --body-font-size-s: 16px;
     --body-font-size-xs: 14px;
-
     --heading-font-size-xxl: 45px;
     --heading-font-size-xl: 36px;
     --heading-font-size-l: 28px;
