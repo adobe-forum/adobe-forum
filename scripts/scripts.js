@@ -13,8 +13,7 @@ import {
   loadCSS,
 } from './aem.js';
 
-// 1. IMPORT SIDEBAR HERE
-import loadSidebar from '../blocks/sidebar/sidebar.js';
+// REMOVED: import loadSidebar ...
 
 /**
  * Builds hero block and prepends to main in a new section.
@@ -120,17 +119,16 @@ async function loadEager(doc) {
  * @param {Element} doc The container element
  */
 async function loadLazy(doc) {
-  loadHeader(doc.querySelector('header'));
-
-  // 2. LOAD SIDEBAR HERE
-  loadSidebar();
-
   const main = doc.querySelector('main');
   await loadSections(main);
 
   const { hash } = window.location;
   const element = hash ? doc.getElementById(hash.substring(1)) : false;
   if (hash && element) element.scrollIntoView();
+
+  loadHeader(doc.querySelector('header'));
+  
+  // REMOVED: loadSidebar();
 
   loadFooter(doc.querySelector('footer'));
 

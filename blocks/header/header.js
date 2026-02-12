@@ -56,7 +56,7 @@ function Navigation({ navItems }) {
   };
 
   const handleNavClick = (e, route) => {
-    // e.preventDefault(); // Uncomment if you are using client-side routing
+    // Optional: Add logic here if you want to handle SPA routing
     console.log('Navigating to:', route);
     if (!isDesktop) {
       setIsMobileMenuOpen(false);
@@ -136,7 +136,7 @@ function Navigation({ navItems }) {
         
         <div class="nav-brand-action">
           <a 
-            href=${brandButton.route}
+            href=${brandButton.route} 
             onClick=${(e) => handleNavClick(e, brandButton.route)}
             class="nav-button spectrum-button"
           >
@@ -150,7 +150,7 @@ function Navigation({ navItems }) {
           ${toolItems.map((item, idx) => html`
             <li key=${idx} class=${item.isAvatar ? 'profile-item' : ''}>
               <a 
-                href=${item.route}
+                href=${item.route} 
                 onClick=${(e) => handleNavClick(e, item.route)}
                 class=${item.isAvatar ? 'profile-link' : 'spectrum-action-button'}
               >
@@ -194,4 +194,17 @@ export default async function decorate(block) {
     console.error('Error rendering header:', error);
     wrapper.innerHTML = '<nav><p>Error loading navigation</p></nav>';
   }
+
+  // Handle Escape key to close mobile menu
+  const handleEscape = (e) => {
+    if (e.code === 'Escape') {
+      const nav = document.getElementById('nav');
+      if (nav && nav.getAttribute('aria-expanded') === 'true') {
+        const hamburger = nav.querySelector('.nav-hamburger button');
+        if (hamburger) hamburger.click();
+      }
+    }
+  };
+
+  window.addEventListener('keydown', handleEscape);
 }
