@@ -1,0 +1,301 @@
+/* Sidebar Block Styles - Adobe Spectrum Design */
+.sidebar {
+    width: 280px;
+    background: rgb(255 255 255);
+    border-right: 1px solid rgb(213 213 213); /* Spectrum gray-300 */
+    padding: 0;
+    height: calc(100vh - 48px); /* 48px = header height */
+    position: fixed;
+    left: 0;
+    top: 48px; /* Match header height exactly */
+    overflow-y: auto;
+    z-index: 100;
+  }
+  
+  /* Push main content to the right, but NOT the header */
+  main,
+  .section {
+    margin-left: 0;
+  }
+  
+  /* Reset margin for elements inside sidebar */
+  .sidebar main,
+  .sidebar .section {
+    margin-left: 0;
+  }
+  
+  .sidebar .search-container {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgb(234 234 234); /* Spectrum gray-200 */
+  }
+  
+  .sidebar .search-container input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid rgb(177 177 177); /* Spectrum gray-400 */
+    border-radius: 4px;
+    font-size: 14px;
+    color: rgb(34 34 34); /* Spectrum gray-900 */
+    background: rgb(255 255 255);
+    transition: border-color 0.13s ease-in-out;
+  }
+  
+  .sidebar .search-container input::placeholder {
+    color: rgb(116 116 116); /* Spectrum gray-600 */
+  }
+  
+  .sidebar .add-category-input input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid rgb(20 115 230); /* Spectrum blue-700 */
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: rgb(255 255 255);
+    color: rgb(34 34 34);
+  }
+  
+  .sidebar .search-container input:focus {
+    outline: none;
+    border-color: rgb(20 115 230); /* Spectrum blue-700 */
+    box-shadow: 0 0 0 1px rgb(20 115 230);
+  }
+  
+  .sidebar .explorer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgb(248 248 248); /* Spectrum gray-75 */
+    border-bottom: 1px solid rgb(234 234 234);
+  }
+  
+  .sidebar .explorer-header h3 {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgb(109 109 109); /* Spectrum gray-700 */
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .sidebar .add-category {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: rgb(109 109 109);
+    cursor: pointer;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.13s ease-in-out, color 0.13s ease-in-out;
+  }
+  
+  .sidebar .add-category:hover {
+    background: rgb(234 234 234); /* Spectrum gray-200 */
+    color: rgb(34 34 34);
+  }
+  
+  .sidebar .add-category:active {
+    background: rgb(213 213 213); /* Spectrum gray-300 */
+  }
+  
+  /* Inline Add Category Input */
+  .sidebar .add-category-input {
+    padding: 12px 16px;
+    background: rgb(248 248 248);
+    border-bottom: 1px solid rgb(234 234 234);
+    display: none;
+  }
+  
+  .sidebar .add-category-input.active {
+    display: block;
+  }
+  
+  .sidebar .add-category-input input:focus {
+    border-color: rgb(13 102 208); /* Spectrum blue-800 */
+    box-shadow: 0 0 0 1px rgb(13 102 208);
+  }
+  
+  /* Error Message */
+  .sidebar .error-message {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: rgb(255 235 235); /* Light red background */
+    border: 1px solid rgb(234 56 41); /* Spectrum red-700 */
+    border-radius: 4px;
+    font-size: 12px;
+    color: rgb(180 0 0); /* Spectrum red-900 */
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .sidebar .add-category-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  
+  .sidebar .add-category-actions button {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.13s ease-in-out;
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .sidebar .add-category-actions .btn-confirm {
+    background: rgb(20 115 230); /* Spectrum blue-700 */
+    color: rgb(255 255 255);
+    border: 1px solid rgb(20 115 230);
+  }
+  
+  .sidebar .add-category-actions .btn-confirm:hover {
+    background: rgb(13 102 208); /* Spectrum blue-800 */
+    border-color: rgb(13 102 208);
+  }
+  
+  .sidebar .add-category-actions .btn-cancel {
+    background: rgb(255 255 255);
+    color: rgb(75 75 75); /* Spectrum gray-800 */
+    border: 1px solid rgb(177 177 177); /* Spectrum gray-400 */
+  }
+  
+  .sidebar .add-category-actions .btn-cancel:hover {
+    background: rgb(248 248 248);
+    border-color: rgb(144 144 144); /* Spectrum gray-500 */
+  }
+  
+  /* Category List */
+  .sidebar .category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .sidebar .category-item {
+    margin: 0;
+  }
+  
+  .sidebar .category-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: rgb(34 34 34); /* Spectrum gray-900 */
+    font-size: 14px;
+    font-weight: 400;
+    transition: background-color 0.13s ease-in-out;
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .sidebar .category-header:hover {
+    background-color: rgb(248 248 248); /* Spectrum gray-75 */
+  }
+  
+  .sidebar .category-toggle {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: rgb(109 109 109); /* Spectrum gray-700 */
+    transition: transform 0.13s ease-in-out;
+  }
+  
+  .sidebar .category-item.collapsed .category-toggle {
+    transform: rotate(-90deg);
+  }
+  
+  .sidebar .category-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    font-size: 16px;
+  }
+  
+  .sidebar .subcategory-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+  }
+  
+  .sidebar .category-item.collapsed .subcategory-list {
+    max-height: 0;
+  }
+  
+  .sidebar .subcategory-item {
+    padding: 6px 16px 6px 48px;
+    font-size: 13px;
+    color: rgb(75 75 75); /* Spectrum gray-800 */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.13s ease-in-out, color 0.13s ease-in-out;
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .sidebar .subcategory-item:hover {
+    background-color: rgb(248 248 248);
+    color: rgb(20 115 230); /* Spectrum blue-700 */
+  }
+  
+  .sidebar .subcategory-item.active {
+    background-color: rgb(231 243 255); /* Spectrum blue-200 */
+    color: rgb(13 102 208); /* Spectrum blue-800 */
+    font-weight: 600;
+  }
+  
+  .sidebar .subcategory-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    font-size: 14px;
+    color: rgb(20 115 230);
+  }
+  
+  .sidebar .no-items {
+    padding: 6px 16px 6px 48px;
+    font-size: 12px;
+    color: rgb(144 144 144); /* Spectrum gray-500 */
+    font-style: italic;
+    font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  /* Spectrum Divider */
+  .sidebar .divider {
+    height: 1px;
+    background: rgb(234 234 234); /* Spectrum gray-200 */
+    margin: 8px 0;
+    border: none;
+  }
+  
+  /* Scrollbar Styles - Spectrum */
+  .sidebar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .sidebar::-webkit-scrollbar-thumb {
+    background: rgb(213 213 213); /* Spectrum gray-300 */
+    border-radius: 4px;
+  }
+  
+  .sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgb(177 177 177); /* Spectrum gray-400 */
+  }
