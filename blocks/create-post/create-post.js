@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
@@ -18,546 +19,463 @@ const EXISTING_CATEGORIES = [
   'html',
 ];
 
-const ICON_BASE_PATH = '/icons';
+// ============================================
+// DOM TO JSON CONVERTER
+// ============================================
 
-async function loadIcon(name) {
-  const resp = await fetch(`${ICON_BASE_PATH}/${name}.svg`);
-  return resp.text();
-}
-
-async function loadIcons(names) {
-  const entries = await Promise.all(
-    names.map(async (name) => [name, await loadIcon(name)]),
-  );
-  return Object.fromEntries(entries);
-}
-
-function ToolbarIcon({ svgMarkup }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (ref.current && svgMarkup) {
-      ref.current.innerHTML = svgMarkup;
-    }
-  }, [svgMarkup]);
-  return html`<span className="toolbar-icon" ref=${ref} />`;
-}
-
-function RichTextToolbar({ onFormat, activeFormats }) {
-  const [icons, setIcons] = useState({});
-  const [fontSizeOpen, setFontSizeOpen] = useState(false);
-  const fontSizeRef = useRef(null);
-
-  useEffect(() => {
-    const iconNames = [
-      'font-size', 'bold', 'italic', 'strikethrough',
-      'code', 'code-block', 'superscript', 'link', 'quote', 'image', 'table',
-      'ordered-list', 'unordered-list', 'indent',
-      'help',
-      'preview',
-    ];
-    loadIcons(iconNames).then(setIcons);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (fontSizeRef.current
-        && !fontSizeRef.current.contains(e.target)) {
-        setFontSizeOpen(false);
+function domToJson(element) {
+  if (!element || element.nodeType !== 1) {
+    return null;
+  }
+  const obj = {
+    tag: element.tagName.toLowerCase(),
+  };
+  if (element.attributes.length > 0) {
+    obj.attributes = {};
+    Array.from(element.attributes).forEach((attr) => {
+      obj.attributes[attr.name] = attr.value;
+    });
+  }
+  const children = [];
+  Array.from(element.childNodes).forEach((node) => {
+    if (node.nodeType === 1) {
+      const childObj = domToJson(node);
+      if (childObj) children.push(childObj);
+    } else if (node.nodeType === 3) {
+      const text = node.nodeValue.trim();
+      if (text) {
+        children.push({ text });
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener(
-      'mousedown',
-      handleClickOutside,
-    );
-  }, []);
-
-  const fontSizes = [
-    { label: 'Small', value: '2' },
-    { label: 'Normal', value: '3' },
-    { label: 'Large', value: '4' },
-    { label: 'Huge', value: '5' },
-  ];
-
-  const formatButtons = [
-    { iconName: 'bold', command: 'bold', label: 'Bold' },
-    { iconName: 'italic', command: 'italic', label: 'Italic' },
-    { iconName: 'strikethrough', command: 'strikeThrough', label: 'Strikethrough' },
-  ];
-
-  const insertButtons = [
-    { iconName: 'code', command: 'code', label: 'Inline Code' },
-    { iconName: 'code-block', command: 'codeBlock', label: 'Code Block' },
-    { iconName: 'superscript', command: 'superscript', label: 'Superscript' },
-    { iconName: 'link', command: 'link', label: 'Insert Link' },
-    { iconName: 'quote', command: 'quote', label: 'Quote' },
-    { iconName: 'image', command: 'image', label: 'Insert Image' },
-    { iconName: 'table', command: 'table', label: 'Insert Table' },
-  ];
-
-  const listButtons = [
-    { iconName: 'ordered-list', command: 'insertOrderedList', label: 'Numbered List' },
-    { iconName: 'unordered-list', command: 'insertUnorderedList', label: 'Bulleted List' },
-    { iconName: 'indent', command: 'indent', label: 'Indent' },
-  ];
-
-  const moreButtons = [
-    { iconName: 'help', command: 'help', label: 'Help' },
-  ];
-
-  const viewButtons = [
-    { iconName: 'preview', command: 'preview', label: 'Preview' },
-  ];
-
-  const renderButtons = (buttons) => buttons.map((btn) => html`
-    <button
-      key=${btn.command}
-      className=${`toolbar-btn ${activeFormats.includes(btn.command) ? 'active' : ''}`}
-      onClick=${() => onFormat(btn.command)}
-      title=${btn.label}
-      type="button"
-    >
-      <${ToolbarIcon} svgMarkup=${icons[btn.iconName]} />
-    </button>
-  `);
-
-  return html`
-    <div className="editor-toolbar">
-      <div className="toolbar-group">
-        <div className="font-size-wrapper" ref=${fontSizeRef}>
-          <button
-            type="button"
-            className=${`toolbar-btn ${fontSizeOpen ? 'active' : ''}`}
-            onClick=${() => setFontSizeOpen(!fontSizeOpen)}
-            title="Font Size"
-          >
-            <${ToolbarIcon} svgMarkup=${icons['font-size']} />
-          </button>
-          ${fontSizeOpen && html`
-            <div className="font-size-dropdown">
-              ${fontSizes.map((fs) => html`
-                <div
-                  key=${fs.value}
-                  className="font-size-option"
-                  onClick=${() => {
-    onFormat(`fontSize:${fs.value}`);
-    setFontSizeOpen(false);
-  }}
-                >
-                  <span style=${{ fontSize: `${fs.value * 4 + 6}px` }}>${fs.label}</span>
-                </div>
-              `)}
-            </div>
-          `}
-        </div>
-        ${renderButtons(formatButtons)}
-      </div>
-      <div className="toolbar-group">${renderButtons(insertButtons)}</div>
-      <div className="toolbar-group">${renderButtons(listButtons)}</div>
-      <div className="toolbar-group">${renderButtons(moreButtons)}</div>
-      <div className="toolbar-group">${renderButtons(viewButtons)}</div>
-    </div>
-  `;
+    }
+  });
+  if (children.length > 0) {
+    obj.children = children;
+  }
+  return obj;
 }
 
-function CodeBlockModal({ onInsert, onClose }) {
-  const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('');
-  const [langOpen, setLangOpen] = useState(false);
-  const textareaRef = useRef(null);
-  const langRef = useRef(null);
+// ============================================
+// QUILL LOADER
+// ============================================
 
-  const languages = [
-    '', 'javascript', 'python', 'java', 'html', 'css',
-    'sql', 'typescript', 'bash', 'json', 'xml', 'php', 'ruby', 'go', 'rust',
-  ];
+let quillLoaded = false;
 
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+function loadQuill() {
+  if (quillLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    // Load CSS
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/vendor/qill/quill.snow.css';
+    document.head.appendChild(link);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (langRef.current && !langRef.current.contains(e.target)) {
-        setLangOpen(false);
-      }
+    // Load JS
+    const script = document.createElement('script');
+    script.src = '/vendor/qill/quill.min.js';
+    script.onload = () => {
+      quillLoaded = true;
+      resolve();
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    script.onerror = () => reject(new Error('Failed to load Quill'));
+    document.head.appendChild(script);
+  });
+}
 
-  const handleInsert = () => {
-    if (code.trim()) {
-      onInsert(code, language);
-    }
-    onClose();
+// ============================================
+// QUILL EDITOR COMPONENT
+// ============================================
+
+function QuillEditor({ onChange, minChars = 20 }) {
+  const containerRef = useRef(null);
+  const quillRef = useRef(null);
+  const activeCellRef = useRef(null);
+  const [charCount, setCharCount] = useState(0);
+  const [showTableTools, setShowTableTools] = useState(false);
+
+  const emitChange = () => {
+    const quill = quillRef.current;
+    if (!quill) return;
+    const editorEl = quill.root;
+    const htmlContent = editorEl.innerHTML;
+    const jsonContent = domToJson(editorEl);
+    const textLength = quill.getText().trim().length;
+    setCharCount(textLength);
+    onChange(htmlContent, jsonContent);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') onClose();
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const ta = textareaRef.current;
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const newCode = `${code.substring(0, start)}  ${code.substring(end)}`;
-      setCode(newCode);
-      requestAnimationFrame(() => {
-        ta.selectionStart = start + 2;
-        ta.selectionEnd = start + 2;
-      });
-    }
-  };
-
-  return html`
-    <div className="code-modal-overlay" onClick=${onClose}>
-      <div className="code-modal" onClick=${(e) => e.stopPropagation()}>
-        <div className="code-modal-header">
-          <h3>Insert Code Block</h3>
-          <button type="button" className="code-modal-close" onClick=${onClose}>×</button>
-        </div>
-        <div className="code-modal-body">
-          <label className="code-modal-label">
-            Language
-            <div className="lang-select-wrapper" ref=${langRef}>
-              <button
-                type="button"
-                className="lang-select-btn"
-                onClick=${() => setLangOpen(!langOpen)}
-              >
-                ${language || 'Plain text'}
-                <span className="lang-select-arrow">${langOpen ? '\u25B2' : '\u25BC'}</span>
-              </button>
-              ${langOpen && html`
-                <div className="lang-select-dropdown">
-                  ${languages.map((lang) => html`
-                    <div
-                      key=${lang}
-                      className=${`lang-select-option ${language === lang ? 'selected' : ''}`}
-                      onClick=${() => { setLanguage(lang); setLangOpen(false); }}
-                    >
-                      ${lang || 'Plain text'}
-                    </div>
-                  `)}
-                </div>
-              `}
-            </div>
-          </label>
-          <textarea
-            ref=${textareaRef}
-            className="code-modal-textarea"
-            value=${code}
-            onInput=${(e) => setCode(e.target.value)}
-            onKeyDown=${handleKeyDown}
-            placeholder="Paste or type your code here..."
-            rows="10"
-          />
-        </div>
-        <div className="code-modal-footer">
-          <button type="button" className="btn btn-cancel" onClick=${onClose}>Cancel</button>
-          <button type="button" className="btn btn-submit" onClick=${handleInsert}>Insert Code</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function RichTextEditor({ value, onChange, minChars = 20 }) {
-  const [activeFormats, setActiveFormats] = useState([]);
-  const [showCodeModal, setShowCodeModal] = useState(false);
-  const editorRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  const updateActiveFormats = () => {
-    const formats = [];
-    if (document.queryCommandState('bold')) formats.push('bold');
-    if (document.queryCommandState('italic')) formats.push('italic');
-    if (document.queryCommandState('strikeThrough')) {
-      formats.push('strikeThrough');
-    }
-    if (document.queryCommandState('superscript')) {
-      formats.push('superscript');
-    }
-    if (document.queryCommandState('insertOrderedList')) {
-      formats.push('insertOrderedList');
-    }
-    if (document.queryCommandState('insertUnorderedList')) {
-      formats.push('insertUnorderedList');
-    }
-
+  const detectTableContext = () => {
     const selection = window.getSelection();
     if (selection.rangeCount) {
-      const anchor = selection.anchorNode?.parentElement;
-      if (anchor) {
-        const codeParent = anchor.closest('code');
-        if (codeParent && !codeParent.closest('pre')) {
-          formats.push('code');
-        }
-        if (codeParent && codeParent.closest('pre')) {
-          formats.push('codeBlock');
-        }
-        if (anchor.closest('a')) formats.push('link');
-        if (anchor.closest('blockquote')) formats.push('quote');
-      }
-    }
-    setActiveFormats(formats);
-  };
-
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-      updateActiveFormats();
-    }
-  };
-
-  const toggleInlineCode = () => {
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-
-    const range = selection.getRangeAt(0);
-    const codeParent = selection
-      .anchorNode?.parentElement?.closest('code');
-
-    if (codeParent && !codeParent.closest('pre')) {
-      const parent = codeParent.parentNode;
-      while (codeParent.firstChild) {
-        parent.insertBefore(codeParent.firstChild, codeParent);
-      }
-      parent.removeChild(codeParent);
-    } else if (!range.collapsed) {
-      const code = document.createElement('code');
-      range.surroundContents(code);
-    }
-    handleInput();
-  };
-
-  const insertCodeBlock = (code, language) => {
-    editorRef.current?.focus();
-    const escaped = code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    const langAttr = language
-      ? ` class="language-${language}"`
-      : '';
-    const lines = escaped.split('\n');
-    const numberedLines = lines
-      .map((line) => `<div class="code-line">${line || ' '}</div>`)
-      .join('');
-    const langLabel = language
-      ? `<div class="code-lang-label">${language}</div>`
-      : '';
-    const blockHtml = `<pre>${langLabel}`
-      + `<code${langAttr}>${numberedLines}</code>`
-      + '</pre><p><br></p>';
-    document.execCommand('insertHTML', false, blockHtml);
-    handleInput();
-  };
-
-  const handleFormat = (command) => {
-    if (command.startsWith('fontSize:')) {
-      const size = command.split(':')[1];
-      document.execCommand('fontSize', false, size);
-      handleInput();
-      return;
-    }
-    if (command === 'link') {
-      // eslint-disable-next-line no-alert
-      const url = prompt('Enter URL:');
-      if (url) {
-        document.execCommand('createLink', false, url);
-      }
-    } else if (command === 'code') {
-      toggleInlineCode();
-      return;
-    } else if (command === 'codeBlock') {
-      setShowCodeModal(true);
-      return;
-    } else if (command === 'image') {
-      fileInputRef.current?.click();
-      return;
-    } else if (command === 'indent') {
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
-      const anchor = selection.anchorNode;
-      const editor = editorRef.current;
-      if (!editor) return;
-      let node = anchor?.nodeType === 3
-        ? anchor.parentElement : anchor;
-      if (node === editor) {
-        document.execCommand('formatBlock', false, 'p');
-        node = selection.anchorNode?.nodeType === 3
-          ? selection.anchorNode.parentElement
-          : selection.anchorNode;
-      }
-      let block = null;
-      while (node && node !== editor) {
-        if (node.parentElement === editor) {
-          block = node;
-          break;
-        }
-        node = node.parentElement;
-      }
-      if (block) {
-        const current = parseInt(
-          block.style.marginLeft || '0',
-          10,
-        );
-        block.style.marginLeft = `${current + 40}px`;
-      }
-      handleInput();
-      return;
-    } else if (command === 'quote') {
-      const selection = window.getSelection();
-      const anchor = selection.rangeCount
-        && selection.anchorNode;
-      const el = anchor?.nodeType === 3
-        ? anchor.parentElement : anchor;
-      const blockquote = el?.closest('blockquote');
-      if (blockquote) {
-        const p = document.createElement('p');
-        p.innerHTML = '<br>';
-        blockquote.parentNode.insertBefore(
-          p,
-          blockquote.nextSibling,
-        );
-        const range = document.createRange();
-        range.setStart(p, 0);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        handleInput();
-      } else {
-        document.execCommand(
-          'formatBlock',
-          false,
-          'blockquote',
-        );
-      }
+      const anchor = selection.anchorNode?.nodeType === 3
+        ? selection.anchorNode.parentElement
+        : selection.anchorNode;
+      const cell = anchor?.closest('td, th');
+      activeCellRef.current = cell || null;
+      setShowTableTools(!!cell);
     } else {
-      document.execCommand(command, false, null);
+      activeCellRef.current = null;
+      setShowTableTools(false);
     }
-    updateActiveFormats();
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      editorRef.current?.focus();
-      const imgHtml = '<img src="'
-        + `${reader.result}" alt="${file.name}"`
-        + ' style="max-width:100%;height:auto;" />'
-        + '<p><br></p>';
-      document.execCommand('insertHTML', false, imgHtml);
-      handleInput();
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
+  // ---- Table operations ----
 
-  const normalizeCodeBlocks = () => {
-    if (!editorRef.current) return;
-    const pres = editorRef.current.querySelectorAll('pre');
-    pres.forEach((pre) => {
-      let code = pre.querySelector('code');
-      if (!code) {
-        code = document.createElement('code');
-        code.textContent = pre.textContent;
-        pre.innerHTML = '';
-        pre.appendChild(code);
-      }
-      if (code.querySelector('.code-line')) return;
-      const text = code.textContent;
-      const lines = text.split('\n');
-      code.innerHTML = '';
-      lines.forEach((line) => {
-        const div = document.createElement('div');
-        div.className = 'code-line';
-        div.textContent = line || ' ';
-        code.appendChild(div);
-      });
+  const addRow = (position) => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    if (!row) return;
+    const colCount = row.cells.length;
+    const newRow = document.createElement('tr');
+    Array.from({ length: colCount }).forEach(() => {
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      newRow.appendChild(td);
     });
+    if (position === 'above') {
+      row.parentNode.insertBefore(newRow, row);
+    } else {
+      row.parentNode.insertBefore(newRow, row.nextSibling);
+    }
+    emitChange();
   };
 
-  const handlePaste = () => {
-    setTimeout(() => {
-      normalizeCodeBlocks();
-      handleInput();
-    }, 0);
+  const addColumn = (position) => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const colIndex = cell.cellIndex;
+    Array.from(table.rows).forEach((row) => {
+      const newCell = document.createElement('td');
+      newCell.innerHTML = '<br>';
+      const insertIndex = position === 'left' ? colIndex : colIndex + 1;
+      if (insertIndex >= row.cells.length) {
+        row.appendChild(newCell);
+      } else {
+        row.insertBefore(newCell, row.cells[insertIndex]);
+      }
+    });
+    emitChange();
   };
 
-  const handleEditorKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      const selection = window.getSelection();
-      const anchor = selection.rangeCount && selection.anchorNode;
-      if (!anchor) return;
+  const deleteRow = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    const table = cell.closest('table');
+    if (!row || !table) return;
+    if (table.rows.length <= 1) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      table.parentNode.insertBefore(p, table);
+      table.remove();
+    } else {
+      row.remove();
+    }
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
 
-      const el = anchor.nodeType === 3 ? anchor.parentElement : anchor;
-      const blockquote = el?.closest('blockquote');
-      if (blockquote) {
-        const text = anchor.textContent || '';
-        if (text.trim() === '') {
-          e.preventDefault();
-          // Remove the empty line inside the blockquote
-          const currentBlock = el.closest('div, p') || el;
-          if (currentBlock !== blockquote) {
-            blockquote.removeChild(currentBlock);
-          }
-          // Insert a new paragraph after the blockquote
-          const p = document.createElement('p');
-          p.innerHTML = '<br>';
-          blockquote.parentNode.insertBefore(p, blockquote.nextSibling);
-          // Move cursor into the new paragraph
-          const range = document.createRange();
-          range.setStart(p, 0);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          handleInput();
+  const deleteColumn = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const colIndex = cell.cellIndex;
+    const firstRowCells = table.rows[0]?.cells.length || 0;
+    if (firstRowCells <= 1) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      table.parentNode.insertBefore(p, table);
+      table.remove();
+    } else {
+      Array.from(table.rows).forEach((row) => {
+        if (row.cells[colIndex]) {
+          row.cells[colIndex].remove();
+        }
+      });
+    }
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
+
+  const mergeCellRight = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const nextCell = cell.nextElementSibling;
+    if (!nextCell) return;
+    const currentSpan = parseInt(cell.getAttribute('colspan') || '1', 10);
+    const nextSpan = parseInt(nextCell.getAttribute('colspan') || '1', 10);
+    cell.setAttribute('colspan', currentSpan + nextSpan);
+    if (nextCell.textContent.trim()) {
+      cell.innerHTML += ` ${nextCell.innerHTML}`;
+    }
+    nextCell.remove();
+    emitChange();
+  };
+
+  const mergeCellDown = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    const nextRow = row?.nextElementSibling;
+    if (!nextRow) return;
+    const colIndex = cell.cellIndex;
+    const belowCell = nextRow.cells[colIndex];
+    if (!belowCell) return;
+    const currentSpan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+    const belowSpan = parseInt(belowCell.getAttribute('rowspan') || '1', 10);
+    cell.setAttribute('rowspan', currentSpan + belowSpan);
+    if (belowCell.textContent.trim()) {
+      cell.innerHTML += ` ${belowCell.innerHTML}`;
+    }
+    belowCell.remove();
+    emitChange();
+  };
+
+  const deleteTable = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    table.parentNode.insertBefore(p, table);
+    table.remove();
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
+
+  useEffect(() => {
+    if (!containerRef.current) return undefined;
+
+    loadQuill().then(() => {
+      if (quillRef.current) return;
+
+      // Register table blots so Quill recognises table elements
+      /* eslint-disable no-undef */
+      const Block = Quill.import('blots/block');
+      const Container = Quill.import('blots/container');
+
+      class TableCell extends Block {}
+      TableCell.blotName = 'td';
+      TableCell.tagName = 'TD';
+
+      class TableRow extends Container {}
+      TableRow.blotName = 'tr';
+      TableRow.tagName = 'TR';
+      TableRow.allowedChildren = [TableCell];
+      TableRow.defaultChild = TableCell;
+
+      class TableBody extends Container {}
+      TableBody.blotName = 'tbody';
+      TableBody.tagName = 'TBODY';
+      TableBody.allowedChildren = [TableRow];
+      TableBody.defaultChild = TableRow;
+
+      class TableBlot extends Container {}
+      TableBlot.blotName = 'table';
+      TableBlot.tagName = 'TABLE';
+      TableBlot.allowedChildren = [TableBody, TableRow];
+      TableBlot.defaultChild = TableRow;
+
+      Quill.register(TableCell);
+      Quill.register(TableRow);
+      Quill.register(TableBody);
+      Quill.register(TableBlot);
+
+      const quill = new Quill(containerRef.current, {
+        theme: 'snow',
+        placeholder: 'Write your question details here...',
+        modules: {
+          toolbar: {
+            container: [
+              [{ size: ['small', false, 'large', 'huge'] }],
+              ['bold', 'italic', 'strike'],
+              ['code', 'code-block'],
+              ['link', 'image', 'blockquote'],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              [{ indent: '-1' }, { indent: '+1' }],
+              ['table'],
+              ['clean'],
+            ],
+            handlers: {
+              table() {
+                const editor = quill.root;
+
+                // Build a 3x3 table
+                const table = document.createElement('table');
+                Array.from({ length: 3 }).forEach(() => {
+                  const tr = document.createElement('tr');
+                  Array.from({ length: 3 }).forEach(() => {
+                    const td = document.createElement('td');
+                    td.innerHTML = '<br>';
+                    tr.appendChild(td);
+                  });
+                  table.appendChild(tr);
+                });
+
+                // Trailing paragraph so the cursor can escape below
+                const trailing = document.createElement('p');
+                trailing.innerHTML = '<br>';
+
+                // Find the block-level node at the cursor
+                let insertAfter = null;
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount) {
+                  let node = sel.anchorNode;
+                  while (node && node !== editor
+                    && node.parentNode !== editor) {
+                    node = node.parentNode;
+                  }
+                  if (node && node.parentNode === editor) {
+                    insertAfter = node;
+                  }
+                }
+
+                // Pause Quill's MutationObserver so it won't strip
+                // the table during its optimize pass
+                const obs = quill.scroll && quill.scroll.observer;
+                if (obs) obs.disconnect();
+
+                if (insertAfter && insertAfter.nextSibling) {
+                  editor.insertBefore(trailing, insertAfter.nextSibling);
+                  editor.insertBefore(table, trailing);
+                } else {
+                  editor.appendChild(table);
+                  editor.appendChild(trailing);
+                }
+
+                // Resume observing
+                if (obs) {
+                  obs.observe(editor, {
+                    attributes: true,
+                    characterData: true,
+                    characterDataOldValue: true,
+                    childList: true,
+                    subtree: true,
+                  });
+                }
+
+                // Place cursor in the first cell
+                const firstCell = table.querySelector('td');
+                if (firstCell) {
+                  const domRange = document.createRange();
+                  domRange.setStart(firstCell, 0);
+                  domRange.collapse(true);
+                  if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(domRange);
+                  }
+                }
+
+                emitChange();
+                detectTableContext();
+              },
+            },
+          },
+        },
+      });
+      /* eslint-enable no-undef */
+
+      // Custom icons — toolbar is a sibling, so query from parent
+      const wrapper = containerRef.current.parentElement;
+      if (wrapper) {
+        const codeBtn = wrapper.querySelector('.ql-code');
+        if (codeBtn) {
+          codeBtn.innerHTML = '<svg viewBox="0 0 18 18"><polyline class="ql-stroke" points="5 7 1 9 5 11" fill="none" stroke-width="1.5"/><polyline class="ql-stroke" points="13 7 17 9 13 11" fill="none" stroke-width="1.5"/><line class="ql-stroke" x1="10" y1="4" x2="8" y2="14" stroke-width="1.5"/></svg>';
+        }
+        const codeBlockBtn = wrapper.querySelector('.ql-code-block');
+        if (codeBlockBtn) {
+          codeBlockBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="1" y="2" width="16" height="14" rx="2" fill="none" stroke-width="1.2"/><line class="ql-stroke" x1="4" y1="6" x2="8" y2="6" stroke-width="1.2"/><line class="ql-stroke" x1="4" y1="9" x2="11" y2="9" stroke-width="1.2"/><line class="ql-stroke" x1="4" y1="12" x2="7" y2="12" stroke-width="1.2"/></svg>';
+        }
+        const tableBtn = wrapper.querySelector('.ql-table');
+        if (tableBtn) {
+          tableBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" height="12" width="12" x="3" y="3" fill="none" stroke-width="1"/><line class="ql-stroke" x1="3" y1="7" x2="15" y2="7"/><line class="ql-stroke" x1="3" y1="11" x2="15" y2="11"/><line class="ql-stroke" x1="7" y1="3" x2="7" y2="15"/><line class="ql-stroke" x1="11" y1="3" x2="11" y2="15"/></svg>';
         }
       }
-    }
-  };
 
-  const charCount = editorRef.current?.textContent?.length || 0;
+      quillRef.current = quill;
+
+      quill.on('text-change', () => {
+        emitChange();
+        detectTableContext();
+      });
+
+      quill.on('selection-change', () => {
+        detectTableContext();
+      });
+
+      // Detect table context on click inside editor
+      quill.root.addEventListener('click', detectTableContext);
+    });
+
+    return undefined;
+  }, []);
+
   const isValid = charCount >= minChars;
 
   return html`
-    <div className="editor-wrapper">
-      <${RichTextToolbar} onFormat=${handleFormat} activeFormats=${activeFormats} />
-      <div
-        ref=${editorRef}
-        className="editor-content"
-        contentEditable
-        onInput=${handleInput}
-        onPaste=${handlePaste}
-        onKeyDown=${handleEditorKeyDown}
-        onKeyUp=${updateActiveFormats}
-        onClick=${updateActiveFormats}
-        data-placeholder=""
-        dangerouslySetInnerHTML=${{ __html: value }}
-      />
-      <div className=${`char-counter ${!isValid && charCount > 0 ? 'warning' : ''}`}>
-        ${charCount} / ${minChars} characters minimum
-      </div>
+    <div className="quill-editor-wrapper">
+      <div ref=${containerRef} />
+      ${showTableTools && html`
+        <div className="table-toolbar">
+          <div className="table-toolbar-group">
+            <span className="table-toolbar-label">Row</span>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addRow('above'); }}
+              title="Add Row Above">+ Above</button>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addRow('below'); }}
+              title="Add Row Below">+ Below</button>
+            <button type="button" className="table-toolbar-btn table-toolbar-btn-danger"
+              onMouseDown=${(e) => { e.preventDefault(); deleteRow(); }}
+              title="Delete Row">\u00D7 Delete</button>
+          </div>
+          <div className="table-toolbar-group">
+            <span className="table-toolbar-label">Column</span>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addColumn('left'); }}
+              title="Add Column Left">+ Left</button>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addColumn('right'); }}
+              title="Add Column Right">+ Right</button>
+            <button type="button" className="table-toolbar-btn table-toolbar-btn-danger"
+              onMouseDown=${(e) => { e.preventDefault(); deleteColumn(); }}
+              title="Delete Column">\u00D7 Delete</button>
+          </div>
+          <div className="table-toolbar-group">
+            <span className="table-toolbar-label">Merge</span>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); mergeCellRight(); }}
+              title="Merge Cell Right">\u2192 Right</button>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); mergeCellDown(); }}
+              title="Merge Cell Down">\u2193 Down</button>
+          </div>
+          <div className="table-toolbar-group">
+            <button type="button" className="table-toolbar-btn table-toolbar-btn-danger"
+              onMouseDown=${(e) => { e.preventDefault(); deleteTable(); }}
+              title="Delete Table">\u00D7 Delete Table</button>
+          </div>
+        </div>
+      `}
+      ${!isValid && html`
+        <div className=${`char-counter ${charCount > 0 ? 'warning' : ''}`}>
+          ${charCount} / ${minChars} characters minimum
+        </div>
+      `}
     </div>
-    <input
-      ref=${fileInputRef}
-      type="file"
-      accept="image/*"
-      style=${{ display: 'none' }}
-      onChange=${handleImageUpload}
-    />
-    ${showCodeModal && html`
-      <${CodeBlockModal}
-        onInsert=${insertCodeBlock}
-        onClose=${() => setShowCodeModal(false)}
-      />
-    `}
   `;
 }
+
+// ============================================
+// CATEGORY SEARCH
+// ============================================
 
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -640,6 +558,10 @@ function CategorySearch({ value, onChange, onSelect }) {
     </div>
   `;
 }
+
+// ============================================
+// TAGS INPUT
+// ============================================
 
 function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const [inputValue, setInputValue] = useState('');
@@ -747,12 +669,18 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
           `)}
         </div>
       `}
-      <div className="tags-helper">
-        ${tags.length}/${maxTags} tags used
-      </div>
+      ${tags.length === 0 && html`
+        <div className="tags-helper">
+          Add at least 1 tag
+        </div>
+      `}
     </div>
   `;
 }
+
+// ============================================
+// PREVIEW MODAL
+// ============================================
 
 function PreviewModal({
   title, category, body, tags, onBack, onPost,
@@ -801,13 +729,42 @@ function PreviewModal({
   `;
 }
 
+// ============================================
+// CREATE POST
+// ============================================
+
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [body, setBody] = useState('');
+  const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Single mutable ref that always holds the latest post JSON
+  const postDataRef = useRef({
+    title: '', category: '', body: null, tags: [],
+  });
+
+  const handleBodyChange = (htmlContent, jsonContent) => {
+    setBody(htmlContent);
+    setBodyJson(jsonContent);
+  };
+
+  // Update the single ref in-place whenever any field changes
+  useEffect(() => {
+    postDataRef.current = {
+      title,
+      category,
+      body: bodyJson,
+      tags,
+    };
+    // eslint-disable-next-line no-console
+    console.clear();
+    // eslint-disable-next-line no-console
+    console.log('Live post JSON:', postDataRef.current);
+  }, [title, category, bodyJson, tags]);
 
   const missingFields = [];
   if (title.length < 15) missingFields.push('Title (min 15 characters)');
@@ -822,17 +779,55 @@ function CreatePost() {
     setShowPreview(true);
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    // Prepend # to each tag before sending to the backend
+    const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
+
     const postData = {
       title,
       category,
       body,
-      tags,
+      tags: tagsWithHash,
     };
 
     // eslint-disable-next-line no-console
-    console.log('Submitting post:', postData);
-    // Add your DB submission logic here
+    console.log('Sending post data:', postData);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // eslint-disable-next-line no-console
+        console.log('Post created successfully:', result);
+        // eslint-disable-next-line no-alert
+        alert('Your question has been posted successfully!');
+        // Reset form
+        setTitle('');
+        setCategory('');
+        setBody('');
+        setBodyJson(null);
+        setTags([]);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Error creating post:', result.error);
+        // eslint-disable-next-line no-alert
+        alert(`Error: ${result.error || 'Failed to create post'}`);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Network error:', error);
+      // eslint-disable-next-line no-alert
+      alert('Network error: Unable to connect to the server. Make sure the server is running.');
+    }
+
     setShowPreview(false);
   };
 
@@ -842,6 +837,7 @@ function CreatePost() {
       setTitle('');
       setCategory('');
       setBody('');
+      setBodyJson(null);
       setTags([]);
     }
   };
@@ -867,9 +863,11 @@ function CreatePost() {
             onInput=${(e) => setTitle(e.target.value)}
             placeholder=""
           />
-          <div className=${`char-counter ${title.length < 15 && title.length > 0 ? 'warning' : ''}`}>
-            ${title.length} / 15 characters minimum
-          </div>
+          ${title.length < 15 && html`
+            <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
+              ${title.length} / 15 characters minimum
+            </div>
+          `}
         </div>
 
         <div className="form-group">
@@ -880,19 +878,15 @@ function CreatePost() {
             Search for an existing category or create a new one.
           </p>
           ${category ? html`
-            <div>
-              <input
-                type="text"
-                value=${category}
-                readOnly
-                style=${{ backgroundColor: '#f6f7f8' }}
-              />
+            <div className="category-chip">
+              <span>${category}</span>
               <button
                 type="button"
+                className="category-remove"
                 onClick=${() => setCategory('')}
-                style=${{ marginTop: '8px', padding: '4px 12px', fontSize: '12px' }}
+                aria-label="Remove category"
               >
-                Change Category
+                ×
               </button>
             </div>
           ` : html`
@@ -911,9 +905,8 @@ function CreatePost() {
           <p className="helper-text">
             Include all the information someone would need to answer your question. Min 20 characters.
           </p>
-          <${RichTextEditor}
-            value=${body}
-            onChange=${setBody}
+          <${QuillEditor}
+            onChange=${handleBodyChange}
             minChars=${20}
           />
         </div>
