@@ -2,12 +2,10 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect } from '../../vendor/preact-hooks.js';
 
 /**
- * 1. MOCK BACKEND (Structured Data)
- * FIX: Removed 'postId' argument since we aren't using it yet.
+ * 1. MOCK BACKEND
+ * Simulates fetching post data.
  */
 async function fetchPostFromBackend() {
-  // FIX: Removed 'return' before setTimeout.
-  // The executor function (resolve) is called, we don't return the timeout ID.
   await new Promise((resolve) => {
     setTimeout(resolve, 600);
   });
@@ -18,6 +16,7 @@ async function fetchPostFromBackend() {
     topic: 'JavaScript',
     author: 'Sarah',
     tags: ['#react', '#frontend', '#hooks'],
+    // Layout: Text -> Image -> Text -> Code -> Text
     content: [
       {
         type: 'text',
@@ -26,7 +25,6 @@ async function fetchPostFromBackend() {
       {
         type: 'image',
         src: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80',
-        caption: 'Fig 1. The React Logo representing the modern ecosystem.',
       },
       {
         type: 'text',
@@ -49,6 +47,7 @@ async function fetchPostFromBackend() {
     ],
     comments: [
       { user: 'Guest', text: 'The code snippet is very helpful!' },
+      { user: 'DevMike', text: 'Thanks for sharing this.' },
     ],
   };
 }
@@ -65,7 +64,6 @@ const ContentBlock = ({ block }) => {
       return html`
         <figure class="block-image">
           <img src="${block.src}" alt="Post Image" />
-          ${block.caption && html`<figcaption>${block.caption}</figcaption>`}
         </figure>
       `;
 
@@ -127,18 +125,24 @@ const ForumPost = () => {
       <hr class="post-divider" />
 
       <div class="discussion-section">
-        <h3 class="discussion-header">Discussion (${post.comments.length})</h3>
+        <h3 class="discussion-header">
+          Discussion <span class="count">(${post.comments.length})</span>
+        </h3>
         
         <div class="comments-list">
           ${post.comments.map((c) => html`
-            <div class="comment-card">
-              <div class="comment-user">${c.user}</div>
-              <div class="comment-text">${c.text}</div>
+            <div class="comment-row">
+              <div class="comment-avatar">${c.user.charAt(0)}</div>
+              
+              <div class="comment-body">
+                <div class="comment-user">${c.user}</div>
+                <div class="comment-text">${c.text}</div>
+              </div>
             </div>
           `)}
         </div>
 
-        <div class="comment-input-area">
+        <div class="comment-input-wrapper">
           <input 
             type="text" 
             placeholder="Add a comment..." 
@@ -147,7 +151,7 @@ const ForumPost = () => {
             onInput=${(e) => setInputValue(e.target.value)}
             onKeyDown=${(e) => e.key === 'Enter' && addComment()}
           />
-          <button class="send-btn" onClick=${addComment}>Send</button>
+          <button class="send-btn" onClick=${addComment}>Post</button>
         </div>
       </div>
     </div>
