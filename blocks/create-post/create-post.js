@@ -822,17 +822,51 @@ function CreatePost() {
     setShowPreview(true);
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    // Prepend # to each tag before sending to the backend
+    const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
+
     const postData = {
       title,
       category,
       body,
-      tags,
+      tags: tagsWithHash,
     };
 
     // eslint-disable-next-line no-console
-    console.log('Submitting post:', postData);
-    // Add your DB submission logic here
+    console.log('Sending post data:', postData);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // eslint-disable-next-line no-console
+        console.log('Post created successfully:', result);
+        alert('Your question has been posted successfully!');
+        // Reset form
+        setTitle('');
+        setCategory('');
+        setBody('');
+        setTags([]);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Error creating post:', result.error);
+        alert(`Error: ${result.error || 'Failed to create post'}`);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Network error:', error);
+      alert('Network error: Unable to connect to the server. Make sure the server is running.');
+    }
+
     setShowPreview(false);
   };
 
