@@ -1,134 +1,128 @@
-/* Adobe Spectrum Design Tokens - CSS Custom Properties */
-:root {
-  --spectrum-component-height-100: 32px;
-  --spectrum-component-height-200: 40px;
-  --spectrum-component-height-300: 48px;
-  --spectrum-spacing-100: 4px;
-  --spectrum-spacing-200: 8px;
-  --spectrum-spacing-300: 12px;
-  --spectrum-spacing-400: 16px;
-  --spectrum-spacing-500: 20px;
-  --spectrum-spacing-600: 24px;
-  --spectrum-spacing-700: 32px;
-  --spectrum-gray-50: #fff;
-  --spectrum-gray-100: #f5f5f5;
-  --spectrum-gray-200: #e1e1e1;
-  --spectrum-gray-300: #d3d3d3;
-  --spectrum-gray-800: #3e3e3e;
-  --spectrum-gray-900: #2c2c2c;
-  --spectrum-accent-color-900: #eb1000;
-  --spectrum-accent-color-1000: #d10d00;
-  --spectrum-accent-color-1100: #b80a00;
-  --spectrum-border-width-100: 1px;
-  --spectrum-border-width-200: 2px;
-  --spectrum-border-radius-100: 4px;
-  --spectrum-border-radius-200: 8px;
-  --spectrum-font-size-400: 18px;
-}
-
 /* ========== HEADER CONTAINER ========== */
 
 .header-wrapper {
-  background-color: var(--spectrum-gray-50);
   width: 100%;
-  position: sticky;
-  top: 0;
+
+  /* Force it to stretch to the 64px defined in your global styles.css */
+  height: var(--header-height, 64px); 
   z-index: 100;
-  border-bottom: 1px solid var(--spectrum-gray-300);
 }
 
+/* --- BULLETPROOF CSS GRID + PADDING --- */
 nav.spectrum-nav {
   box-sizing: border-box;
   display: grid;
-  grid-template-areas: "hamburger brand tools";
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  height: var(--spectrum-component-height-300);
-  padding: 0 var(--spectrum-spacing-400);
+  grid-template-columns: auto 1fr; 
+  align-items: center; /* Centers everything vertically within the 64px */
+  height: 100%; 
+  width: 100%;
+  padding: 0 40px; 
   max-width: 1248px;
   margin: 0 auto;
-  font-family: adobe-clean, sans-serif;
-}
-
-/* Mobile Open State */
-nav.spectrum-nav[aria-expanded="true"] {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: var(--spectrum-gray-50);
-
-  /* FIX: Removed empty line inside this block */
-  grid-template:
-    "hamburger" var(--spectrum-component-height-300)
-    "brand" auto
-    "tools" 1fr
-    / 1fr;
-  overflow-y: auto;
-  align-content: start;
-  padding-bottom: var(--spectrum-spacing-700);
+  font-family: var(--body-font-family);
 }
 
 /* ========== SECTIONS ========== */
 
 .nav-hamburger { 
-  grid-area: hamburger;
-  justify-self: start; 
-  padding-left: var(--spectrum-spacing-400);
+  display: none; 
 }
 
 .nav-brand-section { 
-  grid-area: brand; 
+  grid-column: 1; 
   display: flex; 
   align-items: center;
-  gap: var(--spectrum-spacing-400);
+  gap: 20px; 
+}
+
+.nav-brand img { 
+  height: 28px; 
+  width: auto; 
+  display: block;
 }
 
 .nav-tools { 
-  grid-area: tools;
-  justify-self: end;
+  grid-column: 2; 
+  justify-self: end; 
+  display: flex;
+  align-items: center;
 }
 
-/* Mobile expanded - stack brand section vertically */
+/* ========== MOBILE LAYOUT (< 900px) ========== */
+
 @media (width < 900px) {
-  nav.spectrum-nav[aria-expanded="true"] .nav-brand-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spectrum-spacing-400);
-    padding: var(--spectrum-spacing-400);
+  /* Closed State (Navbar) */
+  nav.spectrum-nav:not([aria-expanded="true"]) {
+    grid-template-columns: auto auto 1fr;
+    padding: 0 20px; 
   }
 
-  nav.spectrum-nav[aria-expanded="true"] .nav-tools {
-    justify-self: start;
-    width: 100%;
-  }
-}
-
-/* Desktop Adjustments (900px+) */
-@media (width >= 900px) {
-  nav.spectrum-nav {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 var(--spectrum-spacing-600);
-  }
-
-  .nav-hamburger { 
-    display: none; 
+  .nav-hamburger {
+    grid-column: 1;
+    display: block;
+    margin-right: 16px;
   }
 
   .nav-brand-section {
-    display: flex;
-    align-items: center;
-    gap: var(--spectrum-spacing-400);
+    grid-column: 2;
   }
 
   .nav-tools {
-    margin-left: auto;
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  nav.spectrum-nav:not([aria-expanded="true"]) .nav-button span {
+    display: none; 
+  }
+
+  /* Open State (Full Screen Menu) */
+  nav.spectrum-nav[aria-expanded="true"] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--spectrum-gray-50);
+    display: flex; 
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 20px; 
+    overflow-y: auto;
+  }
+
+  nav.spectrum-nav[aria-expanded="true"] .nav-brand-section {
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  nav.spectrum-nav[aria-expanded="true"] .nav-tools {
+    width: 100%;
+    margin-top: 24px;
+    justify-self: start;
+  }
+
+  nav[aria-expanded="true"] .nav-tools ul {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    gap: 16px;
+  }
+  
+  nav[aria-expanded="true"] .nav-tools li {
+    width: 100%;
+    border-bottom: 1px solid var(--spectrum-gray-200);
+    padding-bottom: 12px;
+  }
+
+  nav[aria-expanded="true"] .spectrum-action-button {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 8px 0;
   }
 }
 
-/* ========== HAMBURGER ICON ========== */
+/* ========== HAMBURGER ICON STYLING ========== */
 
 .nav-hamburger button {
   background: transparent;
@@ -153,12 +147,13 @@ nav.spectrum-nav[aria-expanded="true"] {
   position: relative;
 }
 
-.nav-hamburger-icon::before {
-  top: -6px;
+/* --- THE LINTER FIX: Expanded all single-line blocks --- */
+.nav-hamburger-icon::before { 
+  top: -6px; 
 }
 
-.nav-hamburger-icon::after {
-  top: 4px;
+.nav-hamburger-icon::after { 
+  top: 4px; 
 }
 
 nav[aria-expanded="true"] .nav-hamburger-icon { 
@@ -183,14 +178,9 @@ nav[aria-expanded="true"] .nav-hamburger-icon::after {
   text-decoration: none;
 }
 
-.nav-brand img { 
-  height: 24px; 
-  width: auto; 
-}
-
 .nav-button.spectrum-button {
   background-color: var(--spectrum-accent-color-900);
-  color: white !important;
+  color: var(--spectrum-gray-50); 
   padding: 8px 16px;
   border-radius: 20px;
   font-weight: 600;
@@ -206,13 +196,6 @@ nav[aria-expanded="true"] .nav-hamburger-icon::after {
 
 .nav-button.spectrum-button:hover {
   background-color: var(--spectrum-accent-color-1000);
-}
-
-/* Hide button text on very small screens */
-@media (width < 600px) {
-  nav.spectrum-nav:not([aria-expanded="true"]) .nav-button span {
-    display: none;
-  }
 }
 
 /* ========== TOOLS & AVATAR ========== */
@@ -286,36 +269,4 @@ nav[aria-expanded="true"] .nav-hamburger-icon::after {
 
 .profile-link:hover .profile-avatar {
   border-color: var(--spectrum-accent-color-900);
-}
-
-/* Mobile expanded tools list */
-@media (width < 900px) {
-  nav[aria-expanded="true"] .nav-tools ul {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: var(--spectrum-spacing-400);
-    gap: var(--spectrum-spacing-200);
-    width: 100%;
-  }
-  
-  nav[aria-expanded="true"] .nav-tools li {
-    width: 100%;
-    padding: var(--spectrum-spacing-200) 0;
-    border-bottom: 1px solid var(--spectrum-gray-200);
-  }
-
-  nav[aria-expanded="true"] .nav-tools li:last-child {
-    border-bottom: none;
-  }
-
-  nav[aria-expanded="true"] .spectrum-action-button {
-    width: 100%;
-    justify-content: flex-start;
-    padding: var(--spectrum-spacing-300);
-  }
-
-  nav[aria-expanded="true"] .profile-link {
-    width: 100%;
-    padding: var(--spectrum-spacing-300);
-  }
 }

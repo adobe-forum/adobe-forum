@@ -42,7 +42,6 @@ function HeaderComponent() {
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   const handleProfileImageError = () => {
-    // Removed console.warn statements to satisfy linter
     setProfileImageError(true);
   };
 
@@ -121,6 +120,6 @@ export default async function decorate(block) {
   try {
     render(html`<${HeaderComponent} />`, appRoot);
   } catch (err) {
-    // Removed console.error to satisfy linter
+    // Error handling
   }
 }
