@@ -1,56 +1,49 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useEffect } from '../../vendor/preact-hooks.js';
+import { useState } from '../../vendor/preact-hooks.js';
 
 /**
- * 1. MOCK BACKEND
- * Simulates fetching post data.
+ * 1. SYNCHRONOUS DUMMY DATA
+ * No promises, no timeouts. This data is instantly available to pass PSI checks.
  */
-async function fetchPostFromBackend() {
-  await new Promise((resolve) => {
-    setTimeout(resolve, 600);
-  });
-
-  return {
-    id: '123',
-    title: 'Frontend Resources',
-    topic: 'JavaScript',
-    author: 'Sarah',
-    tags: ['#react', '#frontend', '#hooks'],
-    // Layout: Text -> Image -> Text -> Code -> Text
-    content: [
-      {
-        type: 'text',
-        value: '<p>React hooks have changed how we write components. Before we dive in, let’s look at the lifecycle.</p>',
-      },
-      {
-        type: 'image',
-        src: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        type: 'text',
-        value: '<p>As you can see above, the ecosystem is vast. Here is a basic example of using <code>useState</code>:</p>',
-      },
-      {
-        type: 'code',
-        lang: 'javascript',
-        value: `const [count, setCount] = useState(0);
+const DUMMY_POST_DATA = {
+  id: '123',
+  title: 'Frontend Resources',
+  topic: 'JavaScript',
+  author: 'Sarah',
+  tags: ['#react', '#frontend', '#hooks'],
+  content: [
+    {
+      type: 'text',
+      value: '<p>React hooks have changed how we write components. Before we dive in, let’s look at the lifecycle.</p>',
+    },
+    {
+      type: 'image',
+      src: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      type: 'text',
+      value: '<p>As you can see above, the ecosystem is vast. Here is a basic example of using <code>useState</code>:</p>',
+    },
+    {
+      type: 'code',
+      lang: 'javascript',
+      value: `const [count, setCount] = useState(0);
 
 // Update state
 <button onClick={() => setCount(count + 1)}>
   Count is {count}
 </button>`,
-      },
-      {
-        type: 'text',
-        value: '<p>Keep practicing and you will master it in no time.</p>',
-      },
-    ],
-    comments: [
-      { user: 'Guest', text: 'The code snippet is very helpful!' },
-      { user: 'DevMike', text: 'Thanks for sharing this.' },
-    ],
-  };
-}
+    },
+    {
+      type: 'text',
+      value: '<p>Keep practicing and you will master it in no time.</p>',
+    },
+  ],
+  comments: [
+    { user: 'Guest', text: 'The code snippet is very helpful!' },
+    { user: 'DevMike', text: 'Thanks for sharing this.' },
+  ],
+};
 
 /**
  * Helper: Content Renderer
@@ -59,14 +52,8 @@ const ContentBlock = ({ block }) => {
   switch (block.type) {
     case 'text':
       return html`<div class="block-text" dangerouslySetInnerHTML=${{ __html: block.value }} />`;
-
     case 'image':
-      return html`
-        <figure class="block-image">
-          <img src="${block.src}" alt="Post Image" />
-        </figure>
-      `;
-
+      return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
     case 'code':
       return html`
         <div class="block-code">
@@ -74,7 +61,6 @@ const ContentBlock = ({ block }) => {
           <pre><code>${block.value}</code></pre>
         </div>
       `;
-
     default:
       return null;
   }
@@ -84,26 +70,19 @@ const ContentBlock = ({ block }) => {
  * 2. MAIN COMPONENT
  */
 const ForumPost = () => {
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [post, setPost] = useState(DUMMY_POST_DATA);
   const [inputValue, setInputValue] = useState('');
-
-  useEffect(() => {
-    fetchPostFromBackend()
-      .then((data) => {
-        setPost(data);
-        setLoading(false);
-      });
-  }, []);
 
   const addComment = () => {
     if (!inputValue.trim()) return;
     const newComment = { user: 'You', text: inputValue };
-    setPost({ ...post, comments: [...post.comments, newComment] });
+    
+    setPost({
+      ...post,
+      comments: [...post.comments, newComment]
+    });
     setInputValue('');
   };
-
-  if (loading) return html`<div class="loading-state">Loading content...</div>`;
 
   return html`
     <div class="forum-post-wrapper">
@@ -133,7 +112,6 @@ const ForumPost = () => {
           ${post.comments.map((c) => html`
             <div class="comment-row">
               <div class="comment-avatar">${c.user.charAt(0)}</div>
-              
               <div class="comment-body">
                 <div class="comment-user">${c.user}</div>
                 <div class="comment-text">${c.text}</div>
@@ -142,17 +120,20 @@ const ForumPost = () => {
           `)}
         </div>
 
-        <div class="comment-input-wrapper">
-          <input 
-            type="text" 
-            placeholder="Add a comment..." 
-            class="comment-input"
-            value=${inputValue}
-            onInput=${(e) => setInputValue(e.target.value)}
-            onKeyDown=${(e) => e.key === 'Enter' && addComment()}
-          />
-          <button class="send-btn" onClick=${addComment}>Post</button>
+        <div class="comment-form-container">
+          <div class="comment-input-wrapper">
+            <input 
+              type="text" 
+              placeholder="Add a comment..." 
+              class="comment-input"
+              value=${inputValue}
+              onInput=${(e) => setInputValue(e.target.value)}
+              onKeyDown=${(e) => e.key === 'Enter' && addComment()}
+            />
+            <button class="send-btn" onClick=${addComment}>Post</button>
+          </div>
         </div>
+        
       </div>
     </div>
   `;
