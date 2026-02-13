@@ -66,12 +66,12 @@ function loadQuill() {
     // Load CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/vendor/qill/quill.snow.css';
+    link.href = '/vendor/quill/quill.snow.css';
     document.head.appendChild(link);
 
     // Load JS
     const script = document.createElement('script');
-    script.src = '/vendor/qill/quill.min.js';
+    script.src = '/vendor/quill/quill.min.js';
     script.onload = () => {
       quillLoaded = true;
       resolve();
