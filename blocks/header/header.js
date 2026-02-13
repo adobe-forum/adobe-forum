@@ -1,5 +1,5 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState } from '../../vendor/preact-hooks.js';
+import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 // ============================================
 // ICON COMPONENTS
@@ -32,7 +32,219 @@ const UserIcon = () => html`
 `;
 
 // ============================================
-// HEADER COMPONENT
+// SIDEBAR COMPONENTS
+// ============================================
+
+const toId = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+const initialCategoryData = [
+  {
+    id: 'javascript',
+    name: 'JavaScript',
+    icon: '📁',
+    subcategories: [
+      { id: 'frontend-resources', name: 'Frontend Resources', icon: '📄' },
+    ],
+  },
+  {
+    id: 'python',
+    name: 'Python',
+    icon: '📁',
+    subcategories: [],
+  },
+  {
+    id: 'css-design',
+    name: 'CSS & Design',
+    icon: '📁',
+    subcategories: [],
+  },
+  {
+    id: 'devops',
+    name: 'DevOps',
+    icon: '📁',
+    subcategories: [
+      { id: 'engineering-handbook', name: 'Engineering Handbook', icon: '📄' },
+    ],
+  },
+];
+
+function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
+  return html`
+    <li class="category-item ${isCollapsed ? 'collapsed' : ''}">
+      <div class="category-header" onClick=${toggleCollapse}>
+        <span class="category-toggle">▼</span>
+        <span class="category-icon">${category.icon || '📁'}</span>
+        <span class="category-name">${category.name}</span>
+      </div>
+      <ul class="subcategory-list">
+        ${category.subcategories && category.subcategories.length > 0
+    ? category.subcategories.map((sub) => html`
+              <li 
+                key=${sub.id}
+                class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
+                onClick=${() => onSubcategoryClick(category.id, sub.id)}
+              >
+                <span class="subcategory-icon">${sub.icon || '📄'}</span>
+                <span>${sub.name}</span>
+              </li>
+            `)
+    : html`<div class="no-items">No pages yet</div>`
+}
+      </ul>
+    </li>
+  `;
+}
+
+function Sidebar({ authoredCategories }) {
+  // --- State ---
+  const [categories, setCategories] = useState(
+    authoredCategories && authoredCategories.length > 0 ? authoredCategories : initialCategoryData,
+  );
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeSubcategory, setActiveSubcategory] = useState(null);
+
+  // New Category Creation State
+  const [isCreating, setIsCreating] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [creationError, setCreationError] = useState('');
+
+  const inputRef = useRef(null);
+
+  // --- Effects ---
+  // Focus input when creation mode starts
+  useEffect(() => {
+    if (isCreating && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isCreating]);
+
+  // --- Handlers ---
+  const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
+
+  const handleSubcategoryClick = (categoryId, subcategoryId) => {
+    setActiveSubcategory(subcategoryId);
+  };
+
+  const startCreating = () => {
+    setIsCreating(true);
+    setNewCatName('');
+    setCreationError('');
+  };
+
+  const cancelCreating = () => {
+    setIsCreating(false);
+    setNewCatName('');
+    setCreationError('');
+  };
+
+  const handleCreateKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      cancelCreating();
+    } else if (e.key === 'Enter') {
+      const trimmedName = newCatName.trim();
+      if (!trimmedName) {
+        setCreationError('Name cannot be empty');
+        return;
+      }
+
+      // Duplicate Check (Case-insensitive)
+      const exists = categories.some(
+        (c) => c.name.toLowerCase() === trimmedName.toLowerCase(),
+      );
+
+      if (exists) {
+        setCreationError('Category already exists');
+        return;
+      }
+
+      // Add Category
+      const newCategory = {
+        id: toId(trimmedName),
+        name: trimmedName,
+        icon: '📁',
+        subcategories: [],
+      };
+
+      setCategories([newCategory, ...categories]);
+      cancelCreating();
+    }
+  };
+
+  const handleCreateInput = (e) => {
+    setNewCatName(e.target.value);
+    if (creationError) setCreationError(''); // Clear error while typing
+  };
+
+  // --- Filtering Logic ---
+  const filteredCategories = categories.map((category) => {
+    if (searchTerm === '') return category;
+    const categoryMatches = category.name.toLowerCase().includes(searchTerm);
+    // Fix: Broken into multiple lines to satisfy max-len rule
+    const filteredSubs = category.subcategories.filter((sub) => (
+      sub.name.toLowerCase().includes(searchTerm)
+    ));
+
+    if (categoryMatches || filteredSubs.length > 0) {
+      return {
+        ...category,
+        subcategories: filteredSubs.length > 0 ? filteredSubs : category.subcategories,
+      };
+    }
+    return null;
+  }).filter(Boolean);
+
+  return html`
+    <div class="sidebar">
+      <div class="search-container">
+        <input type="text" placeholder="Search..." value=${searchTerm} onInput=${handleSearch} />
+      </div>
+
+      <div class="explorer-header">
+        <h3>EXPLORER</h3>
+        <button class="add-category" title="Add Category" onClick=${startCreating}>
+          <${PlusIcon} />
+        </button>
+      </div>
+
+      ${isCreating && html`
+        <div class="new-category-form">
+          <input 
+            ref=${inputRef}
+            type="text" 
+            class="new-category-input ${creationError ? 'error' : ''}"
+            placeholder="Add category"
+            value=${newCatName}
+            onKeyDown=${handleCreateKeyDown}
+            onInput=${handleCreateInput}
+            onBlur=${cancelCreating} 
+          />
+          ${creationError && html`<div class="error-msg">${creationError}</div>`}
+        </div>
+      `}
+
+      <ul class="category-list">
+        ${filteredCategories.length > 0
+    ? filteredCategories.map((category) => html`
+              <${CategoryItem}
+                key=${category.id}
+                category=${category}
+                activeSubcategory=${activeSubcategory}
+                onSubcategoryClick=${handleSubcategoryClick}
+              />
+            `)
+    : html`<div class="no-results">No match found</div>`
+}
+      </ul>
+    </div>
+  `;
+}
+
+// ============================================
+// HEADER COMPONENT (Same as before)
 // ============================================
 
 function HeaderComponent() {
@@ -42,7 +254,6 @@ function HeaderComponent() {
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   const handleProfileImageError = () => {
-    // Removed console.warn statements to satisfy linter
     setProfileImageError(true);
   };
 
@@ -91,13 +302,8 @@ function HeaderComponent() {
             <a href="/profile" class="profile-link">
               <div class="profile-avatar">
                 ${!profileImageError
-    ? html`<img 
-                      src="/icons/profile.png" 
-                      alt="Profile" 
-                      onError=${handleProfileImageError}
-                    />`
-    : html`<${UserIcon} />`
-}
+    ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
+    : html`<${UserIcon} />`}
               </div>
             </a>
           </li>
@@ -112,15 +318,57 @@ function HeaderComponent() {
 // ============================================
 
 export default async function decorate(block) {
-  block.textContent = '';
+  const authoredCategories = [];
+  const ul = block.querySelector('ul');
+  if (ul) {
+    ul.querySelectorAll(':scope > li').forEach((li) => {
+      const categoryName = li.childNodes[0].textContent.trim();
+      const subList = li.querySelector('ul');
+      const subcategories = [];
+      if (subList) {
+        subList.querySelectorAll('li').forEach((subLi) => {
+          const name = subLi.textContent.trim();
+          subcategories.push({ id: toId(name), name, icon: '📄' });
+        });
+      }
+      authoredCategories.push({
+        id: toId(categoryName), name: categoryName, icon: '📁', subcategories,
+      });
+    });
+  }
 
-  const appRoot = document.createElement('div');
-  appRoot.className = 'header-wrapper';
-  block.append(appRoot);
+  block.textContent = '';
+  const headerWrapper = document.createElement('div');
+  headerWrapper.className = 'header-wrapper';
+  const sidebarWrapper = document.createElement('div');
+  sidebarWrapper.className = 'sidebar-wrapper';
+
+  block.append(headerWrapper);
+  block.append(sidebarWrapper);
 
   try {
-    render(html`<${HeaderComponent} />`, appRoot);
+    render(html`<${HeaderComponent} />`, headerWrapper);
+    render(html`<${Sidebar} authoredCategories=${authoredCategories} />`, sidebarWrapper);
   } catch (err) {
-    // Removed console.error to satisfy linter
+    // eslint-disable-next-line no-console
+    console.error('Render error:', err);
+  }
+
+  try {
+    const resp = await fetch('/footer.plain.html');
+    if (resp.ok) {
+      // Fix: Renamed variable from 'html' to 'footerHtml' to avoid shadowing
+      const footerHtml = await resp.text();
+      let footer = document.querySelector('footer');
+      if (!footer) {
+        footer = document.createElement('footer');
+        document.body.append(footer);
+      }
+      footer.innerHTML = footerHtml;
+      footer.classList.add('global-footer');
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load global footer', e);
   }
 }
