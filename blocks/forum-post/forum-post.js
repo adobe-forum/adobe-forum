@@ -76,10 +76,10 @@ const ForumPost = () => {
   const addComment = () => {
     if (!inputValue.trim()) return;
     const newComment = { user: 'You', text: inputValue };
-    
+
     setPost({
       ...post,
-      comments: [...post.comments, newComment]
+      comments: [...post.comments, newComment],
     });
     setInputValue('');
   };
