@@ -69,6 +69,13 @@ const ContentBlock = ({ block }) => {
   }
 };
 
+const ArrowIcon = () => html`
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+    <polyline points="12 5 19 12 12 19"></polyline>
+  </svg>
+`;
+
 /**
  * 2. MAIN COMPONENT
  */
@@ -141,7 +148,9 @@ const ForumPost = () => {
               onInput=${(e) => setInputValue(e.target.value)}
               onKeyDown=${(e) => e.key === 'Enter' && addComment()}
             />
-            <button class="send-btn" onClick=${addComment}>Post</button>
+            <button class="send-btn" onClick=${addComment} aria-label="Post comment">
+              <${ArrowIcon} />
+            </button>
           </div>
         </div>
         
