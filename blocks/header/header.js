@@ -114,7 +114,7 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
       </div>
       <ul class="subcategory-list">
         ${category.subcategories && category.subcategories.length > 0
-    ? category.subcategories.map((sub) => html`
+      ? category.subcategories.map((sub) => html`
               <li 
                 key=${sub.id}
                 class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
@@ -124,8 +124,8 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
                 <span>${sub.name}</span>
               </li>
             `)
-    : html`<div class="no-items">No pages yet</div>`
-}
+      : html`<div class="no-items">No pages yet</div>`
+    }
       </ul>
     </li>
   `;
@@ -264,7 +264,7 @@ function Sidebar({ authoredCategories }) {
 
       <ul class="category-list">
         ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
+      ? filteredCategories.map((category) => html`
               <${CategoryItem}
                 key=${category.id}
                 category=${category}
@@ -272,8 +272,8 @@ function Sidebar({ authoredCategories }) {
                 onSubcategoryClick=${handleSubcategoryClick}
               />
             `)
-    : html`<div class="no-results">No match found</div>`
-}
+      : html`<div class="no-results">No match found</div>`
+    }
       </ul>
     </div>
   `;
@@ -307,10 +307,10 @@ function HeaderComponent() {
             src="/icons/logo.svg"
             alt="Adobe Logo"
             onError=${(e) => {
-    if (e.target.src.endsWith('.svg')) {
-      e.target.src = '/icons/logo.png';
-    }
-  }}
+      if (e.target.src.endsWith('.svg')) {
+        e.target.src = '/icons/logo.png';
+      }
+    }}
           />
         </a>
 
@@ -338,8 +338,8 @@ function HeaderComponent() {
             <a href="/profile" class="profile-link">
               <div class="profile-avatar">
                 ${!profileImageError
-    ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
-    : html`<${UserIcon} />`}
+      ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
+      : html`<${UserIcon} />`}
               </div>
             </a>
           </li>
