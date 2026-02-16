@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
@@ -18,546 +19,849 @@ const EXISTING_CATEGORIES = [
   'html',
 ];
 
-const ICON_BASE_PATH = '/icons';
+// ============================================
+// DOM TO JSON CONVERTER
+// ============================================
 
-async function loadIcon(name) {
-  const resp = await fetch(`${ICON_BASE_PATH}/${name}.svg`);
-  return resp.text();
-}
-
-async function loadIcons(names) {
-  const entries = await Promise.all(
-    names.map(async (name) => [name, await loadIcon(name)]),
-  );
-  return Object.fromEntries(entries);
-}
-
-function ToolbarIcon({ svgMarkup }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (ref.current && svgMarkup) {
-      ref.current.innerHTML = svgMarkup;
-    }
-  }, [svgMarkup]);
-  return html`<span className="toolbar-icon" ref=${ref} />`;
-}
-
-function RichTextToolbar({ onFormat, activeFormats }) {
-  const [icons, setIcons] = useState({});
-  const [fontSizeOpen, setFontSizeOpen] = useState(false);
-  const fontSizeRef = useRef(null);
-
-  useEffect(() => {
-    const iconNames = [
-      'font-size', 'bold', 'italic', 'strikethrough',
-      'code', 'code-block', 'superscript', 'link', 'quote', 'image', 'table',
-      'ordered-list', 'unordered-list', 'indent',
-      'help',
-      'preview',
-    ];
-    loadIcons(iconNames).then(setIcons);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (fontSizeRef.current
-        && !fontSizeRef.current.contains(e.target)) {
-        setFontSizeOpen(false);
+function domToJson(element) {
+  if (!element || element.nodeType !== 1) {
+    return null;
+  }
+  const obj = {
+    tag: element.tagName.toLowerCase(),
+  };
+  if (element.attributes.length > 0) {
+    obj.attributes = {};
+    Array.from(element.attributes).forEach((attr) => {
+      obj.attributes[attr.name] = attr.value;
+    });
+  }
+  const children = [];
+  Array.from(element.childNodes).forEach((node) => {
+    if (node.nodeType === 1) {
+      const childObj = domToJson(node);
+      if (childObj) children.push(childObj);
+    } else if (node.nodeType === 3) {
+      const text = node.nodeValue.trim();
+      if (text) {
+        children.push({ text });
       }
+    }
+  });
+  if (children.length > 0) {
+    obj.children = children;
+  }
+  return obj;
+}
+
+// ============================================
+// QUILL LOADER
+// ============================================
+
+let quillLoaded = false;
+
+function loadQuill() {
+  if (quillLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    // Load CSS
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/vendor/quill/quill.snow.css';
+    document.head.appendChild(link);
+
+    // Load JS
+    const script = document.createElement('script');
+    script.src = '/vendor/quill/quill.min.js';
+    script.onload = () => {
+      quillLoaded = true;
+      resolve();
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener(
-      'mousedown',
-      handleClickOutside,
-    );
-  }, []);
-
-  const fontSizes = [
-    { label: 'Small', value: '2' },
-    { label: 'Normal', value: '3' },
-    { label: 'Large', value: '4' },
-    { label: 'Huge', value: '5' },
-  ];
-
-  const formatButtons = [
-    { iconName: 'bold', command: 'bold', label: 'Bold' },
-    { iconName: 'italic', command: 'italic', label: 'Italic' },
-    { iconName: 'strikethrough', command: 'strikeThrough', label: 'Strikethrough' },
-  ];
-
-  const insertButtons = [
-    { iconName: 'code', command: 'code', label: 'Inline Code' },
-    { iconName: 'code-block', command: 'codeBlock', label: 'Code Block' },
-    { iconName: 'superscript', command: 'superscript', label: 'Superscript' },
-    { iconName: 'link', command: 'link', label: 'Insert Link' },
-    { iconName: 'quote', command: 'quote', label: 'Quote' },
-    { iconName: 'image', command: 'image', label: 'Insert Image' },
-    { iconName: 'table', command: 'table', label: 'Insert Table' },
-  ];
-
-  const listButtons = [
-    { iconName: 'ordered-list', command: 'insertOrderedList', label: 'Numbered List' },
-    { iconName: 'unordered-list', command: 'insertUnorderedList', label: 'Bulleted List' },
-    { iconName: 'indent', command: 'indent', label: 'Indent' },
-  ];
-
-  const moreButtons = [
-    { iconName: 'help', command: 'help', label: 'Help' },
-  ];
-
-  const viewButtons = [
-    { iconName: 'preview', command: 'preview', label: 'Preview' },
-  ];
-
-  const renderButtons = (buttons) => buttons.map((btn) => html`
-    <button
-      key=${btn.command}
-      className=${`toolbar-btn ${activeFormats.includes(btn.command) ? 'active' : ''}`}
-      onClick=${() => onFormat(btn.command)}
-      title=${btn.label}
-      type="button"
-    >
-      <${ToolbarIcon} svgMarkup=${icons[btn.iconName]} />
-    </button>
-  `);
-
-  return html`
-    <div className="editor-toolbar">
-      <div className="toolbar-group">
-        <div className="font-size-wrapper" ref=${fontSizeRef}>
-          <button
-            type="button"
-            className=${`toolbar-btn ${fontSizeOpen ? 'active' : ''}`}
-            onClick=${() => setFontSizeOpen(!fontSizeOpen)}
-            title="Font Size"
-          >
-            <${ToolbarIcon} svgMarkup=${icons['font-size']} />
-          </button>
-          ${fontSizeOpen && html`
-            <div className="font-size-dropdown">
-              ${fontSizes.map((fs) => html`
-                <div
-                  key=${fs.value}
-                  className="font-size-option"
-                  onClick=${() => {
-    onFormat(`fontSize:${fs.value}`);
-    setFontSizeOpen(false);
-  }}
-                >
-                  <span style=${{ fontSize: `${fs.value * 4 + 6}px` }}>${fs.label}</span>
-                </div>
-              `)}
-            </div>
-          `}
-        </div>
-        ${renderButtons(formatButtons)}
-      </div>
-      <div className="toolbar-group">${renderButtons(insertButtons)}</div>
-      <div className="toolbar-group">${renderButtons(listButtons)}</div>
-      <div className="toolbar-group">${renderButtons(moreButtons)}</div>
-      <div className="toolbar-group">${renderButtons(viewButtons)}</div>
-    </div>
-  `;
+    script.onerror = () => reject(new Error('Failed to load Quill'));
+    document.head.appendChild(script);
+  });
 }
 
-function CodeBlockModal({ onInsert, onClose }) {
-  const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('');
-  const [langOpen, setLangOpen] = useState(false);
-  const textareaRef = useRef(null);
-  const langRef = useRef(null);
+// ============================================
+// QUILL EDITOR COMPONENT
+// ============================================
 
-  const languages = [
-    '', 'javascript', 'python', 'java', 'html', 'css',
-    'sql', 'typescript', 'bash', 'json', 'xml', 'php', 'ruby', 'go', 'rust',
-  ];
+function QuillEditor({ onChange, minChars = 20 }) {
+  const containerRef = useRef(null);
+  const quillRef = useRef(null);
+  const activeCellRef = useRef(null);
+  const resizeRef = useRef(null);
+  const [charCount, setCharCount] = useState(0);
+  const [showTableTools, setShowTableTools] = useState(false);
 
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+  const emitChange = () => {
+    const quill = quillRef.current;
+    if (!quill) return;
+    const editorEl = quill.root;
+    const htmlContent = editorEl.innerHTML;
+    const jsonContent = domToJson(editorEl);
+    const textLength = editorEl.textContent.trim().length;
+    setCharCount(textLength);
+    onChange(htmlContent, jsonContent);
+  };
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (langRef.current && !langRef.current.contains(e.target)) {
-        setLangOpen(false);
-      }
+  // ---- Image resize overlay ----
+
+  const clearImageResize = () => {
+    if (!resizeRef.current) return;
+    const { overlay } = resizeRef.current;
+    if (overlay && overlay.parentNode) overlay.remove();
+    resizeRef.current = null;
+  };
+
+  const showImageResize = (img) => {
+    const quill = quillRef.current;
+    if (!quill) return;
+
+    // Don't re-create overlay for the same image
+    if (resizeRef.current && resizeRef.current.img === img) return;
+    clearImageResize();
+
+    // containerRef.current IS the .ql-container (Quill transforms it)
+    const qlContainer = containerRef.current;
+    if (!qlContainer) return;
+
+    // Prevent native browser image drag
+    img.setAttribute('draggable', 'false');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'img-resize-overlay';
+
+    const corners = ['nw', 'ne', 'sw', 'se'];
+    corners.forEach((pos) => {
+      const handle = document.createElement('div');
+      handle.className = `img-resize-handle img-resize-handle-${pos}`;
+      handle.dataset.pos = pos;
+      overlay.appendChild(handle);
+    });
+
+    qlContainer.appendChild(overlay);
+    resizeRef.current = { img, overlay };
+
+    // Position overlay on top of the image, accounting for editor scroll
+    const positionOverlay = () => {
+      const editorEl = quill.root;
+      const cRect = qlContainer.getBoundingClientRect();
+      const iRect = img.getBoundingClientRect();
+      overlay.style.top = `${iRect.top - cRect.top + editorEl.scrollTop}px`;
+      overlay.style.left = `${iRect.left - cRect.left + editorEl.scrollLeft}px`;
+      overlay.style.width = `${iRect.width}px`;
+      overlay.style.height = `${iRect.height}px`;
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    positionOverlay();
 
-  const handleInsert = () => {
-    if (code.trim()) {
-      onInsert(code, language);
-    }
-    onClose();
-  };
+    // Attach drag logic directly on each handle
+    corners.forEach((pos) => {
+      const handle = overlay.querySelector(`.img-resize-handle-${pos}`);
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') onClose();
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const ta = textareaRef.current;
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const newCode = `${code.substring(0, start)}  ${code.substring(end)}`;
-      setCode(newCode);
-      requestAnimationFrame(() => {
-        ta.selectionStart = start + 2;
-        ta.selectionEnd = start + 2;
-      });
-    }
-  };
+        const startX = e.clientX;
+        const startW = img.getBoundingClientRect().width;
+        const startH = img.getBoundingClientRect().height;
+        const ratio = startH / startW;
+        const maxW = qlContainer.clientWidth;
 
-  return html`
-    <div className="code-modal-overlay" onClick=${onClose}>
-      <div className="code-modal" onClick=${(e) => e.stopPropagation()}>
-        <div className="code-modal-header">
-          <h3>Insert Code Block</h3>
-          <button type="button" className="code-modal-close" onClick=${onClose}>×</button>
-        </div>
-        <div className="code-modal-body">
-          <label className="code-modal-label">
-            Language
-            <div className="lang-select-wrapper" ref=${langRef}>
-              <button
-                type="button"
-                className="lang-select-btn"
-                onClick=${() => setLangOpen(!langOpen)}
-              >
-                ${language || 'Plain text'}
-                <span className="lang-select-arrow">${langOpen ? '\u25B2' : '\u25BC'}</span>
-              </button>
-              ${langOpen && html`
-                <div className="lang-select-dropdown">
-                  ${languages.map((lang) => html`
-                    <div
-                      key=${lang}
-                      className=${`lang-select-option ${language === lang ? 'selected' : ''}`}
-                      onClick=${() => { setLanguage(lang); setLangOpen(false); }}
-                    >
-                      ${lang || 'Plain text'}
-                    </div>
-                  `)}
-                </div>
-              `}
-            </div>
-          </label>
-          <textarea
-            ref=${textareaRef}
-            className="code-modal-textarea"
-            value=${code}
-            onInput=${(e) => setCode(e.target.value)}
-            onKeyDown=${handleKeyDown}
-            placeholder="Paste or type your code here..."
-            rows="10"
-          />
-        </div>
-        <div className="code-modal-footer">
-          <button type="button" className="btn btn-cancel" onClick=${onClose}>Cancel</button>
-          <button type="button" className="btn btn-submit" onClick=${handleInsert}>Insert Code</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
+        const onMouseMove = (ev) => {
+          ev.preventDefault();
+          const isLeft = pos.endsWith('w');
+          const dx = isLeft ? startX - ev.clientX : ev.clientX - startX;
+          let newW = Math.round(startW + dx);
+          if (newW < 50) newW = 50;
+          if (newW > maxW) newW = maxW;
+          const newH = Math.round(newW * ratio);
 
-function RichTextEditor({ value, onChange, minChars = 20 }) {
-  const [activeFormats, setActiveFormats] = useState([]);
-  const [showCodeModal, setShowCodeModal] = useState(false);
-  const editorRef = useRef(null);
-  const fileInputRef = useRef(null);
+          img.style.width = `${newW}px`;
+          img.style.height = `${newH}px`;
+          overlay.style.width = `${newW}px`;
+          overlay.style.height = `${newH}px`;
 
-  const updateActiveFormats = () => {
-    const formats = [];
-    if (document.queryCommandState('bold')) formats.push('bold');
-    if (document.queryCommandState('italic')) formats.push('italic');
-    if (document.queryCommandState('strikeThrough')) {
-      formats.push('strikeThrough');
-    }
-    if (document.queryCommandState('superscript')) {
-      formats.push('superscript');
-    }
-    if (document.queryCommandState('insertOrderedList')) {
-      formats.push('insertOrderedList');
-    }
-    if (document.queryCommandState('insertUnorderedList')) {
-      formats.push('insertUnorderedList');
-    }
+          // Re-position overlay
+          const editorEl = quill.root;
+          const cRect = qlContainer.getBoundingClientRect();
+          const iRect = img.getBoundingClientRect();
+          overlay.style.top = `${iRect.top - cRect.top + editorEl.scrollTop}px`;
+          overlay.style.left = `${iRect.left - cRect.left + editorEl.scrollLeft}px`;
+        };
 
-    const selection = window.getSelection();
-    if (selection.rangeCount) {
-      const anchor = selection.anchorNode?.parentElement;
-      if (anchor) {
-        const codeParent = anchor.closest('code');
-        if (codeParent && !codeParent.closest('pre')) {
-          formats.push('code');
-        }
-        if (codeParent && codeParent.closest('pre')) {
-          formats.push('codeBlock');
-        }
-        if (anchor.closest('a')) formats.push('link');
-        if (anchor.closest('blockquote')) formats.push('quote');
-      }
-    }
-    setActiveFormats(formats);
-  };
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          document.body.style.userSelect = '';
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-      updateActiveFormats();
-    }
-  };
+          // Persist width attribute via observer disconnect
+          const obs = quill.scroll && quill.scroll.observer;
+          if (obs) obs.disconnect();
 
-  const toggleInlineCode = () => {
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+          const finalW = img.getBoundingClientRect().width;
+          img.setAttribute('width', Math.round(finalW));
+          img.removeAttribute('height');
+          img.style.height = 'auto';
 
-    const range = selection.getRangeAt(0);
-    const codeParent = selection
-      .anchorNode?.parentElement?.closest('code');
+          if (obs) {
+            obs.observe(quill.scroll.domNode, {
+              attributes: true,
+              characterData: true,
+              characterDataOldValue: true,
+              childList: true,
+              subtree: true,
+            });
+          }
 
-    if (codeParent && !codeParent.closest('pre')) {
-      const parent = codeParent.parentNode;
-      while (codeParent.firstChild) {
-        parent.insertBefore(codeParent.firstChild, codeParent);
-      }
-      parent.removeChild(codeParent);
-    } else if (!range.collapsed) {
-      const code = document.createElement('code');
-      range.surroundContents(code);
-    }
-    handleInput();
-  };
+          positionOverlay();
+          emitChange();
+        };
 
-  const insertCodeBlock = (code, language) => {
-    editorRef.current?.focus();
-    const escaped = code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    const langAttr = language
-      ? ` class="language-${language}"`
-      : '';
-    const lines = escaped.split('\n');
-    const numberedLines = lines
-      .map((line) => `<div class="code-line">${line || ' '}</div>`)
-      .join('');
-    const langLabel = language
-      ? `<div class="code-lang-label">${language}</div>`
-      : '';
-    const blockHtml = `<pre>${langLabel}`
-      + `<code${langAttr}>${numberedLines}</code>`
-      + '</pre><p><br></p>';
-    document.execCommand('insertHTML', false, blockHtml);
-    handleInput();
-  };
-
-  const handleFormat = (command) => {
-    if (command.startsWith('fontSize:')) {
-      const size = command.split(':')[1];
-      document.execCommand('fontSize', false, size);
-      handleInput();
-      return;
-    }
-    if (command === 'link') {
-      // eslint-disable-next-line no-alert
-      const url = prompt('Enter URL:');
-      if (url) {
-        document.execCommand('createLink', false, url);
-      }
-    } else if (command === 'code') {
-      toggleInlineCode();
-      return;
-    } else if (command === 'codeBlock') {
-      setShowCodeModal(true);
-      return;
-    } else if (command === 'image') {
-      fileInputRef.current?.click();
-      return;
-    } else if (command === 'indent') {
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
-      const anchor = selection.anchorNode;
-      const editor = editorRef.current;
-      if (!editor) return;
-      let node = anchor?.nodeType === 3
-        ? anchor.parentElement : anchor;
-      if (node === editor) {
-        document.execCommand('formatBlock', false, 'p');
-        node = selection.anchorNode?.nodeType === 3
-          ? selection.anchorNode.parentElement
-          : selection.anchorNode;
-      }
-      let block = null;
-      while (node && node !== editor) {
-        if (node.parentElement === editor) {
-          block = node;
-          break;
-        }
-        node = node.parentElement;
-      }
-      if (block) {
-        const current = parseInt(
-          block.style.marginLeft || '0',
-          10,
-        );
-        block.style.marginLeft = `${current + 40}px`;
-      }
-      handleInput();
-      return;
-    } else if (command === 'quote') {
-      const selection = window.getSelection();
-      const anchor = selection.rangeCount
-        && selection.anchorNode;
-      const el = anchor?.nodeType === 3
-        ? anchor.parentElement : anchor;
-      const blockquote = el?.closest('blockquote');
-      if (blockquote) {
-        const p = document.createElement('p');
-        p.innerHTML = '<br>';
-        blockquote.parentNode.insertBefore(
-          p,
-          blockquote.nextSibling,
-        );
-        const range = document.createRange();
-        range.setStart(p, 0);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        handleInput();
-      } else {
-        document.execCommand(
-          'formatBlock',
-          false,
-          'blockquote',
-        );
-      }
-    } else {
-      document.execCommand(command, false, null);
-    }
-    updateActiveFormats();
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      editorRef.current?.focus();
-      const imgHtml = '<img src="'
-        + `${reader.result}" alt="${file.name}"`
-        + ' style="max-width:100%;height:auto;" />'
-        + '<p><br></p>';
-      document.execCommand('insertHTML', false, imgHtml);
-      handleInput();
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const normalizeCodeBlocks = () => {
-    if (!editorRef.current) return;
-    const pres = editorRef.current.querySelectorAll('pre');
-    pres.forEach((pre) => {
-      let code = pre.querySelector('code');
-      if (!code) {
-        code = document.createElement('code');
-        code.textContent = pre.textContent;
-        pre.innerHTML = '';
-        pre.appendChild(code);
-      }
-      if (code.querySelector('.code-line')) return;
-      const text = code.textContent;
-      const lines = text.split('\n');
-      code.innerHTML = '';
-      lines.forEach((line) => {
-        const div = document.createElement('div');
-        div.className = 'code-line';
-        div.textContent = line || ' ';
-        code.appendChild(div);
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
       });
     });
   };
 
-  const handlePaste = () => {
-    setTimeout(() => {
-      normalizeCodeBlocks();
-      handleInput();
-    }, 0);
-  };
-
-  const handleEditorKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      const selection = window.getSelection();
-      const anchor = selection.rangeCount && selection.anchorNode;
-      if (!anchor) return;
-
-      const el = anchor.nodeType === 3 ? anchor.parentElement : anchor;
-      const blockquote = el?.closest('blockquote');
-      if (blockquote) {
-        const text = anchor.textContent || '';
-        if (text.trim() === '') {
-          e.preventDefault();
-          // Remove the empty line inside the blockquote
-          const currentBlock = el.closest('div, p') || el;
-          if (currentBlock !== blockquote) {
-            blockquote.removeChild(currentBlock);
-          }
-          // Insert a new paragraph after the blockquote
-          const p = document.createElement('p');
-          p.innerHTML = '<br>';
-          blockquote.parentNode.insertBefore(p, blockquote.nextSibling);
-          // Move cursor into the new paragraph
-          const range = document.createRange();
-          range.setStart(p, 0);
-          range.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          handleInput();
-        }
-      }
+  const detectTableContext = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+      const anchor = selection.anchorNode?.nodeType === 3
+        ? selection.anchorNode.parentElement
+        : selection.anchorNode;
+      const cell = anchor?.closest('td, th');
+      activeCellRef.current = cell || null;
+      setShowTableTools(!!cell);
+    } else {
+      activeCellRef.current = null;
+      setShowTableTools(false);
     }
   };
 
-  const charCount = editorRef.current?.textContent?.length || 0;
+  // ---- Table operations ----
+
+  const addRow = (position) => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    if (!row) return;
+    const colCount = row.cells.length;
+    const newRow = document.createElement('tr');
+    Array.from({ length: colCount }).forEach(() => {
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      newRow.appendChild(td);
+    });
+    if (position === 'above') {
+      row.parentNode.insertBefore(newRow, row);
+    } else {
+      row.parentNode.insertBefore(newRow, row.nextSibling);
+    }
+    emitChange();
+  };
+
+  const addColumn = (position) => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const colIndex = cell.cellIndex;
+    Array.from(table.rows).forEach((row) => {
+      const newCell = document.createElement('td');
+      newCell.innerHTML = '<br>';
+      const insertIndex = position === 'left' ? colIndex : colIndex + 1;
+      if (insertIndex >= row.cells.length) {
+        row.appendChild(newCell);
+      } else {
+        row.insertBefore(newCell, row.cells[insertIndex]);
+      }
+    });
+    emitChange();
+  };
+
+  const deleteRow = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    const table = cell.closest('table');
+    if (!row || !table) return;
+    if (table.rows.length <= 1) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      table.parentNode.insertBefore(p, table);
+      table.remove();
+    } else {
+      row.remove();
+    }
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
+
+  const deleteColumn = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const colIndex = cell.cellIndex;
+    const firstRowCells = table.rows[0]?.cells.length || 0;
+    if (firstRowCells <= 1) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      table.parentNode.insertBefore(p, table);
+      table.remove();
+    } else {
+      Array.from(table.rows).forEach((row) => {
+        if (row.cells[colIndex]) {
+          row.cells[colIndex].remove();
+        }
+      });
+    }
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
+
+  const mergeCellRight = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const nextCell = cell.nextElementSibling;
+    if (!nextCell) return;
+    const currentSpan = parseInt(cell.getAttribute('colspan') || '1', 10);
+    const nextSpan = parseInt(nextCell.getAttribute('colspan') || '1', 10);
+    cell.setAttribute('colspan', currentSpan + nextSpan);
+    if (nextCell.textContent.trim()) {
+      cell.innerHTML += ` ${nextCell.innerHTML}`;
+    }
+    nextCell.remove();
+    emitChange();
+  };
+
+  const mergeCellDown = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    const nextRow = row?.nextElementSibling;
+    if (!nextRow) return;
+    const colIndex = cell.cellIndex;
+    const belowCell = nextRow.cells[colIndex];
+    if (!belowCell) return;
+    const currentSpan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+    const belowSpan = parseInt(belowCell.getAttribute('rowspan') || '1', 10);
+    cell.setAttribute('rowspan', currentSpan + belowSpan);
+    if (belowCell.textContent.trim()) {
+      cell.innerHTML += ` ${belowCell.innerHTML}`;
+    }
+    belowCell.remove();
+    emitChange();
+  };
+
+  const deleteTable = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    table.parentNode.insertBefore(p, table);
+    table.remove();
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
+
+  useEffect(() => {
+    if (!containerRef.current) return undefined;
+
+    loadQuill().then(() => {
+      if (quillRef.current) return;
+
+      // Register table blots so Quill recognises table elements
+      /* eslint-disable no-undef */
+      const Block = Quill.import('blots/block');
+      const Container = Quill.import('blots/container');
+
+      class TableCell extends Block {}
+      TableCell.blotName = 'td';
+      TableCell.tagName = 'TD';
+
+      class TableRow extends Container {}
+      TableRow.blotName = 'tr';
+      TableRow.tagName = 'TR';
+      TableRow.allowedChildren = [TableCell];
+      TableRow.defaultChild = TableCell;
+
+      class TableBody extends Container {}
+      TableBody.blotName = 'tbody';
+      TableBody.tagName = 'TBODY';
+      TableBody.allowedChildren = [TableRow];
+      TableBody.defaultChild = TableRow;
+
+      class TableBlot extends Container {}
+      TableBlot.blotName = 'table';
+      TableBlot.tagName = 'TABLE';
+      TableBlot.allowedChildren = [TableBody, TableRow];
+      TableBlot.defaultChild = TableRow;
+
+      Quill.register(TableCell);
+      Quill.register(TableRow);
+      Quill.register(TableBody);
+      Quill.register(TableBlot);
+
+      const quill = new Quill(containerRef.current, {
+        theme: 'snow',
+        placeholder: 'Write your question details here...',
+        modules: {
+          toolbar: {
+            container: [
+              [{ size: ['small', false, 'large', 'huge'] }],
+              ['bold', 'italic', 'strike'],
+              ['code', 'code-block'],
+              ['link', 'image', 'blockquote'],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              [{ indent: '-1' }, { indent: '+1' }],
+              ['table'],
+              ['clean'],
+            ],
+            handlers: {
+              table() {
+                const editor = quill.root;
+
+                // Build a 3x3 table
+                const table = document.createElement('table');
+                Array.from({ length: 3 }).forEach(() => {
+                  const tr = document.createElement('tr');
+                  Array.from({ length: 3 }).forEach(() => {
+                    const td = document.createElement('td');
+                    td.innerHTML = '<br>';
+                    tr.appendChild(td);
+                  });
+                  table.appendChild(tr);
+                });
+
+                // Trailing paragraph so the cursor can escape below
+                const trailing = document.createElement('p');
+                trailing.innerHTML = '<br>';
+
+                // Find the block-level node at the cursor
+                let insertAfter = null;
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount) {
+                  let node = sel.anchorNode;
+                  while (node && node !== editor
+                    && node.parentNode !== editor) {
+                    node = node.parentNode;
+                  }
+                  if (node && node.parentNode === editor) {
+                    insertAfter = node;
+                  }
+                }
+
+                // Pause Quill's MutationObserver so it won't strip
+                // the table during its optimize pass
+                const obs = quill.scroll && quill.scroll.observer;
+                if (obs) obs.disconnect();
+
+                if (insertAfter && insertAfter.nextSibling) {
+                  editor.insertBefore(trailing, insertAfter.nextSibling);
+                  editor.insertBefore(table, trailing);
+                } else {
+                  editor.appendChild(table);
+                  editor.appendChild(trailing);
+                }
+
+                // Resume observing
+                if (obs) {
+                  obs.observe(editor, {
+                    attributes: true,
+                    characterData: true,
+                    characterDataOldValue: true,
+                    childList: true,
+                    subtree: true,
+                  });
+                }
+
+                // Place cursor in the first cell
+                const firstCell = table.querySelector('td');
+                if (firstCell) {
+                  const domRange = document.createRange();
+                  domRange.setStart(firstCell, 0);
+                  domRange.collapse(true);
+                  if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(domRange);
+                  }
+                }
+
+                emitChange();
+                detectTableContext();
+                editor.classList.remove('ql-blank');
+              },
+            },
+          },
+        },
+      });
+      /* eslint-enable no-undef */
+
+      // Custom icons — toolbar is a sibling, so query from parent
+      const wrapper = containerRef.current.parentElement;
+      if (wrapper) {
+        const codeBtn = wrapper.querySelector('.ql-code');
+        if (codeBtn) {
+          codeBtn.innerHTML = '<svg viewBox="0 0 18 18"><polyline class="ql-stroke" points="5 7 1 9 5 11" fill="none" stroke-width="1.5"/><polyline class="ql-stroke" points="13 7 17 9 13 11" fill="none" stroke-width="1.5"/><line class="ql-stroke" x1="10" y1="4" x2="8" y2="14" stroke-width="1.5"/></svg>';
+        }
+        const codeBlockBtn = wrapper.querySelector('.ql-code-block');
+        if (codeBlockBtn) {
+          codeBlockBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="1" y="2" width="16" height="14" rx="2" fill="none" stroke-width="1.2"/><line class="ql-stroke" x1="4" y1="6" x2="8" y2="6" stroke-width="1.2"/><line class="ql-stroke" x1="4" y1="9" x2="11" y2="9" stroke-width="1.2"/><line class="ql-stroke" x1="4" y1="12" x2="7" y2="12" stroke-width="1.2"/></svg>';
+        }
+        const tableBtn = wrapper.querySelector('.ql-table');
+        if (tableBtn) {
+          tableBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" height="12" width="12" x="3" y="3" fill="none" stroke-width="1"/><line class="ql-stroke" x1="3" y1="7" x2="15" y2="7"/><line class="ql-stroke" x1="3" y1="11" x2="15" y2="11"/><line class="ql-stroke" x1="7" y1="3" x2="7" y2="15"/><line class="ql-stroke" x1="11" y1="3" x2="11" y2="15"/></svg>';
+        }
+
+        // Add tooltips to toolbar buttons
+        const tooltips = {
+          '.ql-bold': 'Bold',
+          '.ql-italic': 'Italic',
+          '.ql-strike': 'Strikethrough',
+          '.ql-code': 'Inline Code',
+          '.ql-code-block': 'Code Block',
+          '.ql-link': 'Insert Link',
+          '.ql-image': 'Insert Image',
+          '.ql-blockquote': 'Blockquote',
+          '.ql-list[value="ordered"]': 'Ordered List',
+          '.ql-list[value="bullet"]': 'Bullet List',
+          '.ql-indent[value="-1"]': 'Decrease Indent',
+          '.ql-indent[value="+1"]': 'Increase Indent',
+          '.ql-table': 'Insert Table',
+          '.ql-clean': 'Clear Formatting',
+        };
+        Object.entries(tooltips).forEach(([sel, tip]) => {
+          const btn = wrapper.querySelector(sel);
+          if (btn) btn.setAttribute('title', tip);
+        });
+
+        // Tooltip for the size dropdown
+        const sizeSelect = wrapper.querySelector('.ql-size');
+        if (sizeSelect) sizeSelect.setAttribute('title', 'Font Size');
+      }
+
+      quillRef.current = quill;
+
+      // Update line-number gutter on code blocks via CSS custom property.
+      // Uses requestAnimationFrame so the style update happens after Quill
+      // has finished processing, avoiding observer disconnect issues.
+      const updateCodeLineNumbers = () => {
+        requestAnimationFrame(() => {
+          const pres = quill.root.querySelectorAll('pre');
+          pres.forEach((pre) => {
+            const lineArr = pre.textContent.split('\n');
+            if (lineArr[lineArr.length - 1] === '') lineArr.pop();
+            const lineCount = lineArr.length || 1;
+            const nums = Array.from(
+              { length: lineCount },
+              (_, i) => i + 1,
+            ).join('\\a ');
+            pre.style.setProperty('--line-nums', `"${nums}"`);
+          });
+        });
+      };
+
+      // Keep a <p> above the first table so users can always type there
+      const ensureLeadingParagraph = () => {
+        requestAnimationFrame(() => {
+          const first = quill.root.firstElementChild;
+          if (first && first.tagName === 'TABLE') {
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            quill.root.insertBefore(p, first);
+          }
+        });
+      };
+
+      quill.on('text-change', () => {
+        clearImageResize();
+        emitChange();
+        detectTableContext();
+        updateCodeLineNumbers();
+        ensureLeadingParagraph();
+      });
+
+      quill.on('selection-change', () => {
+        detectTableContext();
+      });
+
+      quill.root.addEventListener('click', (e) => {
+        detectTableContext();
+        if (e.target.tagName === 'IMG') {
+          showImageResize(e.target);
+        } else if (!e.target.closest('.img-resize-overlay')) {
+          clearImageResize();
+        }
+      });
+
+      // Clear resize overlay when clicking outside the editor
+      document.addEventListener('mousedown', (e) => {
+        if (resizeRef.current
+          && !containerRef.current.contains(e.target)) {
+          clearImageResize();
+        }
+      });
+
+      // Intercept keyboard events with a capture-phase listener so it
+      // fires BEFORE Quill's handler. When tables exist Quill's delta
+      // model is out of sync with the DOM (table content isn't tracked
+      // in the delta), so we bypass Quill and handle edits ourselves.
+      containerRef.current.addEventListener('keydown', (e) => {
+        if (e.key !== 'Backspace' && e.key !== 'Delete'
+          && e.key !== 'Enter') return;
+
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+
+        // ── Inside a table cell ──
+        let nd = sel.anchorNode;
+        let insideTd = false;
+        while (nd && nd !== quill.root) {
+          if (nd.nodeName === 'TD') { insideTd = true; break; }
+          nd = nd.parentNode;
+        }
+
+        if (insideTd) {
+          e.stopPropagation();
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const br = document.createElement('br');
+            range.insertNode(br);
+            range.setStartAfter(br);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            emitChange();
+          }
+          return;
+        }
+
+        // ── Outside table cells ──
+        // If no tables in editor, let Quill handle normally
+        if (!quill.root.querySelector('table')) return;
+
+        // Tables exist → bypass Quill for all structural keys
+        e.stopPropagation();
+
+        let block = sel.anchorNode;
+        while (block && block.parentNode !== quill.root) {
+          block = block.parentNode;
+        }
+        if (!block) return;
+
+        const range = sel.getRangeAt(0);
+
+        // ── Backspace ──
+        if (e.key === 'Backspace') {
+          if (!range.collapsed) return; // browser handles selection
+
+          // Check if cursor is at start of block
+          const preRange = document.createRange();
+          preRange.setStart(block, 0);
+          preRange.setEnd(range.startContainer, range.startOffset);
+          const atStart = preRange.toString().length === 0;
+
+          if (atStart) {
+            e.preventDefault();
+            const prev = block.previousElementSibling;
+            if (!prev || prev.tagName === 'TABLE') return;
+
+            // Remove BR placeholder from empty prev
+            if (prev.lastChild && prev.lastChild.nodeName === 'BR'
+              && !prev.textContent.trim()) {
+              prev.removeChild(prev.lastChild);
+            }
+            // Mark merge point for cursor
+            const mergeNode = prev.lastChild;
+            const mergeOff = mergeNode && mergeNode.nodeType === 3
+              ? mergeNode.textContent.length : 0;
+            // Move content unless block is just an empty placeholder
+            const isEmpty = !block.textContent.trim()
+              && block.childNodes.length <= 1;
+            if (!isEmpty) {
+              while (block.firstChild) {
+                prev.appendChild(block.firstChild);
+              }
+            }
+            block.remove();
+            // Restore cursor at merge point
+            const nr = document.createRange();
+            if (mergeNode && mergeNode.nodeType === 3) {
+              nr.setStart(mergeNode, mergeOff);
+            } else if (mergeNode) {
+              nr.setStartAfter(mergeNode);
+            } else {
+              nr.setStart(prev, 0);
+            }
+            nr.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(nr);
+            emitChange();
+          }
+          // else: mid-block character deletion, browser handles natively
+          return;
+        }
+
+        // ── Delete ──
+        if (e.key === 'Delete') {
+          if (!range.collapsed) return;
+
+          const postRange = document.createRange();
+          postRange.setStart(range.endContainer, range.endOffset);
+          postRange.setEnd(block, block.childNodes.length);
+          const atEnd = postRange.toString().length === 0;
+
+          if (atEnd) {
+            e.preventDefault();
+            const next = block.nextElementSibling;
+            if (!next || next.tagName === 'TABLE') return;
+            const isNextEmpty = !next.textContent.trim()
+              && next.childNodes.length <= 1;
+            if (!isNextEmpty) {
+              while (next.firstChild) {
+                block.appendChild(next.firstChild);
+              }
+            }
+            next.remove();
+            emitChange();
+          }
+          return;
+        }
+
+        // ── Enter ──
+        if (e.key === 'Enter') {
+          // Inside a code block → insert newline, not a new paragraph
+          if (block.nodeName === 'PRE') {
+            e.preventDefault();
+            if (!range.collapsed) range.deleteContents();
+            const nl = document.createTextNode('\n');
+            range.insertNode(nl);
+            range.setStartAfter(nl);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            emitChange();
+            updateCodeLineNumbers();
+            return;
+          }
+
+          e.preventDefault();
+          if (!range.collapsed) range.deleteContents();
+
+          const newP = document.createElement('p');
+          const afterRange = document.createRange();
+          afterRange.setStart(range.startContainer, range.startOffset);
+          afterRange.setEnd(block, block.childNodes.length);
+          const frag = afterRange.extractContents();
+
+          if (frag.textContent.trim() || frag.querySelector('img')) {
+            newP.appendChild(frag);
+          } else {
+            newP.innerHTML = '<br>';
+          }
+          if (!block.textContent && !block.querySelector('img')) {
+            block.innerHTML = '<br>';
+          }
+          if (block.nextSibling) {
+            quill.root.insertBefore(newP, block.nextSibling);
+          } else {
+            quill.root.appendChild(newP);
+          }
+          const nr = document.createRange();
+          nr.setStart(newP, 0);
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+          emitChange();
+        }
+      }, true);
+
+      // Catch edits inside table cells and other DOM-inserted content
+      // that bypass Quill's text-change event
+      quill.root.addEventListener('input', () => {
+        const { root } = quill;
+        const hasVisualContent = root.textContent.trim().length > 0
+          || root.querySelector('table, img, iframe');
+        if (hasVisualContent) {
+          root.classList.remove('ql-blank');
+        }
+        emitChange();
+        updateCodeLineNumbers();
+        ensureLeadingParagraph();
+      });
+    });
+
+    return undefined;
+  }, []);
+
   const isValid = charCount >= minChars;
 
   return html`
-    <div className="editor-wrapper">
-      <${RichTextToolbar} onFormat=${handleFormat} activeFormats=${activeFormats} />
-      <div
-        ref=${editorRef}
-        className="editor-content"
-        contentEditable
-        onInput=${handleInput}
-        onPaste=${handlePaste}
-        onKeyDown=${handleEditorKeyDown}
-        onKeyUp=${updateActiveFormats}
-        onClick=${updateActiveFormats}
-        data-placeholder=""
-        dangerouslySetInnerHTML=${{ __html: value }}
-      />
-      <div className=${`char-counter ${!isValid && charCount > 0 ? 'warning' : ''}`}>
-        ${charCount} / ${minChars} characters minimum
-      </div>
+    <div className="quill-editor-wrapper">
+      <div ref=${containerRef} />
+      ${showTableTools && html`
+        <div className="table-toolbar">
+          <div className="table-toolbar-group">
+            <span className="table-toolbar-label">Row</span>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addRow('above'); }}
+              title="Add Row Above">+ Above</button>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addRow('below'); }}
+              title="Add Row Below">+ Below</button>
+            <button type="button" className="table-toolbar-btn table-toolbar-btn-danger"
+              onMouseDown=${(e) => { e.preventDefault(); deleteRow(); }}
+              title="Delete Row">\u00D7 Delete</button>
+          </div>
+          <div className="table-toolbar-group">
+            <span className="table-toolbar-label">Column</span>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addColumn('left'); }}
+              title="Add Column Left">+ Left</button>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); addColumn('right'); }}
+              title="Add Column Right">+ Right</button>
+            <button type="button" className="table-toolbar-btn table-toolbar-btn-danger"
+              onMouseDown=${(e) => { e.preventDefault(); deleteColumn(); }}
+              title="Delete Column">\u00D7 Delete</button>
+          </div>
+          <div className="table-toolbar-group">
+            <span className="table-toolbar-label">Merge</span>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); mergeCellRight(); }}
+              title="Merge Cell Right">\u2192 Right</button>
+            <button type="button" className="table-toolbar-btn"
+              onMouseDown=${(e) => { e.preventDefault(); mergeCellDown(); }}
+              title="Merge Cell Down">\u2193 Down</button>
+          </div>
+          <div className="table-toolbar-group">
+            <button type="button" className="table-toolbar-btn table-toolbar-btn-danger"
+              onMouseDown=${(e) => { e.preventDefault(); deleteTable(); }}
+              title="Delete Table">\u00D7 Delete Table</button>
+          </div>
+        </div>
+      `}
+      ${!isValid && html`
+        <div className=${`char-counter ${charCount > 0 ? 'warning' : ''}`}>
+          ${charCount} / ${minChars} characters minimum
+        </div>
+      `}
     </div>
-    <input
-      ref=${fileInputRef}
-      type="file"
-      accept="image/*"
-      style=${{ display: 'none' }}
-      onChange=${handleImageUpload}
-    />
-    ${showCodeModal && html`
-      <${CodeBlockModal}
-        onInsert=${insertCodeBlock}
-        onClose=${() => setShowCodeModal(false)}
-      />
-    `}
   `;
 }
+
+// ============================================
+// CATEGORY SEARCH
+// ============================================
 
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -640,6 +944,10 @@ function CategorySearch({ value, onChange, onSelect }) {
     </div>
   `;
 }
+
+// ============================================
+// TAGS INPUT
+// ============================================
 
 function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const [inputValue, setInputValue] = useState('');
@@ -747,45 +1055,64 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
           `)}
         </div>
       `}
-      <div className="tags-helper">
-        ${tags.length}/${maxTags} tags used
-      </div>
+      ${tags.length === 0 && html`
+        <div className="tags-helper">
+          Add at least 1 tag
+        </div>
+      `}
     </div>
   `;
 }
 
+// ============================================
+// PREVIEW MODAL
+// ============================================
+
 function PreviewModal({
   title, category, body, tags, onBack, onPost,
 }) {
+  const bodyRef = useRef(null);
+
+  // Add line numbers to code blocks after the body HTML is rendered
+  useEffect(() => {
+    if (!bodyRef.current) return;
+    bodyRef.current.querySelectorAll('pre').forEach((pre) => {
+      const lineArr = pre.textContent.split('\n');
+      if (lineArr[lineArr.length - 1] === '') lineArr.pop();
+      const lineCount = lineArr.length || 1;
+      const nums = Array.from(
+        { length: lineCount },
+        (_, i) => i + 1,
+      ).join('\\a ');
+      pre.style.setProperty('--line-nums', `"${nums}"`);
+    });
+  }, [body]);
+
   return html`
     <div className="preview-modal-overlay" onClick=${onBack}>
       <div className="preview-modal" onClick=${(e) => e.stopPropagation()}>
-        <div className="preview-modal-header">
-          <h2>Preview Your Question</h2>
-        </div>
         <div className="preview-modal-body">
-          <div className="preview-field">
-            <span className="preview-label">Title</span>
-            <h3 className="preview-title">${title}</h3>
-          </div>
-          <div className="preview-field">
-            <span className="preview-label">Category</span>
-            <span className="preview-category">${category}</span>
-          </div>
-          <div className="preview-field">
-            <span className="preview-label">Body</span>
+          <div className="preview-post">
+            ${tags.length > 0 && html`
+              <div className="preview-tags">
+                ${tags.map((tag) => html`
+                  <span key=${tag} className="preview-tag">#${tag}</span>
+                `)}
+              </div>
+            `}
+            <h1 className="preview-title">${title}</h1>
+            <div className="preview-meta">
+              <span className="preview-author">You</span>
+              ${category && html`
+                <span className="preview-meta-sep">\u00B7</span>
+                <span className="preview-category">${category}</span>
+              `}
+            </div>
             <div
+              ref=${bodyRef}
               className="preview-body-content"
               dangerouslySetInnerHTML=${{ __html: body }}
             />
-          </div>
-          <div className="preview-field">
-            <span className="preview-label">Tags</span>
-            <div className="preview-tags">
-              ${tags.map((tag) => html`
-                <span key=${tag} className="preview-tag">${tag}</span>
-              `)}
-            </div>
           </div>
         </div>
         <div className="preview-modal-footer">
@@ -793,7 +1120,7 @@ function PreviewModal({
             Back to Edit
           </button>
           <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
-            Post
+            Post 
           </button>
         </div>
       </div>
@@ -801,13 +1128,42 @@ function PreviewModal({
   `;
 }
 
+// ============================================
+// CREATE POST
+// ============================================
+
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [body, setBody] = useState('');
+  const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Single mutable ref that always holds the latest post JSON
+  const postDataRef = useRef({
+    title: '', category: '', body: null, tags: [],
+  });
+
+  const handleBodyChange = (htmlContent, jsonContent) => {
+    setBody(htmlContent);
+    setBodyJson(jsonContent);
+  };
+
+  // Update the single ref in-place whenever any field changes
+  useEffect(() => {
+    postDataRef.current = {
+      title,
+      category,
+      body: bodyJson,
+      tags,
+    };
+    // eslint-disable-next-line no-console
+    console.clear();
+    // eslint-disable-next-line no-console
+    console.log('Live post JSON:', postDataRef.current);
+  }, [title, category, bodyJson, tags]);
 
   const missingFields = [];
   if (title.length < 15) missingFields.push('Title (min 15 characters)');
@@ -822,17 +1178,55 @@ function CreatePost() {
     setShowPreview(true);
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    // Prepend # to each tag before sending to the backend
+    const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
+
     const postData = {
       title,
       category,
-      body,
-      tags,
+      body: bodyJson,
+      tags: tagsWithHash,
     };
 
     // eslint-disable-next-line no-console
-    console.log('Submitting post:', postData);
-    // Add your DB submission logic here
+    console.log('Sending post data:', postData);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // eslint-disable-next-line no-console
+        console.log('Post created successfully:', result);
+        // eslint-disable-next-line no-alert
+        alert('Your question has been posted successfully!');
+        // Reset form
+        setTitle('');
+        setCategory('');
+        setBody('');
+        setBodyJson(null);
+        setTags([]);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error('Error creating post:', result.error);
+        // eslint-disable-next-line no-alert
+        alert(`Error: ${result.error || 'Failed to create post'}`);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Network error:', error);
+      // eslint-disable-next-line no-alert
+      alert('Network error: Unable to connect to the server. Make sure the server is running.');
+    }
+
     setShowPreview(false);
   };
 
@@ -842,6 +1236,7 @@ function CreatePost() {
       setTitle('');
       setCategory('');
       setBody('');
+      setBodyJson(null);
       setTags([]);
     }
   };
@@ -849,7 +1244,7 @@ function CreatePost() {
   return html`
     <div className="create-post">
       <h1>
-        Ask question
+        Post your thoughts
         <span className="required-text">Required fields *</span>
       </h1>
 
@@ -867,9 +1262,11 @@ function CreatePost() {
             onInput=${(e) => setTitle(e.target.value)}
             placeholder=""
           />
-          <div className=${`char-counter ${title.length < 15 && title.length > 0 ? 'warning' : ''}`}>
-            ${title.length} / 15 characters minimum
-          </div>
+          ${title.length < 15 && html`
+            <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
+              ${title.length} / 15 characters minimum
+            </div>
+          `}
         </div>
 
         <div className="form-group">
@@ -880,19 +1277,15 @@ function CreatePost() {
             Search for an existing category or create a new one.
           </p>
           ${category ? html`
-            <div>
-              <input
-                type="text"
-                value=${category}
-                readOnly
-                style=${{ backgroundColor: '#f6f7f8' }}
-              />
+            <div className="category-chip">
+              <span>${category}</span>
               <button
                 type="button"
+                className="category-remove"
                 onClick=${() => setCategory('')}
-                style=${{ marginTop: '8px', padding: '4px 12px', fontSize: '12px' }}
+                aria-label="Remove category"
               >
-                Change Category
+                ×
               </button>
             </div>
           ` : html`
@@ -911,9 +1304,8 @@ function CreatePost() {
           <p className="helper-text">
             Include all the information someone would need to answer your question. Min 20 characters.
           </p>
-          <${RichTextEditor}
-            value=${body}
-            onChange=${setBody}
+          <${QuillEditor}
+            onChange=${handleBodyChange}
             minChars=${20}
           />
         </div>
@@ -942,7 +1334,7 @@ function CreatePost() {
               className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
               disabled=${!isFormValid}
             >
-              Post Question
+              Post 
             </button>
             ${!isFormValid && html`
               <div className="submit-tooltip">
