@@ -1,5 +1,5 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
+import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 
 // ============================================
 // ICON COMPONENTS
@@ -9,6 +9,16 @@ const PlusIcon = () => html`
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <line x1="12" y1="5" x2="12" y2="19"/>
     <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+`;
+
+const ImagePlusIcon = () => html`
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+    <circle cx="8.5" cy="8.5" r="1.5"/>
+    <polyline points="21 15 16 10 5 21"/>
+    <line x1="16" y1="8" x2="16" y2="14"/>
+    <line x1="13" y1="11" x2="19" y2="11"/>
   </svg>
 `;
 
@@ -31,263 +41,294 @@ const UserIcon = () => html`
   </svg>
 `;
 
+const CameraIcon = () => html`
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+`;
+
+const GearIcon = () => html`
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color: var(--spectrum-gray-700);">
+    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+  </svg>
+`;
+
+const EditPencilIcon = () => html`
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+`;
+
+const ChevronDownIcon = () => html`
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+`;
+
+const EyeIcon = () => html`
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+`;
+
+const EditIcon = () => html`
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+`;
+
 // ============================================
-// SIDEBAR COMPONENTS
+// PROFILE SETTINGS POPUP COMPONENT
 // ============================================
 
-const toId = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+function ProfileSettingsPopup({ isOpen, onClose, anchorRef }) {
+  const popupRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [profileImage, setProfileImage] = useState('/icons/profile.png');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phoneCode: '+91',
+    phoneNumber: '',
+    address: '',
+    gender: '',
+    dob: '',
+    email: '',
+    password: ''
+  });
 
-const STORAGE_KEY = 'sidebar-categories';
+  // Close popup when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
 
-const initialCategoryData = [
-  {
-    id: 'javascript',
-    name: 'JavaScript',
-    icon: '📁',
-    subcategories: [
-      { id: 'frontend-resources', name: 'Frontend Resources', icon: '📄' },
-    ],
-  },
-  {
-    id: 'python',
-    name: 'Python',
-    icon: '📁',
-    subcategories: [],
-  },
-  {
-    id: 'css-design',
-    name: 'CSS & Design',
-    icon: '📁',
-    subcategories: [],
-  },
-  {
-    id: 'devops',
-    name: 'DevOps',
-    icon: '📁',
-    subcategories: [
-      { id: 'engineering-handbook', name: 'Engineering Handbook', icon: '📄' },
-    ],
-  },
-];
-
-// Load categories from localStorage
-const loadCategories = (authoredCategories) => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Return stored categories if they exist and are valid
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target) && 
+          anchorRef.current && !anchorRef.current.contains(event.target)) {
+        onClose();
       }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = () => {
+    // Save logic here
+    setIsEditMode(false);
+    onClose();
+  };
+
+  const handleEditToggle = () => {
+    setIsEditMode(!isEditMode);
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImage(e.target.result);
+      };
+      reader.readAsDataURL(file);
     }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to load categories from localStorage:', e);
-  }
-  // Fall back to authored or initial data
-  return authoredCategories && authoredCategories.length > 0
-    ? authoredCategories
-    : initialCategoryData;
-};
+  };
 
-// Save categories to localStorage
-const saveCategories = (categories) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to save categories to localStorage:', e);
-  }
-};
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
 
-function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handlePasswordChangeClick = () => {
+    setShowPasswordChangeModal(true);
+  };
+
+  const closePasswordChangeModal = () => {
+    setShowPasswordChangeModal(false);
+  };
+
+  const displayPassword = showPassword ? formData.password : '•'.repeat(formData.password.length);
 
   return html`
-    <li class="category-item ${isCollapsed ? 'collapsed' : ''}">
-      <div class="category-header" onClick=${toggleCollapse}>
-        <span class="category-toggle">▼</span>
-        <span class="category-icon">${category.icon || '📁'}</span>
-        <span class="category-name">${category.name}</span>
-      </div>
-      <ul class="subcategory-list">
-        ${category.subcategories && category.subcategories.length > 0
-    ? category.subcategories.map((sub) => html`
-              <li 
-                key=${sub.id}
-                class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
-                onClick=${() => onSubcategoryClick(category.id, sub.id)}
-              >
-                <span class="subcategory-icon">${sub.icon || '📄'}</span>
-                <span>${sub.name}</span>
-              </li>
-            `)
-    : html`<div class="no-items">No pages yet</div>`
-}
-      </ul>
-    </li>
-  `;
-}
-
-function Sidebar({ authoredCategories }) {
-  // --- State ---
-  const [categories, setCategories] = useState(() => loadCategories(authoredCategories));
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubcategory, setActiveSubcategory] = useState(null);
-
-  // New Category Creation State
-  const [isCreating, setIsCreating] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [creationError, setCreationError] = useState('');
-
-  const inputRef = useRef(null);
-
-  // --- Effects ---
-  // Focus input when creation mode starts
-  useEffect(() => {
-    if (isCreating && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isCreating]);
-
-  // Save to localStorage whenever categories change
-  useEffect(() => {
-    saveCategories(categories);
-  }, [categories]);
-
-  // --- Handlers ---
-  const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
-
-  const handleSubcategoryClick = (categoryId, subcategoryId) => {
-    setActiveSubcategory(subcategoryId);
-  };
-
-  const startCreating = () => {
-    setIsCreating(true);
-    setNewCatName('');
-    setCreationError('');
-  };
-
-  const cancelCreating = () => {
-    setIsCreating(false);
-    setNewCatName('');
-    setCreationError('');
-  };
-
-  const handleCreateKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      cancelCreating();
-    } else if (e.key === 'Enter') {
-      const trimmedName = newCatName.trim();
-      if (!trimmedName) {
-        setCreationError('Name cannot be empty');
-        return;
-      }
-
-      // Duplicate Check (Case-insensitive)
-      const exists = categories.some(
-        (c) => c.name.toLowerCase() === trimmedName.toLowerCase(),
-      );
-
-      if (exists) {
-        setCreationError('Category already exists');
-        return;
-      }
-
-      // Add Category
-      const newCategory = {
-        id: toId(trimmedName),
-        name: trimmedName,
-        icon: '📁',
-        subcategories: [],
-      };
-
-      setCategories([newCategory, ...categories]);
-      cancelCreating();
-    }
-  };
-
-  const handleCreateInput = (e) => {
-    setNewCatName(e.target.value);
-    if (creationError) setCreationError(''); // Clear error while typing
-  };
-
-  // --- Filtering Logic ---
-  const filteredCategories = categories.map((category) => {
-    if (searchTerm === '') return category;
-    const categoryMatches = category.name.toLowerCase().includes(searchTerm);
-    // Fix: Broken into multiple lines to satisfy max-len rule
-    const filteredSubs = category.subcategories.filter((sub) => (
-      sub.name.toLowerCase().includes(searchTerm)
-    ));
-
-    if (categoryMatches || filteredSubs.length > 0) {
-      return {
-        ...category,
-        subcategories: filteredSubs.length > 0 ? filteredSubs : category.subcategories,
-      };
-    }
-    return null;
-  }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
-
-  return html`
-    <div class="sidebar">
-      <div class="search-container">
-        <input type="text" placeholder="Search..." value=${searchTerm} onInput=${handleSearch} />
-      </div>
-
-      <div class="explorer-header">
-        <h3>EXPLORER</h3>
-        <button class="add-category" title="Add Category" onClick=${startCreating}>
-          <${PlusIcon} />
-        </button>
-      </div>
-
-      ${isCreating && html`
-        <div class="new-category-form">
+    <div class="profile-popup-overlay">
+      <div class="profile-popup" ref=${popupRef}>
+        <!-- Profile Avatar Section -->
+        <div class="profile-popup-header">
+          <div class="profile-popup-avatar">
+            <img src=${profileImage} alt="Profile" />
+          </div>
+          <button class="profile-edit-link" onClick=${triggerFileInput} type="button">
+            <${EditPencilIcon} />
+            <span>Edit Profile Picture</span>
+          </button>
           <input 
-            ref=${inputRef}
-            type="text" 
-            class="new-category-input ${creationError ? 'error' : ''}"
-            placeholder="Add category"
-            value=${newCatName}
-            onKeyDown=${handleCreateKeyDown}
-            onInput=${handleCreateInput}
-            onBlur=${cancelCreating} 
+            ref=${fileInputRef}
+            type="file" 
+            accept="image/*" 
+            onChange=${handleImageUpload}
+            style="display: none;"
           />
-          ${creationError && html`<div class="error-msg">${creationError}</div>`}
         </div>
-      `}
 
-      <ul class="category-list">
-        ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
-              <${CategoryItem}
-                key=${category.id}
-                category=${category}
-                activeSubcategory=${activeSubcategory}
-                onSubcategoryClick=${handleSubcategoryClick}
+        <!-- Contact Details Section -->
+        <div class="profile-popup-section">
+          <h2 class="profile-section-title">Contact Details</h2>
+          
+          <div class="profile-form-grid">
+            <div class="profile-form-group">
+              <input 
+                type="text" 
+                class="profile-input"
+                placeholder="First Name"
+                value=${formData.firstName}
+                onChange=${(e) => handleInputChange('firstName', e.target.value)}
+                disabled=${!isEditMode}
               />
-            `)
-    : html`<div class="no-results">No match found</div>`
-}
-      </ul>
+            </div>
+
+            <div class="profile-form-group">
+              <input 
+                type="text" 
+                class="profile-input"
+                placeholder="Last Name"
+                value=${formData.lastName}
+                onChange=${(e) => handleInputChange('lastName', e.target.value)}
+                disabled=${!isEditMode}
+              />
+            </div>
+          </div>
+
+          <div class="profile-form-grid">
+            <div class="profile-form-group">
+              <div class="profile-phone-input">
+                <select 
+                  class="profile-phone-code"
+                  value=${formData.phoneCode}
+                  onChange=${(e) => handleInputChange('phoneCode', e.target.value)}
+                  disabled=${!isEditMode}
+                >
+                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                </select>
+                <input 
+                  type="text" 
+                  class="profile-input profile-phone-number"
+                  placeholder="Phone Number"
+                  value=${formData.phoneNumber}
+                  onChange=${(e) => handleInputChange('phoneNumber', e.target.value)}
+                  disabled=${!isEditMode}
+                />
+              </div>
+            </div>
+
+            <div class="profile-form-group">
+              <select 
+                class="profile-select"
+                value=${formData.gender}
+                onChange=${(e) => handleInputChange('gender', e.target.value)}
+                disabled=${!isEditMode}
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="profile-form-grid">
+            <div class="profile-form-group">
+              <input 
+                type="date" 
+                class="profile-input"
+                placeholder="Date of Birth"
+                value=${formData.dob}
+                onChange=${(e) => handleInputChange('dob', e.target.value)}
+                disabled=${!isEditMode}
+              />
+            </div>
+          </div>
+
+          <div class="profile-buttons-group">
+            <button class="profile-edit-button" onClick=${handleEditToggle} type="button">
+              <${EditPencilIcon} />
+              <span>${isEditMode ? 'Cancel' : 'Edit'}</span>
+            </button>
+            <button class="profile-save-button" onClick=${handleSaveChanges} disabled=${!isEditMode}>
+              Save Changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Account Overview Section -->
+        <div class="profile-popup-section">
+          <h2 class="profile-section-title">Account Overview</h2>
+
+          <div class="profile-table">
+            <div class="profile-table-header">
+              <div class="profile-table-cell">Account</div>
+              <div class="profile-table-cell">Email</div>
+              <div class="profile-table-cell">Password</div>
+              <div class="profile-table-cell">View</div>
+              <div class="profile-table-cell">Edit</div>
+            </div>
+            
+            <div class="profile-table-row">
+              <div class="profile-table-cell profile-table-label">Credentials</div>
+              <div class="profile-table-cell profile-email-cell">${formData.email || '-'}</div>
+              <div class="profile-table-cell profile-password-cell">${displayPassword || '-'}</div>
+              <div class="profile-table-cell">
+                <button 
+                  class="profile-action-button" 
+                  onClick=${togglePasswordVisibility}
+                  aria-label=${showPassword ? "Hide Password" : "View Password"}
+                  type="button"
+                >
+                  <${EyeIcon} />
+                </button>
+              </div>
+              <div class="profile-table-cell">
+                <a href="/account/edit" class="profile-action-button profile-action-link" aria-label="Edit Account">
+                  <${EditIcon} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
 
 // ============================================
-// HEADER COMPONENT (Same as before)
+// HEADER COMPONENT
 // ============================================
 
 function HeaderComponent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
+  const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
+  const profileButtonRef = useRef(null);
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleProfilePopup = () => setIsProfilePopupOpen(!isProfilePopupOpen);
 
   const handleProfileImageError = () => {
     setProfileImageError(true);
@@ -307,15 +348,15 @@ function HeaderComponent() {
             src="/icons/logo.svg"
             alt="Adobe Logo"
             onError=${(e) => {
-    if (e.target.src.endsWith('.svg')) {
-      e.target.src = '/icons/logo.png';
-    }
-  }}
+              if (e.target.src.endsWith('.svg')) {
+                e.target.src = '/icons/logo.png';
+              }
+            }}
           />
         </a>
 
         <a href="/create-post" class="nav-button spectrum-button">
-          <${PlusIcon} />
+          <${ImagePlusIcon} />
           <span>Add Post</span>
         </a>
       </div>
@@ -335,16 +376,32 @@ function HeaderComponent() {
           </li>
           
           <li class="profile-item">
-            <a href="/profile" class="profile-link">
+            <button 
+              ref=${profileButtonRef}
+              class="profile-link profile-button" 
+              onClick=${toggleProfilePopup}
+              aria-label="Profile"
+            >
               <div class="profile-avatar">
                 ${!profileImageError
-    ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
-    : html`<${UserIcon} />`}
+                  ? html`<img 
+                      src="/icons/profile.png" 
+                      alt="Profile" 
+                      onError=${handleProfileImageError}
+                    />`
+                  : html`<${UserIcon} />`
+                }
               </div>
-            </a>
+            </button>
           </li>
         </ul>
       </div>
+
+      <${ProfileSettingsPopup} 
+        isOpen=${isProfilePopupOpen} 
+        onClose=${() => setIsProfilePopupOpen(false)}
+        anchorRef=${profileButtonRef}
+      />
     </nav>
   `;
 }
@@ -354,57 +411,15 @@ function HeaderComponent() {
 // ============================================
 
 export default async function decorate(block) {
-  const authoredCategories = [];
-  const ul = block.querySelector('ul');
-  if (ul) {
-    ul.querySelectorAll(':scope > li').forEach((li) => {
-      const categoryName = li.childNodes[0].textContent.trim();
-      const subList = li.querySelector('ul');
-      const subcategories = [];
-      if (subList) {
-        subList.querySelectorAll('li').forEach((subLi) => {
-          const name = subLi.textContent.trim();
-          subcategories.push({ id: toId(name), name, icon: '📄' });
-        });
-      }
-      authoredCategories.push({
-        id: toId(categoryName), name: categoryName, icon: '📁', subcategories,
-      });
-    });
-  }
-
   block.textContent = '';
-  const headerWrapper = document.createElement('div');
-  headerWrapper.className = 'header-wrapper';
-  const sidebarWrapper = document.createElement('div');
-  sidebarWrapper.className = 'sidebar-wrapper';
 
-  block.append(headerWrapper);
-  block.append(sidebarWrapper);
+  const appRoot = document.createElement('div');
+  appRoot.className = 'header-wrapper';
+  block.append(appRoot);
 
   try {
-    render(html`<${HeaderComponent} />`, headerWrapper);
-    render(html`<${Sidebar} authoredCategories=${authoredCategories} />`, sidebarWrapper);
+    render(html`<${HeaderComponent} />`, appRoot);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Render error:', err);
-  }
-
-  try {
-    const resp = await fetch('/footer.plain.html');
-    if (resp.ok) {
-      // Fix: Renamed variable from 'html' to 'footerHtml' to avoid shadowing
-      const footerHtml = await resp.text();
-      let footer = document.querySelector('footer');
-      if (!footer) {
-        footer = document.createElement('footer');
-        document.body.append(footer);
-      }
-      footer.innerHTML = footerHtml;
-      footer.classList.add('global-footer');
-    }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to load global footer', e);
+    // Error handling
   }
 }
