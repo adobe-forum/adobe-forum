@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Posts - Adobe Forum</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 12px;
+
+      @media (width >= 768px) {
+        padding: 20px;
+      }
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+      @media (width >= 768px) {
+        padding: 30px;
+        margin-bottom: 30px;
+      }
+
+      & h1 {
+        color: #333;
+        margin-bottom: 8px;
+        font-size: 1.5rem;
+
+        @media (width >= 768px) {
+          margin-bottom: 10px;
+          font-size: 2rem;
+        }
+      }
+
+      & p {
+        color: #666;
+        font-size: 13px;
+
+        @media (width >= 768px) {
+          font-size: 14px;
+        }
+      }
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      background: white;
+      border-radius: 8px;
+      color: #667eea;
+      font-weight: 500;
+    }
+
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+
+      @media (width >= 768px) {
+        padding: 20px;
+      }
+    }
+
+    .post-grid {
+      display: grid;
+      gap: 16px;
+
+      @media (width >= 768px) {
+        gap: 20px;
+      }
+    }
+
+    .post-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-left: 4px solid #667eea;
+
+      @media (width >= 768px) {
+        padding: 25px;
+      }
+
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    .post-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+
+      @media (width >= 768px) {
+        font-size: 22px;
+      }
+    }
+
+    .post-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      color: #999;
+
+      @media (width >= 768px) {
+        gap: 15px;
+        font-size: 13px;
+      }
+    }
+
+    .post-category {
+      display: inline-block;
+      background: #f0f0f0;
+      color: #667eea;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 12px;
+
+      @media (width >= 768px) {
+        padding: 4px 12px;
+      }
+    }
+
+    .post-date {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    /* Rich text body styles */
+    .post-body {
+      color: #444;
+      line-height: 1.7;
+      margin-bottom: 15px;
+
+      &.collapsed {
+        max-height: 300px;
+        overflow: hidden;
+      }
+
+      &.expanded {
+        max-height: none;
+      }
+
+      & h1, & h2, & h3, & h4 {
+        margin: 1em 0 0.5em 0;
+        color: #333;
+        font-weight: 600;
+      }
+
+      & h1 { font-size: 1.8em; }
+      & h2 { font-size: 1.5em; }
+      & h3 { font-size: 1.3em; }
+
+      & p { margin: 0.8em 0; }
+
+      & a {
+        color: #667eea;
+        text-decoration: none;
+
+        &:hover { text-decoration: underline; }
+      }
+
+      & strong, & b { font-weight: 600; }
+      & em, & i { font-style: italic; }
+      & u { text-decoration: underline; }
+      & s { text-decoration: line-through; }
+
+      & ul, & ol {
+        margin: 0.8em 0;
+        padding-left: 2em;
+      }
+
+      & li { margin: 0.3em 0; }
+
+      & blockquote {
+        border-left: 4px solid #667eea;
+        background: #f8f9ff;
+        padding: 12px 20px;
+        margin: 1em 0;
+        font-style: italic;
+      }
+
+      /* Inline code */
+      & code {
+        font-family: 'Consolas', 'Monaco', monospace;
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        color: #e83e8c;
+      }
+
+      /* Code blocks */
+      & pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 12px 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 1em 0;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+
+        @media (width >= 768px) {
+          padding: 16px 20px;
+          font-size: 14px;
+        }
+
+        & code {
+          background: transparent;
+          padding: 0;
+          color: inherit;
+        }
+      }
+
+      /* Tables */
+      & table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+        font-size: 13px;
+        display: block;
+        overflow-x: auto;
+
+        @media (width >= 768px) {
+          font-size: 14px;
+          display: table;
+        }
+      }
+
+      & th, & td {
+        border: 1px solid #ddd;
+        padding: 8px 10px;
+        text-align: left;
+
+        @media (width >= 768px) {
+          padding: 10px 12px;
+        }
+      }
+
+      & th {
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+      }
+
+      & tr:nth-child(even) { background: #f9f9f9; }
+      & tr:hover { background: #f0f4ff; }
+
+      /* Images */
+      & img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 1em 0;
+      }
+
+      & hr {
+        border: none;
+        border-top: 2px solid #eee;
+        margin: 1.5em 0;
+      }
+
+      /* Quill editor styles */
+      & .ql-indent-1 { padding-left: 3em; }
+      & .ql-indent-2 { padding-left: 6em; }
+      & .ql-align-center { text-align: center; }
+      & .ql-align-right { text-align: right; }
+      & .ql-size-small { font-size: 0.75em; }
+      & .ql-size-large { font-size: 1.5em; }
+      & .ql-size-huge { font-size: 2.5em; }
+    }
+
+    .post-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+
+      @media (width >= 768px) {
+        gap: 8px;
+      }
+    }
+
+    .tag {
+      display: inline-block;
+      background: #e8f0ff;
+      color: #667eea;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 11px;
+      font-weight: 500;
+
+      @media (width >= 768px) {
+        padding: 5px 12px;
+        font-size: 12px;
+      }
+    }
+
+    .empty-state {
+      background: white;
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      color: #999;
+
+      @media (width >= 768px) {
+        padding: 60px 20px;
+      }
+
+      & svg {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+
+        @media (width >= 768px) {
+          width: 60px;
+          height: 60px;
+          margin-bottom: 20px;
+        }
+      }
+    }
+
+    .controls {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+
+      @media (width >= 768px) {
+        padding: 20px;
+        margin-bottom: 30px;
+        gap: 10px;
+      }
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13px;
+      transition: background 0.3s ease;
+
+      @media (width >= 768px) {
+        padding: 10px 20px;
+        font-size: 14px;
+      }
+
+      &:hover {
+        background: #764ba2;
+      }
+    }
+
+    .btn-expand {
+      background: #f0f0f0;
+      color: #667eea;
+      font-size: 12px;
+      padding: 6px 12px;
+      margin-top: 10px;
+
+      @media (width >= 768px) {
+        font-size: 13px;
+        padding: 6px 14px;
+      }
+
+      &:hover { background: #e0e0e0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 Forum Posts</h1>
+      <p>View all posts with full formatting (code blocks, tables, rich text)</p>
+    </header>
+
+    <div class="controls">
+      <button onclick="fetchPosts()">🔄 Refresh Posts</button>
+      <button onclick="location.href='http://localhost:3000'">← Back to Forum</button>
+    </div>
+
+    <div id="content"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api/posts';
+
+    async function fetchPosts() {
+      const contentDiv = document.getElementById('content');
+      contentDiv.innerHTML = '<div class="loading">⏳ Loading posts...</div>';
+
+      try {
+        const response = await fetch(API_URL);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.posts) {
+          displayPosts(data.posts);
+        } else {
+          contentDiv.innerHTML = `<div class="error">⚠️ No posts found or invalid response format</div>`;
+        }
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        contentDiv.innerHTML = `
+          <div class="error">
+            <strong>❌ Error loading posts:</strong><br>
+            ${error.message}
+            <br><br>
+            <small>Make sure the backend server is running on http://localhost:5000</small>
+          </div>
+        `;
+      }
+    }
+
+    function displayPosts(posts) {
+      const contentDiv = document.getElementById('content');
+
+      if (posts.length === 0) {
+        contentDiv.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+            <h2>No posts yet</h2>
+            <p>Be the first to create a post!</p>
+          </div>
+        `;
+        return;
+      }
+
+      const postsHTML = posts.map((post, index) => {
+        const date = new Date(post.createdAt);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        // Render HTML body directly to preserve all formatting
+        const bodyHTML = post.body || '<p><em>No content</em></p>';
+        const tagsHTML = (post.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+
+        return `
+          <div class="post-card">
+            <div class="post-title">${escapeHtml(post.title)}</div>
+            <div class="post-meta">
+              <span class="post-category">📁 ${escapeHtml(post.category)}</span>
+              <span class="post-date">📅 ${formattedDate}</span>
+            </div>
+            <div class="post-body collapsed" id="body-${index}">${bodyHTML}</div>
+            <button class="btn-expand" onclick="toggleExpand(${index}, this)">📖 Expand</button>
+            <div class="post-tags">${tagsHTML}</div>
+          </div>
+        `;
+      }).join('');
+
+      contentDiv.innerHTML = `
+        <div class="post-grid">
+          ${postsHTML}
+        </div>
+      `;
+    }
+
+    function toggleExpand(index, btn) {
+      const body = document.getElementById(`body-${index}`);
+      if (body.classList.contains('collapsed')) {
+        body.classList.remove('collapsed');
+        body.classList.add('expanded');
+        btn.textContent = '📕 Collapse';
+      } else {
+        body.classList.remove('expanded');
+        body.classList.add('collapsed');
+        btn.textContent = '📖 Expand';
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Load posts on page load
+    window.addEventListener('load', fetchPosts);
+  </script>
+</body>
+</html>

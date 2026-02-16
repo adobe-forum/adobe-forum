@@ -1321,7 +1321,7 @@ function CreatePost() {
     const postData = {
       title,
       category,
-      body: bodyJson,
+      body,
       tags: tagsWithHash,
     };
 
