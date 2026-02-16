@@ -327,17 +327,24 @@ function HeaderComponent() {
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const profileButtonRef = useRef(null);
 
-  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const toggleProfilePopup = () => setIsProfilePopupOpen(!isProfilePopupOpen);
+  const toggleMenu = () => {
+    const newState = !isMobileMenuOpen;
+    setIsMobileMenuOpen(newState);
+    // Toggle sidebar visibility on mobile
+    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+    if (sidebarWrapper) {
+      sidebarWrapper.classList.toggle('mobile-open', newState);
+    }
+  };
 
   const handleProfileImageError = () => {
     setProfileImageError(true);
   };
 
   return html`
-    <nav class="spectrum-nav" aria-expanded="${isMobileMenuOpen}">
-      <div class="nav-hamburger">
-        <button type="button" onClick=${toggleMenu} aria-label="Toggle Menu">
+    <nav class="spectrum-nav">
+      <div class="nav-hamburger ${isMobileMenuOpen ? 'is-open' : ''}">
+        <button type="button" onClick=${toggleMenu} aria-label="Toggle Sidebar">
           <span class="nav-hamburger-icon"></span>
         </button>
       </div>
