@@ -55,10 +55,13 @@ const ContentBlock = ({ block }) => {
     case 'image':
       return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
     case 'code':
+      // Calculate line numbers for the gutter
+      const lineCount = block.value.split('\n').length;
+      const nums = Array.from({ length: lineCount }, (_, i) => i + 1).join('\\a ');
+
       return html`
         <div class="block-code">
-          <div class="code-lang">${block.lang}</div>
-          <pre><code>${block.value}</code></pre>
+          <pre style="--line-nums: '${nums}'">${block.value}</pre>
         </div>
       `;
     default:
