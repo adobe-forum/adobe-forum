@@ -4,6 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Post from './models/Post.js';
 
+/* eslint-disable no-console */
+
 // Load environment variables
 dotenv.config();
 
@@ -17,7 +19,7 @@ app.use(cors({
 }));
 // Also allow file:// origins (shows as 'null' string)
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  const { origin } = req.headers;
   if (origin === 'null' || !origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }

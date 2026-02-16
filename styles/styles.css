@@ -133,8 +133,7 @@ main {
   background-color: var(--background-color);
   padding: 20px;
   position: relative;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: auto hidden;
   max-width: 100%;
   min-width: 0; /* Prevent grid blowout */
 
