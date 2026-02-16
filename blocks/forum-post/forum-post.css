@@ -91,17 +91,22 @@
 .block-code pre {
   position: relative;
   background: #1e1e1e;
+
   /* matches --cp-code-bg */
   color: #d4d4d4;
+
   /* matches --cp-code-text */
   border-radius: 6px;
   margin: 0;
   padding: 16px 16px 16px 3.5em;
+
   /* Space for line numbers */
   overflow-x: auto;
+
   /* Match create-post preview-body-content defaults */
   font-family: monospace;
   font-size: 14px;
+
   /* create-post is ~15px base, usually code is slightly smaller or monospace */
   line-height: 1.6;
 }
@@ -115,8 +120,8 @@
   width: 2.5em;
   padding: 16px 8px 16px 0;
   text-align: right;
-  color: rgba(212, 212, 212, 0.3);
-  border-right: 1px solid rgba(212, 212, 212, 0.15);
+  color: rgb(212 212 212 / 30%);
+  border-right: 1px solid rgb(212 212 212 / 15%);
   white-space: pre;
   font-family: inherit;
   font-size: inherit;
@@ -154,6 +159,7 @@
   flex-direction: column;
   gap: 24px;
   max-height: 250px;
+
   /* Reduced from 400px so it scrolls much sooner */
   overflow-y: auto;
   padding-right: 12px;
@@ -259,6 +265,7 @@
   color: var(--text-color);
   font-family: var(--body-font-family);
   padding: 8px 0 8px 8px;
+
   /* Added left padding */
 }
 
@@ -267,6 +274,7 @@
   color: var(--spectrum-gray-50);
   border: none;
   border-radius: 50%;
+
   /* Circle shape since it's just an icon */
   width: 32px;
   height: 32px;
@@ -278,6 +286,7 @@
   font-family: var(--body-font-family);
   margin-left: 4px;
   margin-right: 4px;
+
   /* Added right margin */
 }
 
