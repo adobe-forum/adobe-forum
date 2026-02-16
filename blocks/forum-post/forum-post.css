@@ -6,6 +6,7 @@
   color: var(--text-color);
   padding: 20px 20px 60px;
   line-height: 1.6;
+}
 
 /* --- 2. Header Section --- */
 .tags-row {
@@ -25,7 +26,7 @@
 }
 
 .post-title {
-  font-size: 1.75rem;
+  font-size: 2.5rem;
   font-weight: 800;
   margin: 0 0 12px;
   color: var(--text-color);
@@ -38,14 +39,8 @@
   color: var(--spectrum-gray-600);
   margin-bottom: 40px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-
-  @media (width >= 768px) {
-    font-size: 1rem;
-    margin-bottom: 40px;
-  }
 }
 
 .author-name {
@@ -75,6 +70,7 @@
 .block-image {
   margin: 32px 0;
   text-align: center;
+}
 
 .block-image img {
   max-width: 80%;
@@ -86,57 +82,48 @@
 /* --- Code Block Styling (Matches create-post) --- */
 .block-code {
   margin: 24px 0;
-}
 
-/* 
- * Removing .code-lang styles as we removed the element
- */
+  pre {
+    position: relative;
+    background: #1e1e1e;
+    /* matches --cp-code-bg */
+    color: #d4d4d4;
+    /* matches --cp-code-text */
+    border-radius: 6px;
+    margin: 0;
+    padding: 16px 16px 16px 3.5em;
+    /* Space for line numbers */
+    overflow-x: auto;
+    font-family: monospace;
+    /* Match create-post preview-body-content defaults */
+    font-size: 14px;
+    line-height: 1.6;
+    /* create-post is ~15px base, usually code is slightly smaller or monospace */
 
-.block-code pre {
-  position: relative;
-  background: #1e1e1e;
+    &::before {
+      content: var(--line-nums, "");
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2.5em;
+      padding: 16px 8px 16px 0;
+      text-align: right;
+      color: rgb(212 212 212 / 30%);
+      border-right: 1px solid rgb(212 212 212 / 15%);
+      white-space: pre;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      pointer-events: none;
+      user-select: none;
+    }
+  }
 
-  /* matches --cp-code-bg */
-  color: #d4d4d4;
-
-  /* matches --cp-code-text */
-  border-radius: 6px;
-  margin: 0;
-  padding: 16px 16px 16px 3.5em;
-
-  /* Space for line numbers */
-  overflow-x: auto;
-
-  /* Match create-post preview-body-content defaults */
-  font-family: monospace;
-  font-size: 14px;
-
-  /* create-post is ~15px base, usually code is slightly smaller or monospace */
-  line-height: 1.6;
-}
-
-.block-code pre::before {
-  content: var(--line-nums, "");
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2.5em;
-  padding: 16px 8px 16px 0;
-  text-align: right;
-  color: rgb(212 212 212 / 30%);
-  border-right: 1px solid rgb(212 212 212 / 15%);
-  white-space: pre;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  pointer-events: none;
-  user-select: none;
-}
-
-.block-code code {
-  color: inherit;
-  background: transparent;
+  code {
+    color: inherit;
+    background: transparent;
+  }
 }
 
 /* --- 4. Discussion Section --- */
@@ -159,7 +146,7 @@
 }
 
 .discussion-header {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 24px;
   color: var(--text-color);
