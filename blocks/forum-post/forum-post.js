@@ -54,7 +54,7 @@ const ContentBlock = ({ block }) => {
       return html`<div class="block-text" dangerouslySetInnerHTML=${{ __html: block.value }} />`;
     case 'image':
       return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
-    case 'code':
+    case 'code': {
       // Calculate line numbers for the gutter
       const lineCount = block.value.split('\n').length;
       const nums = Array.from({ length: lineCount }, (_, i) => i + 1).join('\\a ');
@@ -64,6 +64,7 @@ const ContentBlock = ({ block }) => {
           <pre style="--line-nums: '${nums}'">${block.value}</pre>
         </div>
       `;
+    }
     default:
       return null;
   }
