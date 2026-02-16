@@ -519,6 +519,32 @@ function QuillEditor({ onChange, minChars = 20 }) {
         if (tableBtn) {
           tableBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" height="12" width="12" x="3" y="3" fill="none" stroke-width="1"/><line class="ql-stroke" x1="3" y1="7" x2="15" y2="7"/><line class="ql-stroke" x1="3" y1="11" x2="15" y2="11"/><line class="ql-stroke" x1="7" y1="3" x2="7" y2="15"/><line class="ql-stroke" x1="11" y1="3" x2="11" y2="15"/></svg>';
         }
+
+        // Add tooltips to toolbar buttons
+        const tooltips = {
+          '.ql-bold': 'Bold',
+          '.ql-italic': 'Italic',
+          '.ql-strike': 'Strikethrough',
+          '.ql-code': 'Inline Code',
+          '.ql-code-block': 'Code Block',
+          '.ql-link': 'Insert Link',
+          '.ql-image': 'Insert Image',
+          '.ql-blockquote': 'Blockquote',
+          '.ql-list[value="ordered"]': 'Ordered List',
+          '.ql-list[value="bullet"]': 'Bullet List',
+          '.ql-indent[value="-1"]': 'Decrease Indent',
+          '.ql-indent[value="+1"]': 'Increase Indent',
+          '.ql-table': 'Insert Table',
+          '.ql-clean': 'Clear Formatting',
+        };
+        Object.entries(tooltips).forEach(([sel, tip]) => {
+          const btn = wrapper.querySelector(sel);
+          if (btn) btn.setAttribute('title', tip);
+        });
+
+        // Tooltip for the size dropdown
+        const sizeSelect = wrapper.querySelector('.ql-size');
+        if (sizeSelect) sizeSelect.setAttribute('title', 'Font Size');
       }
 
       quillRef.current = quill;
@@ -1094,7 +1120,7 @@ function PreviewModal({
             Back to Edit
           </button>
           <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
-            Post Question
+            Post 
           </button>
         </div>
       </div>
@@ -1218,7 +1244,7 @@ function CreatePost() {
   return html`
     <div className="create-post">
       <h1>
-        Ask question
+        Post your thoughts
         <span className="required-text">Required fields *</span>
       </h1>
 
@@ -1308,7 +1334,7 @@ function CreatePost() {
               className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
               disabled=${!isFormValid}
             >
-              Post Question
+              Post 
             </button>
             ${!isFormValid && html`
               <div className="submit-tooltip">
