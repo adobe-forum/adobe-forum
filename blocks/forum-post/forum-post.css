@@ -4,13 +4,8 @@
   margin: 0 auto;
   font-family: var(--body-font-family);
   color: var(--text-color);
-  padding: 16px 16px 40px;
+  padding: 20px 20px 60px;
   line-height: 1.6;
-
-  @media (width >= 768px) {
-    padding: 20px 20px 60px;
-  }
-}
 
 /* --- 2. Header Section --- */
 .tags-row {
@@ -34,19 +29,14 @@
   font-weight: 800;
   margin: 0 0 12px;
   color: var(--text-color);
-  line-height: 1.2;
+  line-height: 1.1;
   font-family: var(--heading-font-family);
-
-  @media (width >= 768px) {
-    font-size: 2.5rem;
-    line-height: 1.1;
-  }
 }
 
 .post-meta {
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: var(--spectrum-gray-600);
-  margin-bottom: 24px;
+  margin-bottom: 40px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -69,99 +59,91 @@
 
 /* --- 3. Content Area --- */
 .post-content-area {
-  font-size: 1rem;
+  font-size: 1.125rem;
   color: var(--text-color);
-  margin-bottom: 32px;
-
-  @media (width >= 768px) {
-    font-size: 1.125rem;
-    margin-bottom: 40px;
-  }
+  margin-bottom: 40px;
 }
 
 .block-text {
   margin-bottom: 24px;
+}
 
-  & p {
-    margin: 0 0 16px;
-  }
+.block-text p {
+  margin: 0 0 16px;
 }
 
 .block-image {
-  margin: 24px 0;
+  margin: 32px 0;
   text-align: center;
 
-  @media (width >= 768px) {
-    margin: 32px 0;
-  }
-
-  & img {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--spectrum-border-radius-200);
-    border: 1px solid var(--spectrum-gray-200);
-
-    @media (width >= 768px) {
-      max-width: 80%;
-    }
-  }
+.block-image img {
+  max-width: 80%;
+  height: auto;
+  border-radius: var(--spectrum-border-radius-200);
+  border: 1px solid var(--spectrum-gray-200);
 }
 
 /* --- Code Block Styling (Matches create-post) --- */
 .block-code {
   margin: 24px 0;
+}
 
-  & pre {
-    position: relative;
-    background: #1e1e1e;
-    color: #d4d4d4;
-    border-radius: 6px;
-    margin: 0;
-    padding: 16px 16px 16px 3.5em;
-    overflow-x: auto;
-    font-family: monospace;
-    font-size: 13px;
-    line-height: 1.6;
+/* 
+ * Removing .code-lang styles as we removed the element
+ */
 
-    @media (width >= 768px) {
-      font-size: 14px;
-    }
+.block-code pre {
+  position: relative;
+  background: #1e1e1e;
 
-    &::before {
-      content: var(--line-nums, "");
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2.5em;
-      padding: 16px 8px 16px 0;
-      text-align: right;
-      color: rgb(212 212 212 / 30%);
-      border-right: 1px solid rgb(212 212 212 / 15%);
-      white-space: pre;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
-      pointer-events: none;
-      user-select: none;
-    }
-  }
+  /* matches --cp-code-bg */
+  color: #d4d4d4;
 
-  & code {
-    color: inherit;
-    background: transparent;
-  }
+  /* matches --cp-code-text */
+  border-radius: 6px;
+  margin: 0;
+  padding: 16px 16px 16px 3.5em;
+
+  /* Space for line numbers */
+  overflow-x: auto;
+
+  /* Match create-post preview-body-content defaults */
+  font-family: monospace;
+  font-size: 14px;
+
+  /* create-post is ~15px base, usually code is slightly smaller or monospace */
+  line-height: 1.6;
+}
+
+.block-code pre::before {
+  content: var(--line-nums, "");
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5em;
+  padding: 16px 8px 16px 0;
+  text-align: right;
+  color: rgb(212 212 212 / 30%);
+  border-right: 1px solid rgb(212 212 212 / 15%);
+  white-space: pre;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+
+.block-code code {
+  color: inherit;
+  background: transparent;
 }
 
 /* --- 4. Discussion Section --- */
 .post-divider {
   border: none;
   border-top: 1px solid var(--spectrum-gray-200);
-  margin: 32px 0;
-
-  @media (width >= 768px) {
-    margin: 40px 0;
-  }
+  margin: 40px 0;
 }
 
 .discussion-section {
@@ -171,67 +153,54 @@
 .discussion-header {
   font-size: 1.125rem;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   color: var(--text-color);
-
-  @media (width >= 768px) {
-    font-size: 1.25rem;
-    margin-bottom: 24px;
-  }
 }
 
 /* The Comment Container (Scrollable) */
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-height: 200px;
+  gap: 24px;
+  max-height: 250px;
+
+  /* Reduced from 400px so it scrolls much sooner */
   overflow-y: auto;
-  padding-right: 8px;
+  padding-right: 12px;
+}
 
-  @media (width >= 768px) {
-    gap: 24px;
-    max-height: 250px;
-    padding-right: 12px;
-  }
+/* Custom Scrollbar Styling */
+.comments-list::-webkit-scrollbar {
+  width: 8px;
+}
 
-  /* Custom Scrollbar Styling */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
+.comments-list::-webkit-scrollbar-track {
+  background: var(--spectrum-gray-100);
+  border-radius: var(--spectrum-border-radius-100);
+}
 
-  &::-webkit-scrollbar-track {
-    background: var(--spectrum-gray-100);
-    border-radius: var(--spectrum-border-radius-100);
-  }
+.comments-list::-webkit-scrollbar-thumb {
+  background: var(--spectrum-gray-300);
+  border-radius: var(--spectrum-border-radius-100);
+}
 
-  &::-webkit-scrollbar-thumb {
-    background: var(--spectrum-gray-300);
-    border-radius: var(--spectrum-border-radius-100);
-
-    &:hover {
-      background: var(--spectrum-gray-400);
-    }
-  }
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: var(--spectrum-gray-400);
 }
 
 /* INDIVIDUAL COMMENT ROW */
 .comment-row {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: flex-start;
   width: 100%;
-
-  @media (width >= 768px) {
-    gap: 16px;
-  }
 }
 
 /* Avatar Styling */
 .comment-avatar {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   background-color: var(--spectrum-gray-900);
   color: var(--spectrum-gray-50);
   border-radius: 50%;
@@ -239,16 +208,9 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 1rem;
   text-transform: uppercase;
   margin-top: 2px;
-
-  @media (width >= 768px) {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    font-size: 1rem;
-  }
 }
 
 /* Comment Body */
@@ -261,36 +223,23 @@
 
 .comment-user {
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   color: var(--text-color);
   margin-bottom: 4px;
   line-height: 1.2;
-
-  @media (width >= 768px) {
-    font-size: 0.95rem;
-  }
 }
 
 .comment-text {
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: var(--text-color);
   line-height: 1.5;
-
-  @media (width >= 768px) {
-    font-size: 1rem;
-  }
 }
 
 /* --- Input Area Styling (Inline Button) --- */
 .comment-form-container {
-  margin-top: 32px;
-  padding-top: 20px;
+  margin-top: 40px;
+  padding-top: 24px;
   border-top: 1px solid var(--spectrum-gray-200);
-
-  @media (width >= 768px) {
-    margin-top: 40px;
-    padding-top: 24px;
-  }
 }
 
 /* This wrapper acts as the visual "input box" */
@@ -302,12 +251,12 @@
   border-radius: 24px;
   padding: 2px 2px 2px 12px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
 
-  /* Highlight the whole wrapper when typing */
-  &:focus-within {
-    border-color: var(--link-color);
-    box-shadow: 0 0 0 1px var(--link-color);
-  }
+/* Highlight the whole wrapper when typing */
+.comment-input-wrapper:focus-within {
+  border-color: var(--link-color);
+  box-shadow: 0 0 0 1px var(--link-color);
 }
 
 /* The actual text field is now invisible */
@@ -315,15 +264,13 @@
   flex: 1;
   border: none;
   background: transparent;
-  font-size: 0.9rem;
+  font-size: 1rem;
   outline: none;
   color: var(--text-color);
   font-family: var(--body-font-family);
   padding: 8px 0 8px 8px;
 
-  @media (width >= 768px) {
-    font-size: 1rem;
-  }
+  /* Added left padding */
 }
 
 .send-btn {
@@ -331,6 +278,8 @@
   color: var(--spectrum-gray-50);
   border: none;
   border-radius: 50%;
+
+  /* Circle shape since it's just an icon */
   width: 32px;
   height: 32px;
   padding: 0;
@@ -341,9 +290,10 @@
   font-family: var(--body-font-family);
   margin-left: 4px;
   margin-right: 4px;
-  flex-shrink: 0;
 
-  &:hover {
-    background-color: var(--link-hover-color);
-  }
+  /* Added right margin */
+}
+
+.send-btn:hover {
+  background-color: var(--link-hover-color);
 }
