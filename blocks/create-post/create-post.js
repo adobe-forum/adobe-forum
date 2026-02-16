@@ -1140,6 +1140,12 @@ function CreatePost() {
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // Single mutable ref that always holds the latest post JSON
   const postDataRef = useRef({
@@ -1206,8 +1212,7 @@ function CreatePost() {
       if (response.ok) {
         // eslint-disable-next-line no-console
         console.log('Post created successfully:', result);
-        // eslint-disable-next-line no-alert
-        alert('Your question has been posted successfully!');
+        showToast('Your question has been posted successfully!', 'success');
         // Reset form
         setTitle('');
         setCategory('');
@@ -1217,14 +1222,12 @@ function CreatePost() {
       } else {
         // eslint-disable-next-line no-console
         console.error('Error creating post:', result.error);
-        // eslint-disable-next-line no-alert
-        alert(`Error: ${result.error || 'Failed to create post'}`);
+        showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Network error:', error);
-      // eslint-disable-next-line no-alert
-      alert('Network error: Unable to connect to the server. Make sure the server is running.');
+      showToast('Network error: Unable to connect to the server.', 'error');
     }
 
     setShowPreview(false);
@@ -1356,6 +1359,13 @@ function CreatePost() {
           onBack=${() => setShowPreview(false)}
           onPost=${handlePost}
         />
+      `}
+      ${toast && html`
+        <div className=${`cp-toast cp-toast-${toast.type}`}>
+          <span className="cp-toast-msg">${toast.message}</span>
+          <button type="button" className="cp-toast-close" onClick=${() => setToast(null)}
+            aria-label="Dismiss">\u00D7</button>
+        </div>
       `}
     </div>
   `;
