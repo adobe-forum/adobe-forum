@@ -37,6 +37,8 @@ const UserIcon = () => html`
 
 const toId = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+const STORAGE_KEY = 'sidebar-categories';
+
 const initialCategoryData = [
   {
     id: 'javascript',
@@ -68,8 +70,39 @@ const initialCategoryData = [
   },
 ];
 
+// Load categories from localStorage
+const loadCategories = (authoredCategories) => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Return stored categories if they exist and are valid
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load categories from localStorage:', e);
+  }
+  // Fall back to authored or initial data
+  return authoredCategories && authoredCategories.length > 0
+    ? authoredCategories
+    : initialCategoryData;
+};
+
+// Save categories to localStorage
+const saveCategories = (categories) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to save categories to localStorage:', e);
+  }
+};
+
 function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   return html`
@@ -100,9 +133,7 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
 
 function Sidebar({ authoredCategories }) {
   // --- State ---
-  const [categories, setCategories] = useState(
-    authoredCategories && authoredCategories.length > 0 ? authoredCategories : initialCategoryData,
-  );
+  const [categories, setCategories] = useState(() => loadCategories(authoredCategories));
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
@@ -121,6 +152,11 @@ function Sidebar({ authoredCategories }) {
       inputRef.current.focus();
     }
   }, [isCreating]);
+
+  // Save to localStorage whenever categories change
+  useEffect(() => {
+    saveCategories(categories);
+  }, [categories]);
 
   // --- Handlers ---
   const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
@@ -195,7 +231,7 @@ function Sidebar({ authoredCategories }) {
       };
     }
     return null;
-  }).filter(Boolean);
+  }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
 
   return html`
     <div class="sidebar">
