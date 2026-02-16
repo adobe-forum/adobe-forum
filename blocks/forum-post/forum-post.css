@@ -139,11 +139,16 @@
 .post-divider {
   border: none;
   border-top: 1px solid var(--spectrum-gray-200);
-  margin: 40px 0;
+  margin: 0;
+  /* Margin reset to remove whitespace */
+  display: none;
+  /* Hidden because discussions are disabled */
 }
 
 .discussion-section {
   padding-top: 10px;
+  display: none;
+  /* Section hidden as discussions are currently disabled */
 }
 
 .discussion-header {
