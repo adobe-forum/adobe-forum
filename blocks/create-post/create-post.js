@@ -89,6 +89,7 @@ function QuillEditor({ onChange, minChars = 20 }) {
   const containerRef = useRef(null);
   const quillRef = useRef(null);
   const activeCellRef = useRef(null);
+  const resizeRef = useRef(null);
   const [charCount, setCharCount] = useState(0);
   const [showTableTools, setShowTableTools] = useState(false);
 
@@ -98,9 +99,129 @@ function QuillEditor({ onChange, minChars = 20 }) {
     const editorEl = quill.root;
     const htmlContent = editorEl.innerHTML;
     const jsonContent = domToJson(editorEl);
-    const textLength = quill.getText().trim().length;
+    const textLength = editorEl.textContent.trim().length;
     setCharCount(textLength);
     onChange(htmlContent, jsonContent);
+  };
+
+  // ---- Image resize overlay ----
+
+  const clearImageResize = () => {
+    if (!resizeRef.current) return;
+    const { overlay } = resizeRef.current;
+    if (overlay && overlay.parentNode) overlay.remove();
+    resizeRef.current = null;
+  };
+
+  const showImageResize = (img) => {
+    const quill = quillRef.current;
+    if (!quill) return;
+
+    // Don't re-create overlay for the same image
+    if (resizeRef.current && resizeRef.current.img === img) return;
+    clearImageResize();
+
+    // containerRef.current IS the .ql-container (Quill transforms it)
+    const qlContainer = containerRef.current;
+    if (!qlContainer) return;
+
+    // Prevent native browser image drag
+    img.setAttribute('draggable', 'false');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'img-resize-overlay';
+
+    const corners = ['nw', 'ne', 'sw', 'se'];
+    corners.forEach((pos) => {
+      const handle = document.createElement('div');
+      handle.className = `img-resize-handle img-resize-handle-${pos}`;
+      handle.dataset.pos = pos;
+      overlay.appendChild(handle);
+    });
+
+    qlContainer.appendChild(overlay);
+    resizeRef.current = { img, overlay };
+
+    // Position overlay on top of the image, accounting for editor scroll
+    const positionOverlay = () => {
+      const editorEl = quill.root;
+      const cRect = qlContainer.getBoundingClientRect();
+      const iRect = img.getBoundingClientRect();
+      overlay.style.top = `${iRect.top - cRect.top + editorEl.scrollTop}px`;
+      overlay.style.left = `${iRect.left - cRect.left + editorEl.scrollLeft}px`;
+      overlay.style.width = `${iRect.width}px`;
+      overlay.style.height = `${iRect.height}px`;
+    };
+    positionOverlay();
+
+    // Attach drag logic directly on each handle
+    corners.forEach((pos) => {
+      const handle = overlay.querySelector(`.img-resize-handle-${pos}`);
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const startX = e.clientX;
+        const startW = img.getBoundingClientRect().width;
+        const startH = img.getBoundingClientRect().height;
+        const ratio = startH / startW;
+        const maxW = qlContainer.clientWidth;
+
+        const onMouseMove = (ev) => {
+          ev.preventDefault();
+          const isLeft = pos.endsWith('w');
+          const dx = isLeft ? startX - ev.clientX : ev.clientX - startX;
+          let newW = Math.round(startW + dx);
+          if (newW < 50) newW = 50;
+          if (newW > maxW) newW = maxW;
+          const newH = Math.round(newW * ratio);
+
+          img.style.width = `${newW}px`;
+          img.style.height = `${newH}px`;
+          overlay.style.width = `${newW}px`;
+          overlay.style.height = `${newH}px`;
+
+          // Re-position overlay
+          const editorEl = quill.root;
+          const cRect = qlContainer.getBoundingClientRect();
+          const iRect = img.getBoundingClientRect();
+          overlay.style.top = `${iRect.top - cRect.top + editorEl.scrollTop}px`;
+          overlay.style.left = `${iRect.left - cRect.left + editorEl.scrollLeft}px`;
+        };
+
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          document.body.style.userSelect = '';
+
+          // Persist width attribute via observer disconnect
+          const obs = quill.scroll && quill.scroll.observer;
+          if (obs) obs.disconnect();
+
+          const finalW = img.getBoundingClientRect().width;
+          img.setAttribute('width', Math.round(finalW));
+          img.removeAttribute('height');
+          img.style.height = 'auto';
+
+          if (obs) {
+            obs.observe(quill.scroll.domNode, {
+              attributes: true,
+              characterData: true,
+              characterDataOldValue: true,
+              childList: true,
+              subtree: true,
+            });
+          }
+
+          positionOverlay();
+          emitChange();
+        };
+
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    });
   };
 
   const detectTableContext = () => {
@@ -375,6 +496,7 @@ function QuillEditor({ onChange, minChars = 20 }) {
 
                 emitChange();
                 detectTableContext();
+                editor.classList.remove('ql-blank');
               },
             },
           },
@@ -401,17 +523,255 @@ function QuillEditor({ onChange, minChars = 20 }) {
 
       quillRef.current = quill;
 
+      // Update line-number gutter on code blocks via CSS custom property.
+      // Uses requestAnimationFrame so the style update happens after Quill
+      // has finished processing, avoiding observer disconnect issues.
+      const updateCodeLineNumbers = () => {
+        requestAnimationFrame(() => {
+          const pres = quill.root.querySelectorAll('pre');
+          pres.forEach((pre) => {
+            const lineArr = pre.textContent.split('\n');
+            if (lineArr[lineArr.length - 1] === '') lineArr.pop();
+            const lineCount = lineArr.length || 1;
+            const nums = Array.from(
+              { length: lineCount },
+              (_, i) => i + 1,
+            ).join('\\a ');
+            pre.style.setProperty('--line-nums', `"${nums}"`);
+          });
+        });
+      };
+
+      // Keep a <p> above the first table so users can always type there
+      const ensureLeadingParagraph = () => {
+        requestAnimationFrame(() => {
+          const first = quill.root.firstElementChild;
+          if (first && first.tagName === 'TABLE') {
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            quill.root.insertBefore(p, first);
+          }
+        });
+      };
+
       quill.on('text-change', () => {
+        clearImageResize();
         emitChange();
         detectTableContext();
+        updateCodeLineNumbers();
+        ensureLeadingParagraph();
       });
 
       quill.on('selection-change', () => {
         detectTableContext();
       });
 
-      // Detect table context on click inside editor
-      quill.root.addEventListener('click', detectTableContext);
+      quill.root.addEventListener('click', (e) => {
+        detectTableContext();
+        if (e.target.tagName === 'IMG') {
+          showImageResize(e.target);
+        } else if (!e.target.closest('.img-resize-overlay')) {
+          clearImageResize();
+        }
+      });
+
+      // Clear resize overlay when clicking outside the editor
+      document.addEventListener('mousedown', (e) => {
+        if (resizeRef.current
+          && !containerRef.current.contains(e.target)) {
+          clearImageResize();
+        }
+      });
+
+      // Intercept keyboard events with a capture-phase listener so it
+      // fires BEFORE Quill's handler. When tables exist Quill's delta
+      // model is out of sync with the DOM (table content isn't tracked
+      // in the delta), so we bypass Quill and handle edits ourselves.
+      containerRef.current.addEventListener('keydown', (e) => {
+        if (e.key !== 'Backspace' && e.key !== 'Delete'
+          && e.key !== 'Enter') return;
+
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+
+        // ── Inside a table cell ──
+        let nd = sel.anchorNode;
+        let insideTd = false;
+        while (nd && nd !== quill.root) {
+          if (nd.nodeName === 'TD') { insideTd = true; break; }
+          nd = nd.parentNode;
+        }
+
+        if (insideTd) {
+          e.stopPropagation();
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const br = document.createElement('br');
+            range.insertNode(br);
+            range.setStartAfter(br);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            emitChange();
+          }
+          return;
+        }
+
+        // ── Outside table cells ──
+        // If no tables in editor, let Quill handle normally
+        if (!quill.root.querySelector('table')) return;
+
+        // Tables exist → bypass Quill for all structural keys
+        e.stopPropagation();
+
+        let block = sel.anchorNode;
+        while (block && block.parentNode !== quill.root) {
+          block = block.parentNode;
+        }
+        if (!block) return;
+
+        const range = sel.getRangeAt(0);
+
+        // ── Backspace ──
+        if (e.key === 'Backspace') {
+          if (!range.collapsed) return; // browser handles selection
+
+          // Check if cursor is at start of block
+          const preRange = document.createRange();
+          preRange.setStart(block, 0);
+          preRange.setEnd(range.startContainer, range.startOffset);
+          const atStart = preRange.toString().length === 0;
+
+          if (atStart) {
+            e.preventDefault();
+            const prev = block.previousElementSibling;
+            if (!prev || prev.tagName === 'TABLE') return;
+
+            // Remove BR placeholder from empty prev
+            if (prev.lastChild && prev.lastChild.nodeName === 'BR'
+              && !prev.textContent.trim()) {
+              prev.removeChild(prev.lastChild);
+            }
+            // Mark merge point for cursor
+            const mergeNode = prev.lastChild;
+            const mergeOff = mergeNode && mergeNode.nodeType === 3
+              ? mergeNode.textContent.length : 0;
+            // Move content unless block is just an empty placeholder
+            const isEmpty = !block.textContent.trim()
+              && block.childNodes.length <= 1;
+            if (!isEmpty) {
+              while (block.firstChild) {
+                prev.appendChild(block.firstChild);
+              }
+            }
+            block.remove();
+            // Restore cursor at merge point
+            const nr = document.createRange();
+            if (mergeNode && mergeNode.nodeType === 3) {
+              nr.setStart(mergeNode, mergeOff);
+            } else if (mergeNode) {
+              nr.setStartAfter(mergeNode);
+            } else {
+              nr.setStart(prev, 0);
+            }
+            nr.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(nr);
+            emitChange();
+          }
+          // else: mid-block character deletion, browser handles natively
+          return;
+        }
+
+        // ── Delete ──
+        if (e.key === 'Delete') {
+          if (!range.collapsed) return;
+
+          const postRange = document.createRange();
+          postRange.setStart(range.endContainer, range.endOffset);
+          postRange.setEnd(block, block.childNodes.length);
+          const atEnd = postRange.toString().length === 0;
+
+          if (atEnd) {
+            e.preventDefault();
+            const next = block.nextElementSibling;
+            if (!next || next.tagName === 'TABLE') return;
+            const isNextEmpty = !next.textContent.trim()
+              && next.childNodes.length <= 1;
+            if (!isNextEmpty) {
+              while (next.firstChild) {
+                block.appendChild(next.firstChild);
+              }
+            }
+            next.remove();
+            emitChange();
+          }
+          return;
+        }
+
+        // ── Enter ──
+        if (e.key === 'Enter') {
+          // Inside a code block → insert newline, not a new paragraph
+          if (block.nodeName === 'PRE') {
+            e.preventDefault();
+            if (!range.collapsed) range.deleteContents();
+            const nl = document.createTextNode('\n');
+            range.insertNode(nl);
+            range.setStartAfter(nl);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            emitChange();
+            updateCodeLineNumbers();
+            return;
+          }
+
+          e.preventDefault();
+          if (!range.collapsed) range.deleteContents();
+
+          const newP = document.createElement('p');
+          const afterRange = document.createRange();
+          afterRange.setStart(range.startContainer, range.startOffset);
+          afterRange.setEnd(block, block.childNodes.length);
+          const frag = afterRange.extractContents();
+
+          if (frag.textContent.trim() || frag.querySelector('img')) {
+            newP.appendChild(frag);
+          } else {
+            newP.innerHTML = '<br>';
+          }
+          if (!block.textContent && !block.querySelector('img')) {
+            block.innerHTML = '<br>';
+          }
+          if (block.nextSibling) {
+            quill.root.insertBefore(newP, block.nextSibling);
+          } else {
+            quill.root.appendChild(newP);
+          }
+          const nr = document.createRange();
+          nr.setStart(newP, 0);
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+          emitChange();
+        }
+      }, true);
+
+      // Catch edits inside table cells and other DOM-inserted content
+      // that bypass Quill's text-change event
+      quill.root.addEventListener('input', () => {
+        const { root } = quill;
+        const hasVisualContent = root.textContent.trim().length > 0
+          || root.querySelector('table, img, iframe');
+        if (hasVisualContent) {
+          root.classList.remove('ql-blank');
+        }
+        emitChange();
+        updateCodeLineNumbers();
+        ensureLeadingParagraph();
+      });
     });
 
     return undefined;
@@ -685,35 +1045,48 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 function PreviewModal({
   title, category, body, tags, onBack, onPost,
 }) {
+  const bodyRef = useRef(null);
+
+  // Add line numbers to code blocks after the body HTML is rendered
+  useEffect(() => {
+    if (!bodyRef.current) return;
+    bodyRef.current.querySelectorAll('pre').forEach((pre) => {
+      const lineArr = pre.textContent.split('\n');
+      if (lineArr[lineArr.length - 1] === '') lineArr.pop();
+      const lineCount = lineArr.length || 1;
+      const nums = Array.from(
+        { length: lineCount },
+        (_, i) => i + 1,
+      ).join('\\a ');
+      pre.style.setProperty('--line-nums', `"${nums}"`);
+    });
+  }, [body]);
+
   return html`
     <div className="preview-modal-overlay" onClick=${onBack}>
       <div className="preview-modal" onClick=${(e) => e.stopPropagation()}>
-        <div className="preview-modal-header">
-          <h2>Preview Your Question</h2>
-        </div>
         <div className="preview-modal-body">
-          <div className="preview-field">
-            <span className="preview-label">Title</span>
-            <h3 className="preview-title">${title}</h3>
-          </div>
-          <div className="preview-field">
-            <span className="preview-label">Category</span>
-            <span className="preview-category">${category}</span>
-          </div>
-          <div className="preview-field">
-            <span className="preview-label">Body</span>
+          <div className="preview-post">
+            ${tags.length > 0 && html`
+              <div className="preview-tags">
+                ${tags.map((tag) => html`
+                  <span key=${tag} className="preview-tag">#${tag}</span>
+                `)}
+              </div>
+            `}
+            <h1 className="preview-title">${title}</h1>
+            <div className="preview-meta">
+              <span className="preview-author">You</span>
+              ${category && html`
+                <span className="preview-meta-sep">\u00B7</span>
+                <span className="preview-category">${category}</span>
+              `}
+            </div>
             <div
+              ref=${bodyRef}
               className="preview-body-content"
               dangerouslySetInnerHTML=${{ __html: body }}
             />
-          </div>
-          <div className="preview-field">
-            <span className="preview-label">Tags</span>
-            <div className="preview-tags">
-              ${tags.map((tag) => html`
-                <span key=${tag} className="preview-tag">${tag}</span>
-              `)}
-            </div>
           </div>
         </div>
         <div className="preview-modal-footer">
@@ -721,7 +1094,7 @@ function PreviewModal({
             Back to Edit
           </button>
           <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
-            Post
+            Post Question
           </button>
         </div>
       </div>
@@ -786,7 +1159,7 @@ function CreatePost() {
     const postData = {
       title,
       category,
-      body,
+      body: bodyJson,
       tags: tagsWithHash,
     };
 
