@@ -92,49 +92,202 @@
   color: var(--cp-color-required);
 }
 
-/* Quill editor wrapper */
-.quill-editor-wrapper {
+/* Custom editor wrapper */
+.ce-editor-wrapper {
   border: 1px solid var(--cp-border);
   border-radius: 4px;
   overflow: hidden;
 }
 
-.quill-editor-wrapper .ql-toolbar {
-  border: none;
+/* Toolbar */
+.ce-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--cp-border-light);
   background: var(--cp-bg-subtle);
 }
 
-.quill-editor-wrapper .ql-container {
-  border: none;
+.ce-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.ce-toolbar-group + .ce-toolbar-group {
+  border-left: 1px solid var(--cp-border-light);
+}
+
+.ce-toolbar-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--cp-icon-stroke);
+}
+
+.ce-toolbar-btn:hover {
+  background: var(--cp-bg-hover);
+}
+
+.ce-toolbar-btn:active {
+  background: var(--cp-bg-pressed);
+}
+
+.ce-toolbar-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.ce-size-select {
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid var(--cp-border-light);
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--cp-bg-surface);
+  color: var(--cp-text-primary);
+}
+
+/* Editor container */
+.ce-container {
+  position: relative;
   font-size: 14px;
   min-height: 250px;
 }
 
-.quill-editor-wrapper .ql-editor {
+.ce-editor {
   min-height: 250px;
   line-height: 1.6;
+  padding: 12px 15px;
+  outline: none;
+  tab-size: 4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  overflow-y: auto;
 }
 
-.quill-editor-wrapper .ql-editor.ql-blank::before {
+/* Placeholder */
+.ce-editor.is-empty::before {
+  content: attr(data-placeholder);
   color: var(--cp-text-muted);
   font-style: normal;
   padding-left: 2px;
+  pointer-events: none;
+  position: absolute;
 }
 
-.quill-editor-wrapper .ql-editor.ql-blank:has(table)::before {
+.ce-editor.is-empty:has(table)::before {
   display: none;
 }
 
-/* Table button icon */
-.quill-editor-wrapper .ql-table svg {
-  width: 18px;
-  height: 18px;
+/* Editor content formatting */
+.ce-editor p {
+  margin: 0 0 8px;
 }
 
-.quill-editor-wrapper .ql-table .ql-stroke {
-  stroke: var(--cp-icon-stroke);
-  fill: none;
+.ce-editor h1,
+.ce-editor h2,
+.ce-editor h3,
+.ce-editor h4,
+.ce-editor h5,
+.ce-editor h6 {
+  margin: 16px 0 8px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.ce-editor h1 { font-size: 2em; }
+.ce-editor h2 { font-size: 1.5em; }
+.ce-editor h3 { font-size: 1.17em; }
+.ce-editor h4 { font-size: 1em; }
+.ce-editor h5 { font-size: 0.83em; }
+.ce-editor h6 { font-size: 0.67em; }
+
+.ce-editor a {
+  color: var(--link-color, #1473e6);
+  text-decoration: underline;
+}
+
+.ce-editor blockquote {
+  border-left: 4px solid var(--cp-blockquote-accent);
+  margin: 8px 0;
+  padding: 12px 16px;
+  color: var(--cp-text-dim);
+  background: var(--cp-blockquote-bg);
+}
+
+.ce-editor pre {
+  position: relative;
+  background: var(--cp-code-bg);
+  color: var(--cp-code-text);
+  padding: 16px 16px 16px 3.5em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.ce-editor pre::before {
+  content: var(--line-nums, "");
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5em;
+  padding: 16px 8px 16px 0;
+  text-align: right;
+  color: rgb(212 212 212 / 30%);
+  border-right: 1px solid rgb(212 212 212 / 15%);
+  white-space: pre;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ce-editor code,
+.preview-body-content code {
+  background: var(--cp-bg-hover);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.ce-editor pre code,
+.preview-body-content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.ce-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+  display: block;
+  cursor: pointer;
+}
+
+.ce-editor ol,
+.ce-editor ul {
+  padding-left: 1.5em;
+  margin: 0 0 8px;
 }
 
 /* Table styling — ordered by ascending specificity */
@@ -152,7 +305,7 @@
   border: 1px solid var(--cp-border-table);
 }
 
-.quill-editor-wrapper .ql-editor table {
+.ce-editor table {
   width: 100%;
   border-collapse: collapse;
   margin: 16px 0;
@@ -160,8 +313,8 @@
   border: 1px solid var(--cp-border-table);
 }
 
-.quill-editor-wrapper .ql-editor td,
-.quill-editor-wrapper .ql-editor th {
+.ce-editor td,
+.ce-editor th {
   padding: 12px 16px;
   border: 1px solid var(--cp-border-table);
   min-width: 80px;
@@ -176,12 +329,12 @@
   background: var(--cp-bg-hover-light);
 }
 
-.quill-editor-wrapper .ql-editor tr:first-child td {
+.ce-editor tr:first-child td {
   background: var(--cp-bg-hover);
   font-weight: 600;
 }
 
-.quill-editor-wrapper .ql-editor tr:hover td {
+.ce-editor tr:hover td {
   background: var(--cp-bg-hover-light);
 }
 
@@ -591,10 +744,29 @@
   color: var(--cp-text-primary);
 }
 
-/* Preview body content styling for Quill output */
+/* Preview body content styling */
 .preview-body-content p {
   margin: 0 0 12px;
 }
+
+.preview-body-content h1,
+.preview-body-content h2,
+.preview-body-content h3,
+.preview-body-content h4,
+.preview-body-content h5,
+.preview-body-content h6 {
+  margin: 16px 0 8px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--cp-text-primary);
+}
+
+.preview-body-content h1 { font-size: 2em; }
+.preview-body-content h2 { font-size: 1.5em; }
+.preview-body-content h3 { font-size: 1.17em; }
+.preview-body-content h4 { font-size: 1em; }
+.preview-body-content h5 { font-size: 0.83em; }
+.preview-body-content h6 { font-size: 0.67em; }
 
 .preview-body-content blockquote {
   border-left: 4px solid var(--cp-blockquote-accent);
@@ -633,45 +805,6 @@
   user-select: none;
 }
 
-/* Code block line numbers — editor (must beat .ql-snow .ql-editor pre) */
-.quill-editor-wrapper .ql-snow .ql-editor pre {
-  position: relative;
-  padding-left: 3.5em;
-}
-
-.quill-editor-wrapper .ql-snow .ql-editor pre::before {
-  content: var(--line-nums, "");
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2.5em;
-  padding: 5px 8px 5px 0;
-  text-align: right;
-  color: rgb(212 212 212 / 30%);
-  border-right: 1px solid rgb(212 212 212 / 15%);
-  white-space: pre;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  pointer-events: none;
-  user-select: none;
-}
-
-.preview-body-content code {
-  background: var(--cp-bg-hover);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 13px;
-}
-
-.preview-body-content pre code {
-  background: none;
-  padding: 0;
-  color: inherit;
-}
-
 .preview-body-content img {
   max-width: 100%;
   height: auto;
@@ -688,10 +821,6 @@
 }
 
 /* ========== IMAGE RESIZE OVERLAY ========== */
-
-.quill-editor-wrapper .ql-editor img {
-  cursor: pointer;
-}
 
 .img-resize-overlay {
   position: absolute;
