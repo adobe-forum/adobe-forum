@@ -327,15 +327,8 @@ function HeaderComponent() {
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const profileButtonRef = useRef(null);
 
-  const toggleMenu = () => {
-    const newState = !isMobileMenuOpen;
-    setIsMobileMenuOpen(newState);
-    // Toggle sidebar visibility on mobile
-    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-    if (sidebarWrapper) {
-      sidebarWrapper.classList.toggle('mobile-open', newState);
-    }
-  };
+  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleProfilePopup = () => setIsProfilePopupOpen(!isProfilePopupOpen);
 
   const handleProfileImageError = () => {
     setProfileImageError(true);

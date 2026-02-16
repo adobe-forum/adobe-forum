@@ -30,10 +30,21 @@
     "stylelint": "17.1.1",
     "stylelint-config-standard": "40.0.0"
   },
+<<<<<<< HEAD
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "mongoose": "^9.2.1"
+=======
+  "main": ".eslintrc.js",
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "mongodb": "^7.1.0"
+>>>>>>> 585d5f4 (created profile)
   }
 }
