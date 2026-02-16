@@ -1182,10 +1182,14 @@ function CreatePost() {
     // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
+  const handlePost = async () => {
+    // Prepend # to each tag before sending to the backend
+    const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
+
     const postData = {
       title,
       category,
-      body: bodyJson,
+      body,
       tags: tagsWithHash,
     };
 
@@ -1206,24 +1210,20 @@ function CreatePost() {
       if (response.ok) {
         // eslint-disable-next-line no-console
         console.log('Post created successfully:', result);
-        // eslint-disable-next-line no-alert
         alert('Your question has been posted successfully!');
         // Reset form
         setTitle('');
         setCategory('');
         setBody('');
-        setBodyJson(null);
         setTags([]);
       } else {
         // eslint-disable-next-line no-console
         console.error('Error creating post:', result.error);
-        // eslint-disable-next-line no-alert
         alert(`Error: ${result.error || 'Failed to create post'}`);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Network error:', error);
-      // eslint-disable-next-line no-alert
       alert('Network error: Unable to connect to the server. Make sure the server is running.');
     }
 
