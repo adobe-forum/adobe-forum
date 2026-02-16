@@ -1,5 +1,5 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState } from '../../vendor/preact-hooks.js';
+import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 /**
  * 1. SYNCHRONOUS DUMMY DATA
@@ -72,6 +72,14 @@ const ContentBlock = ({ block }) => {
 const ForumPost = () => {
   const [post, setPost] = useState(DUMMY_POST_DATA);
   const [inputValue, setInputValue] = useState('');
+  const commentsListRef = useRef(null);
+
+  // Auto-scroll to bottom when comments change
+  useEffect(() => {
+    if (commentsListRef.current) {
+      commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
+    }
+  }, [post.comments]);
 
   const addComment = () => {
     if (!inputValue.trim()) return;
@@ -108,7 +116,7 @@ const ForumPost = () => {
           Discussion <span class="count">(${post.comments.length})</span>
         </h3>
         
-        <div class="comments-list">
+        <div class="comments-list" ref=${commentsListRef}>
           ${post.comments.map((c) => html`
             <div class="comment-row">
               <div class="comment-avatar">${c.user.charAt(0)}</div>
