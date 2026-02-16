@@ -86,18 +86,23 @@
   pre {
     position: relative;
     background: #1e1e1e;
+
     /* matches --cp-code-bg */
     color: #d4d4d4;
+
     /* matches --cp-code-text */
     border-radius: 6px;
     margin: 0;
     padding: 16px 16px 16px 3.5em;
+
     /* Space for line numbers */
     overflow-x: auto;
     font-family: monospace;
+
     /* Match create-post preview-body-content defaults */
     font-size: 14px;
     line-height: 1.6;
+
     /* create-post is ~15px base, usually code is slightly smaller or monospace */
 
     &::before {
