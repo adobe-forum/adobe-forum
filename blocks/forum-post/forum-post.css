@@ -6,20 +6,6 @@
   color: var(--text-color);
   padding: 20px 20px 60px;
   line-height: 1.6;
-  position: relative;
-}
-
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgb(255 255 255 / 90%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: var(--spectrum-blue-900, #0265DC);
-  font-weight: 600;
-  z-index: 100;
 }
 
 /* --- 2. Header Section --- */
@@ -40,7 +26,7 @@
 }
 
 .post-title {
-  font-size: 1.75rem;
+  font-size: 2.5rem;
   font-weight: 800;
   margin: 0 0 12px;
   color: var(--text-color);
@@ -53,14 +39,8 @@
   color: var(--spectrum-gray-600);
   margin-bottom: 40px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-
-  @media (width >= 768px) {
-    font-size: 1rem;
-    margin-bottom: 40px;
-  }
 }
 
 .author-name {
@@ -212,69 +192,53 @@
 /* --- Code Block Styling (Matches create-post) --- */
 .block-code {
   margin: 24px 0;
-}
 
-/* 
- * Removing .code-lang styles as we removed the element
- */
+  pre {
+    position: relative;
+    background: #1e1e1e;
 
-.block-code pre {
-  position: relative;
-  background: #1e1e1e;
+    /* matches --cp-code-bg */
+    color: #d4d4d4;
 
-  /* matches --cp-code-bg */
-  color: #d4d4d4;
+    /* matches --cp-code-text */
+    border-radius: 6px;
+    margin: 0;
+    padding: 16px 16px 16px 3.5em;
 
-  /* matches --cp-code-text */
-  border-radius: 6px;
-  margin: 0;
-  padding: 16px 16px 16px 3.5em;
+    /* Space for line numbers */
+    overflow-x: auto;
+    font-family: monospace;
 
-  /* Space for line numbers */
-  overflow-x: auto;
+    /* Match create-post preview-body-content defaults */
+    font-size: 14px;
+    line-height: 1.6;
 
-  /* Match create-post preview-body-content defaults */
-  font-family: Monaco, Consolas, 'Courier New', monospace;
-  font-size: 14px;
+    /* create-post is ~15px base, usually code is slightly smaller or monospace */
 
-  /* create-post is ~15px base, usually code is slightly smaller or monospace */
-  line-height: 1.6;
-  white-space: pre;
-}
+    &::before {
+      content: var(--line-nums, "");
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2.5em;
+      padding: 16px 8px 16px 0;
+      text-align: right;
+      color: rgb(212 212 212 / 30%);
+      border-right: 1px solid rgb(212 212 212 / 15%);
+      white-space: pre;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      pointer-events: none;
+      user-select: none;
+    }
+  }
 
-.block-code pre::before {
-  content: var(--line-nums, "");
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2.5em;
-  padding: 16px 8px 16px 0;
-  text-align: right;
-  color: rgb(212 212 212 / 30%);
-  border-right: 1px solid rgb(212 212 212 / 15%);
-  white-space: pre;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  pointer-events: none;
-  user-select: none;
-}
-
-.block-code code {
-  color: inherit;
-  background: transparent;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
-}
-
-/* Support for video embeds */
-.block-text iframe,
-.block-text video {
-  max-width: 100%;
-  margin: 16px 0;
-  border-radius: 6px;
+  code {
+    color: inherit;
+    background: transparent;
+  }
 }
 
 /* --- 4. Discussion Section --- */
@@ -297,7 +261,7 @@
 }
 
 .discussion-header {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 24px;
   color: var(--text-color);
