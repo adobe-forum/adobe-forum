@@ -86,7 +86,6 @@ async function loadIcons() {
         const resp = await fetch(`/icons/${file}.svg`);
         if (resp.ok) return [cmd, await resp.text()];
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error(`Failed to load icon: ${file}.svg`, e);
       }
       return [cmd, ''];
@@ -412,7 +411,13 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       const editor = editorRef.current;
       if (!editor) return;
       const first = editor.firstElementChild;
-      if (first && first.tagName === 'TABLE') {
+      if (!first) return;
+      const tag = first.tagName;
+      const needsLeading = tag === 'TABLE'
+        || /^H[1-6]$/.test(tag)
+        || tag === 'PRE'
+        || tag === 'BLOCKQUOTE';
+      if (needsLeading) {
         const p = document.createElement('p');
         p.innerHTML = '<br>';
         editor.insertBefore(p, first);
@@ -607,7 +612,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const handleLinkInsert = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
-    // eslint-disable-next-line no-alert
     const url = prompt('Enter URL:');
     if (!url) return;
     document.execCommand('createLink', false, url);
@@ -727,11 +731,30 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     // Input handler
     const onInput = () => {
       // Clean up inline <code> artifacts
+      const sel = window.getSelection();
+      const cursorNode = sel?.anchorNode;
+      const cursorOffset = sel?.anchorOffset;
       editor.querySelectorAll('code').forEach((code) => {
         if (code.closest('pre')) return; // Don't touch code inside pre blocks
-        // Strip ZWS from codes that have real content
+        // Strip ZWS from codes that have real content, preserving cursor
         if (code.textContent.includes('\u200B') && code.textContent.length > 1) {
-          code.textContent = code.textContent.replace(/\u200B/g, '');
+          code.childNodes.forEach((child) => {
+            if (child.nodeType === 3 && child.nodeValue.includes('\u200B')) {
+              const old = child.nodeValue;
+              child.nodeValue = old.replace(/\u200B/g, '');
+              // Restore cursor at the correct offset
+              if (sel && child === cursorNode) {
+                const zwsBefore = (old.substring(0, cursorOffset).match(/\u200B/g) || []).length;
+                const adjusted = cursorOffset - zwsBefore;
+                const newOff = Math.max(0, Math.min(adjusted, child.nodeValue.length));
+                const r = document.createRange();
+                r.setStart(child, newOff);
+                r.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(r);
+              }
+            }
+          });
         }
         // Unwrap <code> that only contains <br> (browser clones this on Enter)
         if (code.childNodes.length === 1 && code.firstChild.nodeName === 'BR') {
@@ -874,6 +897,34 @@ function RichTextEditor({ onChange, minChars = 20 }) {
           updateActiveFormats();
           return;
         }
+      }
+
+      // ── Enter inside a heading — next line becomes a regular paragraph ──
+      if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) range.deleteContents();
+        // Extract content after cursor
+        const afterRange = document.createRange();
+        afterRange.setStart(
+          range.startContainer,
+          range.startOffset,
+        );
+        afterRange.setEnd(block, block.childNodes.length);
+        const fragment = afterRange.extractContents();
+        const newP = document.createElement('p');
+        newP.appendChild(fragment);
+        if (!newP.textContent.trim()) newP.innerHTML = '<br>';
+        block.after(newP);
+        const nr = document.createRange();
+        nr.setStart(newP, 0);
+        nr.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(nr);
+        emitChange();
+        updateActiveFormats();
+        return;
       }
 
       // ── Outside table cells ──
@@ -1268,6 +1319,12 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
     }
   };
 
+  const handleBlur = () => {
+    if (inputValue.trim()) {
+      addTag(inputValue.trim());
+    }
+  };
+
   return html`
     <div className="tags-wrapper" ref=${wrapperRef}>
       <div className="tags-input-container">
@@ -1291,6 +1348,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
           value=${inputValue}
           onInput=${handleInputChange}
           onKeyDown=${handleKeyDown}
+          onBlur=${handleBlur}
           onFocus=${() => inputValue.trim() && setIsOpen(true)}
           placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
           disabled=${tags.length >= maxTags}
@@ -1393,12 +1451,15 @@ function CreatePost() {
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
+  const [sidebarPath, setSidebarPath] = useState(''); // e.g., "React > Hooks > Custom Hooks"
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+  const showToast = (message, type = 'success', onConfirm = null) => {
+    setToast({ message, type, onConfirm });
+    if (!onConfirm) {
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
   // Single mutable ref that always holds the latest post JSON
@@ -1419,9 +1480,7 @@ function CreatePost() {
       body: bodyJson,
       tags,
     };
-    // eslint-disable-next-line no-console
     console.clear();
-    // eslint-disable-next-line no-console
     console.log('Live post JSON:', postDataRef.current);
   }, [title, category, bodyJson, tags]);
 
@@ -1449,7 +1508,6 @@ function CreatePost() {
       tags: tagsWithHash,
     };
 
-    // eslint-disable-next-line no-console
     console.log('Sending post data:', postData);
 
     try {
@@ -1464,8 +1522,35 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        // eslint-disable-next-line no-console
         console.log('Post created successfully:', result);
+
+        // Create sidebar item with nested path
+        try {
+          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              title,
+              category,
+              postId: result.post._id, // eslint-disable-line no-underscore-dangle
+              path: sidebarPath || title, // Use title if no path specified
+              autoNestES6: true, // Enable auto-nesting for ES6 related content
+            }),
+          });
+
+          if (sidebarResponse.ok) {
+            // eslint-disable-next-line no-console
+            console.log('Sidebar item created successfully');
+            // Dispatch event to refresh sidebar
+            window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+          }
+        } catch (sidebarError) {
+          // eslint-disable-next-line no-console
+          console.error('Error creating sidebar item:', sidebarError);
+        }
+
         showToast('Your question has been posted successfully!', 'success');
         // Reset form
         setTitle('');
@@ -1473,13 +1558,12 @@ function CreatePost() {
         setBody('');
         setBodyJson(null);
         setTags([]);
+        setSidebarPath('');
       } else {
-        // eslint-disable-next-line no-console
         console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Network error:', error);
       showToast('Network error: Unable to connect to the server.', 'error');
     }
@@ -1488,14 +1572,9 @@ function CreatePost() {
   };
 
   const handleCancel = () => {
-    // eslint-disable-next-line no-alert, no-restricted-globals
-    if (confirm('Are you sure you want to discard this post?')) {
-      setTitle('');
-      setCategory('');
-      setBody('');
-      setBodyJson(null);
-      setTags([]);
-    }
+    showToast('Are you sure you want to discard this post?', 'warning', () => {
+      window.location.href = '/';
+    });
   };
 
   return html`
@@ -1581,6 +1660,22 @@ function CreatePost() {
           />
         </div>
 
+        <div className="form-group">
+          <label>
+            Sidebar Path
+          </label>
+          <p className="helper-text">
+            Optional: Organize in nested folders. Use ">" to create hierarchy.
+            Example: "React > Hooks > Custom Hooks". ES6-related content auto-nests.
+          </p>
+          <input
+            type="text"
+            value=${sidebarPath}
+            onInput=${(e) => setSidebarPath(e.target.value)}
+            placeholder="e.g., React > Hooks > useState"
+          />
+        </div>
+
         <div className="submit-section">
           <button type="button" className="btn btn-cancel" onClick=${handleCancel}>
             Cancel
@@ -1617,8 +1712,15 @@ function CreatePost() {
       ${toast && html`
         <div className=${`cp-toast cp-toast-${toast.type}`}>
           <span className="cp-toast-msg">${toast.message}</span>
-          <button type="button" className="cp-toast-close" onClick=${() => setToast(null)}
-            aria-label="Dismiss">\u00D7</button>
+          ${toast.onConfirm ? html`
+            <div className="cp-toast-actions">
+              <button type="button" className="cp-toast-confirm" onClick=${() => { setToast(null); toast.onConfirm(); }}>Yes</button>
+              <button type="button" className="cp-toast-dismiss" onClick=${() => setToast(null)}>No</button>
+            </div>
+          ` : html`
+            <button type="button" className="cp-toast-close" onClick=${() => setToast(null)}
+              aria-label="Dismiss">\u00D7</button>
+          `}
         </div>
       `}
     </div>

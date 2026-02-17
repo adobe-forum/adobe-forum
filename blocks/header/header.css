@@ -346,12 +346,26 @@ nav.spectrum-nav {
     transition: max-height 0.3s;
   }
 
+  /* Tree Structure Styles */
+  & .tree-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    max-height: 1000px;
+    transition: max-height 0.3s;
+  }
+
   & .category-item.collapsed {
     & .category-toggle {
       transform: rotate(-90deg);
     }
 
     & .subcategory-list {
+      max-height: 0;
+    }
+
+    & .tree-list {
       max-height: 0;
     }
   }
@@ -381,6 +395,75 @@ nav.spectrum-nav {
     color: #1473e6;
   }
 
+  & .tree-item {
+    list-style: none;
+  }
+
+  & .tree-item-content {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    padding-left: calc(24px + var(--indent-level, 0) * 16px);
+    cursor: pointer;
+    font-size: 13px;
+    color: #4b4b4b;
+    transition: background-color 0.15s;
+
+    &:hover {
+      background: #f8f8f8;
+      color: #1473e6;
+    }
+
+    &.active {
+      background-color: rgb(231 243 255);
+      color: rgb(13 102 208);
+      font-weight: 600;
+    }
+  }
+
+  & .tree-toggle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: #888;
+    transition: transform 0.2s;
+    margin-right: 4px;
+  }
+
+  & .tree-toggle.expanded {
+    transform: rotate(90deg);
+  }
+
+  & .tree-icon {
+    margin-right: 8px;
+    font-size: 14px;
+  }
+
+  & .tree-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & .tree-children {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  & .tree-item.is-folder > .tree-item-content {
+    font-weight: 500;
+    color: #333;
+  }
+
+  & .tree-item.is-file > .tree-item-content {
+    padding-left: calc(40px + var(--indent-level, 0) * 16px);
+  }
+
   & .no-items {
     padding: 6px 16px 6px 48px;
     font-style: italic;
@@ -394,6 +477,14 @@ nav.spectrum-nav {
     color: #888;
     font-size: 13px;
     font-style: italic;
+  }
+
+  & .loading {
+    padding: 20px;
+    text-align: center;
+    color: #1473e6;
+    font-size: 13px;
+    font-weight: 600;
   }
 }
 
