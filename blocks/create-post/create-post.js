@@ -1362,7 +1362,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
             <div
               key=${tag}
               className="tag-option"
-              onClick=${() => addTag(tag)}
+              onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
             >
               ${tag}
             </div>
