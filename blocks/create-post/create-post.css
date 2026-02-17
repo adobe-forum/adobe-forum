@@ -532,8 +532,17 @@
   min-width: 120px;
   font-size: 14px;
   padding: 4px 0;
-  border: none;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   background: transparent;
+  appearance: none;
+
+  &:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
 }
 
 .tags-dropdown {
@@ -596,11 +605,13 @@
 }
 
 .btn-cancel {
-  background: var(--cp-bg-hover);
+  background-color: var(--cp-bg-hover);
   color: var(--cp-text-primary);
 
-  &:hover {
-    background: var(--cp-bg-pressed);
+  &:hover,
+  &:focus {
+    background-color: var(--cp-bg-pressed);
+    color: var(--cp-text-primary);
   }
 }
 
@@ -962,6 +973,41 @@
   &.cp-toast-error {
     background-color: #d7373f;
   }
+
+  &.cp-toast-warning {
+    background-color: #d7373f;
+    animation: cp-toast-in 0.3s ease;
+  }
+}
+
+.cp-toast-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cp-toast-confirm,
+.cp-toast-dismiss {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cp-toast-confirm {
+  background: #fff;
+  color: #d7373f;
+}
+
+.cp-toast-dismiss {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 60%);
+}
+
+.cp-toast-dismiss:hover {
+  background: rgb(255 255 255 / 15%);
 }
 
 .cp-toast-msg {

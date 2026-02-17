@@ -727,11 +727,30 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     // Input handler
     const onInput = () => {
       // Clean up inline <code> artifacts
+      const sel = window.getSelection();
+      const cursorNode = sel?.anchorNode;
+      const cursorOffset = sel?.anchorOffset;
       editor.querySelectorAll('code').forEach((code) => {
         if (code.closest('pre')) return; // Don't touch code inside pre blocks
-        // Strip ZWS from codes that have real content
+        // Strip ZWS from codes that have real content, preserving cursor
         if (code.textContent.includes('\u200B') && code.textContent.length > 1) {
-          code.textContent = code.textContent.replace(/\u200B/g, '');
+          code.childNodes.forEach((child) => {
+            if (child.nodeType === 3 && child.nodeValue.includes('\u200B')) {
+              const old = child.nodeValue;
+              child.nodeValue = old.replace(/\u200B/g, '');
+              // Restore cursor at the correct offset
+              if (sel && child === cursorNode) {
+                const zwsBefore = (old.substring(0, cursorOffset).match(/\u200B/g) || []).length;
+                const adjusted = cursorOffset - zwsBefore;
+                const newOff = Math.max(0, Math.min(adjusted, child.nodeValue.length));
+                const r = document.createRange();
+                r.setStart(child, newOff);
+                r.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(r);
+              }
+            }
+          });
         }
         // Unwrap <code> that only contains <br> (browser clones this on Enter)
         if (code.childNodes.length === 1 && code.firstChild.nodeName === 'BR') {
@@ -1268,6 +1287,12 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
     }
   };
 
+  const handleBlur = () => {
+    if (inputValue.trim()) {
+      addTag(inputValue.trim());
+    }
+  };
+
   return html`
     <div className="tags-wrapper" ref=${wrapperRef}>
       <div className="tags-input-container">
@@ -1291,6 +1316,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
           value=${inputValue}
           onInput=${handleInputChange}
           onKeyDown=${handleKeyDown}
+          onBlur=${handleBlur}
           onFocus=${() => inputValue.trim() && setIsOpen(true)}
           placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
           disabled=${tags.length >= maxTags}
@@ -1396,9 +1422,11 @@ function CreatePost() {
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+  const showToast = (message, type = 'success', onConfirm = null) => {
+    setToast({ message, type, onConfirm });
+    if (!onConfirm) {
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
   // Single mutable ref that always holds the latest post JSON
@@ -1488,14 +1516,9 @@ function CreatePost() {
   };
 
   const handleCancel = () => {
-    // eslint-disable-next-line no-alert, no-restricted-globals
-    if (confirm('Are you sure you want to discard this post?')) {
-      setTitle('');
-      setCategory('');
-      setBody('');
-      setBodyJson(null);
-      setTags([]);
-    }
+    showToast('Are you sure you want to discard this post?', 'warning', () => {
+      window.location.href = '/';
+    });
   };
 
   return html`
@@ -1617,8 +1640,15 @@ function CreatePost() {
       ${toast && html`
         <div className=${`cp-toast cp-toast-${toast.type}`}>
           <span className="cp-toast-msg">${toast.message}</span>
-          <button type="button" className="cp-toast-close" onClick=${() => setToast(null)}
-            aria-label="Dismiss">\u00D7</button>
+          ${toast.onConfirm ? html`
+            <div className="cp-toast-actions">
+              <button type="button" className="cp-toast-confirm" onClick=${() => { setToast(null); toast.onConfirm(); }}>Yes</button>
+              <button type="button" className="cp-toast-dismiss" onClick=${() => setToast(null)}>No</button>
+            </div>
+          ` : html`
+            <button type="button" className="cp-toast-close" onClick=${() => setToast(null)}
+              aria-label="Dismiss">\u00D7</button>
+          `}
         </div>
       `}
     </div>
