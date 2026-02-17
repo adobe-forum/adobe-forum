@@ -549,7 +549,6 @@ export default async function decorate(block) {
   try {
     const resp = await fetch('/footer.plain.html');
     if (resp.ok) {
-      // Fix: Renamed variable from 'html' to 'footerHtml' to avoid shadowing
       const footerHtml = await resp.text();
       let footer = document.querySelector('footer');
       if (!footer) {
@@ -560,7 +559,6 @@ export default async function decorate(block) {
       footer.classList.add('global-footer');
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('Failed to load global footer', e);
   }
 }
