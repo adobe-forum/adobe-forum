@@ -63,7 +63,7 @@ const loadProfileData = () => {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
   } catch (e) {
-    console.error('Failed to load profile data:', e);
+    // failed to load profile data, return defaults
   }
   return {
     firstName: '',
@@ -80,7 +80,7 @@ const saveProfileData = (data) => {
   try {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
-    console.error('Failed to save profile data:', e);
+    // failed to save profile data
   }
 };
 
@@ -1122,7 +1122,7 @@ const loadCategories = (authoredCategories) => {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (e) {
-    console.error('Failed to load categories from localStorage:', e);
+    // failed to load categories, use defaults
   }
   return authoredCategories && authoredCategories.length > 0
     ? authoredCategories
@@ -1133,7 +1133,7 @@ const saveCategories = (categories) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
   } catch (e) {
-    console.error('Failed to save categories to localStorage:', e);
+    // failed to save categories
   }
 };
 
@@ -1434,7 +1434,7 @@ export default async function decorate(block) {
     render(html`<${HeaderComponent} />`, headerWrapper);
     render(html`<${Sidebar} authoredCategories=${authoredCategories} />`, sidebarWrapper);
   } catch (err) {
-    console.error('Render error:', err);
+    // render failed silently
   }
 
   try {
@@ -1450,6 +1450,6 @@ export default async function decorate(block) {
       footer.classList.add('global-footer');
     }
   } catch (e) {
-    console.error('Failed to load global footer', e);
+    // failed to load global footer
   }
 }
