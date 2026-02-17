@@ -90,20 +90,40 @@ const saveProfileData = (data) => {
 
 const MOCK_POSTS = {
   popular: [
-    { id: 1, title: 'Getting Started with JavaScript ES2024', category: 'JavaScript', likes: 38, comments: 9, views: 142 },
-    { id: 2, title: 'CSS Grid vs Flexbox: The Ultimate Guide', category: 'CSS & Design', likes: 31, comments: 7, views: 118 },
-    { id: 3, title: 'Docker for Frontend Developers', category: 'DevOps', likes: 24, comments: 5, views: 96 },
+    {
+      id: 1, title: 'Getting Started with JavaScript ES2024', category: 'JavaScript', likes: 38, comments: 9, views: 142,
+    },
+    {
+      id: 2, title: 'CSS Grid vs Flexbox: The Ultimate Guide', category: 'CSS & Design', likes: 31, comments: 7, views: 118,
+    },
+    {
+      id: 3, title: 'Docker for Frontend Developers', category: 'DevOps', likes: 24, comments: 5, views: 96,
+    },
   ],
   recent: [
-    { id: 4, title: 'Python Type Hints in 2025', category: 'Python', likes: 8, comments: 2, views: 34, date: '12 Feb 2026' },
-    { id: 5, title: 'Building CLI Tools with Node.js', category: 'JavaScript', likes: 6, comments: 1, views: 27, date: '9 Feb 2026' },
-    { id: 6, title: 'Kubernetes Helm Charts Deep Dive', category: 'DevOps', likes: 5, comments: 1, views: 21, date: '5 Feb 2026' },
+    {
+      id: 4, title: 'Python Type Hints in 2025', category: 'Python', likes: 8, comments: 2, views: 34, date: '12 Feb 2026',
+    },
+    {
+      id: 5, title: 'Building CLI Tools with Node.js', category: 'JavaScript', likes: 6, comments: 1, views: 27, date: '9 Feb 2026',
+    },
+    {
+      id: 6, title: 'Kubernetes Helm Charts Deep Dive', category: 'DevOps', likes: 5, comments: 1, views: 21, date: '5 Feb 2026',
+    },
   ],
   categories: [
-    { name: 'JavaScript', posts: 7, likes: 94, comments: 21, views: 380 },
-    { name: 'Python', posts: 5, likes: 61, comments: 14, views: 240 },
-    { name: 'CSS & Design', posts: 4, likes: 48, comments: 10, views: 190 },
-    { name: 'DevOps', posts: 3, likes: 37, comments: 8, views: 150 },
+    {
+      name: 'JavaScript', posts: 7, likes: 94, comments: 21, views: 380,
+    },
+    {
+      name: 'Python', posts: 5, likes: 61, comments: 14, views: 240,
+    },
+    {
+      name: 'CSS & Design', posts: 4, likes: 48, comments: 10, views: 190,
+    },
+    {
+      name: 'DevOps', posts: 3, likes: 37, comments: 8, views: 150,
+    },
   ],
 };
 
@@ -130,11 +150,11 @@ function ActivityStats() {
 
   const tabs = [
     { id: 'popular', label: 'Most Popular' },
-    { id: 'recent',  label: 'Recent Posts' },
+    { id: 'recent', label: 'Recent Posts' },
     { id: 'categories', label: 'Categories' },
   ];
 
-  const formatNum = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`;
+  const formatNum = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`);
 
   const renderPopular = () => html`
     <table class="pp-stats-table">
@@ -257,8 +277,8 @@ function ActivityStats() {
 
       <!-- Table -->
       <div class="pp-table-wrap">
-        ${activeTab === 'popular'    ? renderPopular()    : ''}
-        ${activeTab === 'recent'     ? renderRecent()     : ''}
+        ${activeTab === 'popular' ? renderPopular() : ''}
+        ${activeTab === 'recent' ? renderRecent() : ''}
         ${activeTab === 'categories' ? renderCategories() : ''}
       </div>
     </div>
@@ -334,9 +354,9 @@ function ProfilePopup({ onClose, onProfileImageChange }) {
         <div class="pp-avatar-section">
           <div class="pp-avatar-wrap">
             ${profileData.profileImage
-              ? html`<img src=${profileData.profileImage} alt="Profile" class="pp-avatar-img" />`
-              : html`<div class="pp-avatar-fallback"><${UserIcon} /></div>`
-            }
+    ? html`<img src=${profileData.profileImage} alt="Profile" class="pp-avatar-img" />`
+    : html`<div class="pp-avatar-fallback"><${UserIcon} /></div>`
+}
             <label class="pp-avatar-camera" title="Change photo">
               <${CameraIcon} />
               <input
@@ -443,7 +463,7 @@ function ProfilePopup({ onClose, onProfileImageChange }) {
           <!-- Action Buttons -->
           <div class="pp-actions">
             ${!isEditing
-              ? html`
+    ? html`
                   <button class="pp-btn pp-btn--edit" type="button" onClick=${handleEdit}>
                     <${EditIcon} />
                     <span>Edit</span>
@@ -452,7 +472,7 @@ function ProfilePopup({ onClose, onProfileImageChange }) {
                     Save Changes
                   </button>
                 `
-              : html`
+    : html`
                   <button class="pp-btn pp-btn--edit" type="button" onClick=${handleCancel}>
                     Cancel
                   </button>
@@ -460,7 +480,7 @@ function ProfilePopup({ onClose, onProfileImageChange }) {
                     Save Changes
                   </button>
                 `
-            }
+}
           </div>
         </div>
 
@@ -1130,7 +1150,7 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
       </div>
       <ul class="subcategory-list">
         ${category.subcategories && category.subcategories.length > 0
-          ? category.subcategories.map((sub) => html`
+    ? category.subcategories.map((sub) => html`
               <li
                 key=${sub.id}
                 class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
@@ -1140,7 +1160,7 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
                 <span>${sub.name}</span>
               </li>
             `)
-          : html`<div class="no-items">No pages yet</div>`}
+    : html`<div class="no-items">No pages yet</div>`}
       </ul>
     </li>
   `;
@@ -1259,7 +1279,7 @@ function Sidebar({ authoredCategories }) {
 
       <ul class="category-list">
         ${filteredCategories.length > 0
-          ? filteredCategories.map((category) => html`
+    ? filteredCategories.map((category) => html`
               <${CategoryItem}
                 key=${category.id}
                 category=${category}
@@ -1267,7 +1287,7 @@ function Sidebar({ authoredCategories }) {
                 onSubcategoryClick=${handleSubcategoryClick}
               />
             `)
-          : html`<div class="no-results">No match found</div>`}
+    : html`<div class="no-results">No match found</div>`}
       </ul>
     </div>
   `;
@@ -1327,10 +1347,10 @@ function HeaderComponent() {
             src="/icons/logo.svg"
             alt="Adobe Logo"
             onError=${(e) => {
-              if (e.target.src.endsWith('.svg')) {
-                e.target.src = '/icons/logo.png';
-              }
-            }}
+    if (e.target.src.endsWith('.svg')) {
+      e.target.src = '/icons/logo.png';
+    }
+  }}
           />
         </a>
 
@@ -1358,9 +1378,9 @@ function HeaderComponent() {
             <a href="#" class="profile-link" onClick=${handleProfileClick} aria-label="Profile">
               <div class="profile-avatar">
                 ${profileImage && !profileImageError
-                  ? html`<img src=${profileImage} alt="Profile" onError=${handleProfileImageError} />`
-                  : html`<${UserIcon} />`
-                }
+    ? html`<img src=${profileImage} alt="Profile" onError=${handleProfileImageError} />`
+    : html`<${UserIcon} />`
+}
               </div>
             </a>
           </li>
