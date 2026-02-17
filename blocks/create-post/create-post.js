@@ -1360,7 +1360,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
             <div
               key=${tag}
               className="tag-option"
-              onClick=${() => addTag(tag)}
+              onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
             >
               ${tag}
             </div>
@@ -1660,7 +1660,7 @@ function CreatePost() {
           />
         </div>
 
-        <div className="form-group">
+        <div className="form-group" style=${{ display: 'none' }}>
           <label>
             Sidebar Path
           </label>
