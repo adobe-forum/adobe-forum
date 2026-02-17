@@ -67,6 +67,116 @@
   margin: 0 0 16px;
 }
 
+/* Rich text formatting from Quill editor */
+.block-text strong,
+.block-text b {
+  font-weight: 700;
+}
+
+.block-text em,
+.block-text i {
+  font-style: italic;
+}
+
+.block-text u {
+  text-decoration: underline;
+}
+
+.block-text s {
+  text-decoration: line-through;
+}
+
+.block-text code {
+  background: var(--spectrum-gray-100, #f5f5f5);
+  color: var(--spectrum-red-900, #c9252d);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: Monaco, 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.block-text ul,
+.block-text ol {
+  margin: 16px 0;
+  padding-left: 2em;
+}
+
+.block-text li {
+  margin: 8px 0;
+}
+
+.block-text blockquote {
+  border-left: 4px solid var(--spectrum-blue-500, #1473e6);
+  padding: 12px 20px;
+  margin: 16px 0;
+  background: var(--spectrum-gray-75, #fafafa);
+  font-style: italic;
+}
+
+.block-text a {
+  color: var(--spectrum-blue-900, #0265dc);
+  text-decoration: underline;
+}
+
+.block-text a:hover {
+  text-decoration: none;
+}
+
+.block-text h1,
+.block-text h2,
+.block-text h3,
+.block-text h4,
+.block-text h5,
+.block-text h6 {
+  font-weight: 700;
+  margin: 24px 0 12px;
+  line-height: 1.3;
+}
+
+.block-text h1 { font-size: 2em; }
+.block-text h2 { font-size: 1.5em; }
+.block-text h3 { font-size: 1.25em; }
+
+/* Quill-specific classes */
+.block-text .ql-align-center {
+  text-align: center;
+}
+
+.block-text .ql-align-right {
+  text-align: right;
+}
+
+.block-text .ql-align-justify {
+  text-align: justify;
+}
+
+.block-text .ql-indent-1 { padding-left: 3em; }
+.block-text .ql-indent-2 { padding-left: 6em; }
+.block-text .ql-indent-3 { padding-left: 9em; }
+
+/* Table support from Quill */
+.block-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.block-text table td,
+.block-text table th {
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.block-text table th {
+  background: var(--spectrum-gray-100, #f5f5f5);
+  font-weight: 700;
+}
+
+.block-text table tr:nth-child(even) {
+  background: var(--spectrum-gray-50, #fafafa);
+}
+
 .block-image {
   margin: 32px 0;
   text-align: center;
@@ -82,57 +192,53 @@
 /* --- Code Block Styling (Matches create-post) --- */
 .block-code {
   margin: 24px 0;
-}
 
-/* 
- * Removing .code-lang styles as we removed the element
- */
+  pre {
+    position: relative;
+    background: #1e1e1e;
 
-.block-code pre {
-  position: relative;
-  background: #1e1e1e;
+    /* matches --cp-code-bg */
+    color: #d4d4d4;
 
-  /* matches --cp-code-bg */
-  color: #d4d4d4;
+    /* matches --cp-code-text */
+    border-radius: 6px;
+    margin: 0;
+    padding: 16px 16px 16px 3.5em;
 
-  /* matches --cp-code-text */
-  border-radius: 6px;
-  margin: 0;
-  padding: 16px 16px 16px 3.5em;
+    /* Space for line numbers */
+    overflow-x: auto;
+    font-family: monospace;
 
-  /* Space for line numbers */
-  overflow-x: auto;
+    /* Match create-post preview-body-content defaults */
+    font-size: 14px;
+    line-height: 1.6;
 
-  /* Match create-post preview-body-content defaults */
-  font-family: monospace;
-  font-size: 14px;
+    /* create-post is ~15px base, usually code is slightly smaller or monospace */
 
-  /* create-post is ~15px base, usually code is slightly smaller or monospace */
-  line-height: 1.6;
-}
+    &::before {
+      content: var(--line-nums, "");
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2.5em;
+      padding: 16px 8px 16px 0;
+      text-align: right;
+      color: rgb(212 212 212 / 30%);
+      border-right: 1px solid rgb(212 212 212 / 15%);
+      white-space: pre;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      pointer-events: none;
+      user-select: none;
+    }
+  }
 
-.block-code pre::before {
-  content: var(--line-nums, "");
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2.5em;
-  padding: 16px 8px 16px 0;
-  text-align: right;
-  color: rgb(212 212 212 / 30%);
-  border-right: 1px solid rgb(212 212 212 / 15%);
-  white-space: pre;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  pointer-events: none;
-  user-select: none;
-}
-
-.block-code code {
-  color: inherit;
-  background: transparent;
+  code {
+    color: inherit;
+    background: transparent;
+  }
 }
 
 /* --- 4. Discussion Section --- */
