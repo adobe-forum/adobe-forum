@@ -44,9 +44,7 @@ const initialCategoryData = [
     id: 'javascript',
     name: 'JavaScript',
     icon: '📁',
-    subcategories: [
-      { id: 'frontend-resources', name: 'Frontend Resources', icon: '📄' },
-    ],
+    subcategories: [],
   },
   {
     id: 'python',
@@ -64,9 +62,7 @@ const initialCategoryData = [
     id: 'devops',
     name: 'DevOps',
     icon: '📁',
-    subcategories: [
-      { id: 'engineering-handbook', name: 'Engineering Handbook', icon: '📄' },
-    ],
+    subcategories: [],
   },
 ];
 
@@ -101,9 +97,59 @@ const saveCategories = (categories) => {
   }
 };
 
+// Recursive TreeItem component for nested structure
+function TreeItem({
+  item, activeItem, onItemClick, level = 0,
+}) {
+  const [isExpanded, setIsExpanded] = useState(level === 0);
+  const hasChildren = item.children && item.children.length > 0;
+  const isFolder = item.isFolder || hasChildren;
+
+  const handleClick = () => {
+    if (isFolder) {
+      setIsExpanded(!isExpanded);
+    }
+    if (item.postId) {
+      // eslint-disable-next-line no-underscore-dangle
+      onItemClick(item._id, item.postId._id || item.postId);
+    }
+  };
+
+  return html`
+    <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}" style="--indent-level: ${level}">
+      <div
+        class="tree-item-content ${/* eslint-disable-line no-underscore-dangle */ activeItem === item._id ? 'active' : ''}"
+        onClick=${handleClick}
+      >
+        ${isFolder && html`
+          <span class="tree-toggle ${isExpanded ? 'expanded' : ''}">▶</span>
+        `}
+        <span class="tree-icon">${isFolder ? '📁' : (item.icon || '📄')}</span>
+        <span class="tree-label">${item.title}</span>
+      </div>
+      ${isFolder && isExpanded && hasChildren && html`
+        <ul class="tree-children">
+          ${item.children.map((child) => html`
+            <${TreeItem}
+              key=${/* eslint-disable-line no-underscore-dangle */ child._id}
+              item=${child}
+              activeItem=${activeItem}
+              onItemClick=${onItemClick}
+              level=${level + 1}
+            />
+          `)}
+        </ul>
+      `}
+    </li>
+  `;
+}
+
 function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
+  // Handle tree items (items with children property)
+  const hasTreeItems = category.items && category.items.length > 0;
 
   return html`
     <li class="category-item ${isCollapsed ? 'collapsed' : ''}">
@@ -112,21 +158,35 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
         <span class="category-icon">${category.icon || '📁'}</span>
         <span class="category-name">${category.name}</span>
       </div>
-      <ul class="subcategory-list">
-        ${category.subcategories && category.subcategories.length > 0
+      ${hasTreeItems ? html`
+        <ul class="tree-list">
+          ${category.items.map((item) => html`
+            <${TreeItem}
+              key=${/* eslint-disable-line no-underscore-dangle */ item._id}
+              item=${item}
+              activeItem=${activeSubcategory}
+              onItemClick=${(itemId, postId) => onSubcategoryClick(category.id, itemId, postId)}
+              level=${0}
+            />
+          `)}
+        </ul>
+      ` : html`
+        <ul class="subcategory-list">
+          ${category.subcategories && category.subcategories.length > 0
     ? category.subcategories.map((sub) => html`
-              <li 
-                key=${sub.id}
-                class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
-                onClick=${() => onSubcategoryClick(category.id, sub.id)}
-              >
-                <span class="subcategory-icon">${sub.icon || '📄'}</span>
-                <span>${sub.name}</span>
-              </li>
-            `)
+                <li 
+                  key=${sub.id}
+                  class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
+                  onClick=${() => onSubcategoryClick(category.id, sub.id, sub.postId)}
+                >
+                  <span class="subcategory-icon">${sub.icon || '📄'}</span>
+                  <span>${sub.name}</span>
+                </li>
+              `)
     : html`<div class="no-items">No pages yet</div>`
 }
-      </ul>
+        </ul>
+      `}
     </li>
   `;
 }
@@ -134,6 +194,9 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
 function Sidebar({ authoredCategories }) {
   // --- State ---
   const [categories, setCategories] = useState(() => loadCategories(authoredCategories));
+  // eslint-disable-next-line no-unused-vars
+  const [_sidebarItems, setSidebarItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
@@ -146,6 +209,83 @@ function Sidebar({ authoredCategories }) {
   const inputRef = useRef(null);
 
   // --- Effects ---
+  // Fetch sidebar items from API
+  useEffect(() => {
+    const fetchSidebarItems = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/sidebar-items');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.items) {
+            setSidebarItems(data.items);
+
+            // Group tree items by category
+            const categoryMap = new Map();
+
+            // Start with existing categories
+            categories.forEach((cat) => {
+              categoryMap.set(cat.id, { ...cat, subcategories: [], items: [] });
+            });
+
+            // Process tree items (root level items without parentId)
+            data.items.forEach((item) => {
+              const catId = toId(item.category);
+              if (!categoryMap.has(catId)) {
+                categoryMap.set(catId, {
+                  id: catId,
+                  name: item.category,
+                  icon: '📁',
+                  subcategories: [],
+                  items: [],
+                });
+              }
+
+              const category = categoryMap.get(catId);
+              // Add to items array for tree rendering
+              category.items.push(item);
+
+              // Also add flat subcategories for backwards compatibility
+              if (!item.isFolder && item.postId) {
+                /* eslint-disable no-underscore-dangle */
+                category.subcategories.push({
+                  id: item._id,
+                  name: item.title,
+                  icon: item.icon || '📄',
+                  postId: item.postId._id || item.postId,
+                });
+                /* eslint-enable no-underscore-dangle */
+              }
+            });
+
+            // Update categories state
+            const updatedCategories = Array.from(categoryMap.values());
+            setCategories(updatedCategories);
+            saveCategories(updatedCategories);
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch sidebar items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSidebarItems();
+
+    // Listen for refresh-sidebar events
+    const handleRefresh = () => {
+      setLoading(true);
+      fetchSidebarItems();
+    };
+
+    window.addEventListener('refresh-sidebar', handleRefresh);
+
+    return () => {
+      window.removeEventListener('refresh-sidebar', handleRefresh);
+    };
+  }, []);
+
   // Focus input when creation mode starts
   useEffect(() => {
     if (isCreating && inputRef.current) {
@@ -161,8 +301,14 @@ function Sidebar({ authoredCategories }) {
   // --- Handlers ---
   const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
 
-  const handleSubcategoryClick = (categoryId, subcategoryId) => {
+  const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
+
+    // Trigger custom event to load post in forum-post block
+    const event = new CustomEvent('load-forum-post', {
+      detail: { postId, sidebarItemId: subcategoryId },
+    });
+    window.dispatchEvent(event);
   };
 
   const startCreating = () => {
@@ -262,6 +408,8 @@ function Sidebar({ authoredCategories }) {
         </div>
       `}
 
+      ${loading && html`<div class="loading">Loading...</div>`}
+
       <ul class="category-list">
         ${filteredCategories.length > 0
     ? filteredCategories.map((category) => html`
@@ -287,16 +435,24 @@ function HeaderComponent() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
 
-  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleMenu = () => {
+    const newState = !isMobileMenuOpen;
+    setIsMobileMenuOpen(newState);
+    // Toggle sidebar visibility on mobile
+    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+    if (sidebarWrapper) {
+      sidebarWrapper.classList.toggle('mobile-open', newState);
+    }
+  };
 
   const handleProfileImageError = () => {
     setProfileImageError(true);
   };
 
   return html`
-    <nav class="spectrum-nav" aria-expanded="${isMobileMenuOpen}">
-      <div class="nav-hamburger">
-        <button type="button" onClick=${toggleMenu} aria-label="Toggle Menu">
+    <nav class="spectrum-nav">
+      <div class="nav-hamburger ${isMobileMenuOpen ? 'is-open' : ''}">
+        <button type="button" onClick=${toggleMenu} aria-label="Toggle Sidebar">
           <span class="nav-hamburger-icon"></span>
         </button>
       </div>

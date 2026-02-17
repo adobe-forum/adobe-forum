@@ -2,15 +2,13 @@
 .forum-post-wrapper {
   max-width: 800px;
   margin: 0 auto;
-  font-family: "Adobe Clean", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #333;
-  padding: 20px 20px 60px; /* Added bottom padding for spacing */
+  font-family: var(--body-font-family);
+  color: var(--text-color);
+  padding: 20px 20px 60px;
   line-height: 1.6;
 }
 
-/* --- 2. Header Section (Tags, Title, Meta) --- */
-
-/* Tags Row */
+/* --- 2. Header Section --- */
 .tags-row {
   display: flex;
   flex-wrap: wrap;
@@ -19,29 +17,26 @@
 }
 
 .tag-pill {
-  background-color: #EBF5FF; /* Adobe Light Blue */
-  color: #0265DC;            /* Adobe Blue Text */
+  background-color: var(--spectrum-blue-100, #EBF5FF);
+  color: var(--spectrum-blue-900, #0265DC);
   font-weight: 700;
   font-size: 0.75rem;
   padding: 4px 10px;
-  border-radius: 4px;
-  text-transform: lowercase; /* Optional: keeps tags uniform */
+  border-radius: var(--spectrum-border-radius-100);
 }
 
-/* Post Title */
 .post-title {
   font-size: 2.5rem;
   font-weight: 800;
   margin: 0 0 12px;
-  color: #000;
+  color: var(--text-color);
   line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-family: var(--heading-font-family);
 }
 
-/* Post Metadata (Author • Topic) */
 .post-meta {
   font-size: 1rem;
-  color: #707070;
+  color: var(--spectrum-gray-600);
   margin-bottom: 40px;
   display: flex;
   align-items: center;
@@ -50,27 +45,20 @@
 
 .author-name {
   font-weight: 700;
-  color: #222;
+  color: var(--text-color);
 }
 
 .meta-separator {
-  color: #ccc;
-  font-size: 0.8rem;
+  color: var(--spectrum-gray-300);
 }
 
-.topic-name {
-  color: #707070;
-}
-
-/* --- 3. Content Area (Text, Images, Code) --- */
-
+/* --- 3. Content Area --- */
 .post-content-area {
   font-size: 1.125rem;
-  color: #2c2c2c;
+  color: var(--text-color);
   margin-bottom: 40px;
 }
 
-/* Text Blocks */
 .block-text {
   margin-bottom: 24px;
 }
@@ -79,151 +67,343 @@
   margin: 0 0 16px;
 }
 
-.block-text a {
-  color: #0265DC;
-  text-decoration: none;
+/* Rich text formatting from Quill editor */
+.block-text strong,
+.block-text b {
+  font-weight: 700;
 }
 
-.block-text a:hover {
+.block-text em,
+.block-text i {
+  font-style: italic;
+}
+
+.block-text u {
   text-decoration: underline;
 }
 
-/* Image Blocks */
+.block-text s {
+  text-decoration: line-through;
+}
+
+.block-text code {
+  background: var(--spectrum-gray-100, #f5f5f5);
+  color: var(--spectrum-red-900, #c9252d);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: Monaco, 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.block-text ul,
+.block-text ol {
+  margin: 16px 0;
+  padding-left: 2em;
+}
+
+.block-text li {
+  margin: 8px 0;
+}
+
+.block-text blockquote {
+  border-left: 4px solid var(--spectrum-blue-500, #1473e6);
+  padding: 12px 20px;
+  margin: 16px 0;
+  background: var(--spectrum-gray-75, #fafafa);
+  font-style: italic;
+}
+
+.block-text a {
+  color: var(--spectrum-blue-900, #0265dc);
+  text-decoration: underline;
+}
+
+.block-text a:hover {
+  text-decoration: none;
+}
+
+.block-text h1,
+.block-text h2,
+.block-text h3,
+.block-text h4,
+.block-text h5,
+.block-text h6 {
+  font-weight: 700;
+  margin: 24px 0 12px;
+  line-height: 1.3;
+}
+
+.block-text h1 { font-size: 2em; }
+.block-text h2 { font-size: 1.5em; }
+.block-text h3 { font-size: 1.25em; }
+
+/* Quill-specific classes */
+.block-text .ql-align-center {
+  text-align: center;
+}
+
+.block-text .ql-align-right {
+  text-align: right;
+}
+
+.block-text .ql-align-justify {
+  text-align: justify;
+}
+
+.block-text .ql-indent-1 { padding-left: 3em; }
+.block-text .ql-indent-2 { padding-left: 6em; }
+.block-text .ql-indent-3 { padding-left: 9em; }
+
+/* Table support from Quill */
+.block-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.block-text table td,
+.block-text table th {
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.block-text table th {
+  background: var(--spectrum-gray-100, #f5f5f5);
+  font-weight: 700;
+}
+
+.block-text table tr:nth-child(even) {
+  background: var(--spectrum-gray-50, #fafafa);
+}
+
 .block-image {
-  margin: 40px 0;
+  margin: 32px 0;
   text-align: center;
 }
 
 .block-image img {
-  max-width: 100%;
+  max-width: 80%;
   height: auto;
-  border-radius: 4px;
-  border: 1px solid #eee; /* Subtle border */
+  border-radius: var(--spectrum-border-radius-200);
+  border: 1px solid var(--spectrum-gray-200);
 }
 
-.block-image figcaption {
-  margin-top: 10px;
-  font-size: 0.9rem;
-  color: #666;
-  font-style: italic;
-  text-align: center;
-}
-
-/* Code Blocks (Dark Theme) */
+/* --- Code Block Styling (Matches create-post) --- */
 .block-code {
-  background: #282c34; /* Dark Background */
-  color: #abb2bf;      /* Light Code Text */
-  padding: 20px;
-  border-radius: 6px;
-  margin: 30px 0;
-  overflow-x: auto;    /* Scroll if code is too long */
-  font-family: 'Source Code Pro', Consolas, monospace;
-  position: relative;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
+  margin: 24px 0;
 
-/* Language Label (e.g., JAVASCRIPT) top right */
-.code-lang {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: rgb(255 255 255 / 10%);
-  color: #ddd;
-  padding: 4px 8px;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  border-bottom-left-radius: 6px;
-  font-weight: 600;
-}
+  pre {
+    position: relative;
+    background: #1e1e1e;
 
-.block-code pre {
-  margin: 0;
+    /* matches --cp-code-bg */
+    color: #d4d4d4;
+
+    /* matches --cp-code-text */
+    border-radius: 6px;
+    margin: 0;
+    padding: 16px 16px 16px 3.5em;
+
+    /* Space for line numbers */
+    overflow-x: auto;
+    font-family: monospace;
+
+    /* Match create-post preview-body-content defaults */
+    font-size: 14px;
+    line-height: 1.6;
+
+    /* create-post is ~15px base, usually code is slightly smaller or monospace */
+
+    &::before {
+      content: var(--line-nums, "");
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2.5em;
+      padding: 16px 8px 16px 0;
+      text-align: right;
+      color: rgb(212 212 212 / 30%);
+      border-right: 1px solid rgb(212 212 212 / 15%);
+      white-space: pre;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      pointer-events: none;
+      user-select: none;
+    }
+  }
+
+  code {
+    color: inherit;
+    background: transparent;
+  }
 }
 
 /* --- 4. Discussion Section --- */
-
 .post-divider {
   border: none;
-  border-top: 1px solid #E1E1E1;
-  margin: 40px 0;
+  border-top: 1px solid var(--spectrum-gray-200);
+  margin: 0;
+
+  /* Margin reset to remove whitespace */
+  display: none;
+
+  /* Hidden because discussions are disabled */
 }
 
 .discussion-section {
   padding-top: 10px;
+  display: none;
+
+  /* Section hidden as discussions are currently disabled */
 }
 
 .discussion-header {
   font-size: 1.25rem;
   font-weight: 700;
-  margin-bottom: 20px;
-  color: #222;
+  margin-bottom: 24px;
+  color: var(--text-color);
 }
 
-/* Comment Input Area */
-.comment-input-area {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 30px;
-}
-
-.comment-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #E1E1E1;
-  border-radius: 4px;
-  font-size: 1rem;
-  outline: none;
-  transition: border 0.2s;
-  background-color: #fafafa;
-}
-
-.comment-input:focus {
-  border-color: #0265DC;
-  background-color: #fff;
-}
-
-/* The Red Button */
-.send-btn {
-  background-color: #D31245; /* Adobe Red */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0 24px;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.send-btn:hover {
-  background-color: #b50e3a; /* Darker Red */
-}
-
-/* Comments List */
+/* The Comment Container (Scrollable) */
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
+  max-height: 250px;
+
+  /* Reduced from 400px so it scrolls much sooner */
+  overflow-y: auto;
+  padding-right: 12px;
 }
 
-.comment-card {
-  border: 1px solid #E1E1E1;
-  border-radius: 8px;
-  padding: 16px;
-  background-color: white;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 5%); /* Slight shadow for depth */
+/* Custom Scrollbar Styling */
+.comments-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.comments-list::-webkit-scrollbar-track {
+  background: var(--spectrum-gray-100);
+  border-radius: var(--spectrum-border-radius-100);
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: var(--spectrum-gray-300);
+  border-radius: var(--spectrum-border-radius-100);
+}
+
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: var(--spectrum-gray-400);
+}
+
+/* INDIVIDUAL COMMENT ROW */
+.comment-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Avatar Styling */
+.comment-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background-color: var(--spectrum-gray-900);
+  color: var(--spectrum-gray-50);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Comment Body */
+.comment-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
 }
 
 .comment-user {
   font-weight: 700;
   font-size: 0.95rem;
+  color: var(--text-color);
   margin-bottom: 4px;
-  color: #222;
+  line-height: 1.2;
 }
 
 .comment-text {
   font-size: 1rem;
-  color: #4b4b4b;
+  color: var(--text-color);
   line-height: 1.5;
+}
+
+/* --- Input Area Styling (Inline Button) --- */
+.comment-form-container {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--spectrum-gray-200);
+}
+
+/* This wrapper acts as the visual "input box" */
+.comment-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: var(--spectrum-gray-50);
+  border: 1px solid var(--spectrum-gray-300);
+  border-radius: 24px;
+  padding: 2px 2px 2px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Highlight the whole wrapper when typing */
+.comment-input-wrapper:focus-within {
+  border-color: var(--link-color);
+  box-shadow: 0 0 0 1px var(--link-color);
+}
+
+/* The actual text field is now invisible */
+.comment-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  outline: none;
+  color: var(--text-color);
+  font-family: var(--body-font-family);
+  padding: 8px 0 8px 8px;
+
+  /* Added left padding */
+}
+
+.send-btn {
+  background-color: var(--link-color);
+  color: var(--spectrum-gray-50);
+  border: none;
+  border-radius: 50%;
+
+  /* Circle shape since it's just an icon */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--body-font-family);
+  margin-left: 4px;
+  margin-right: 4px;
+
+  /* Added right margin */
+}
+
+.send-btn:hover {
+  background-color: var(--link-hover-color);
 }
