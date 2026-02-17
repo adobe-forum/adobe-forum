@@ -346,6 +346,16 @@ nav.spectrum-nav {
     transition: max-height 0.3s;
   }
 
+  /* Tree Structure Styles */
+  & .tree-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    max-height: 1000px;
+    transition: max-height 0.3s;
+  }
+
   & .category-item.collapsed {
     & .category-toggle {
       transform: rotate(-90deg);
@@ -383,16 +393,6 @@ nav.spectrum-nav {
   & .subcategory-icon {
     margin-right: 8px;
     color: #1473e6;
-  }
-
-  /* Tree Structure Styles */
-  & .tree-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-    max-height: 1000px;
-    transition: max-height 0.3s;
   }
 
   & .tree-item {

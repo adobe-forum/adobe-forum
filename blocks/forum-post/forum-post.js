@@ -176,12 +176,12 @@ const ForumPost = () => {
           if (data.success && data.post) {
             // Transform the post data to match the expected format
             const fetchedPost = data.post;
-            
+
             // Parse HTML body to extract code blocks and other content
             const contentBlocks = parseHtmlToContentBlocks(fetchedPost.body);
-            
+
             const transformedPost = {
-              id: fetchedPost._id,
+              id: fetchedPost._id, // eslint-disable-line no-underscore-dangle
               title: fetchedPost.title,
               topic: fetchedPost.category,
               author: 'User', // Default author since it's not in the schema

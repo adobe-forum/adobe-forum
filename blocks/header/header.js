@@ -98,7 +98,9 @@ const saveCategories = (categories) => {
 };
 
 // Recursive TreeItem component for nested structure
-function TreeItem({ item, activeItem, onItemClick, level = 0 }) {
+function TreeItem({
+  item, activeItem, onItemClick, level = 0,
+}) {
   const [isExpanded, setIsExpanded] = useState(level === 0);
   const hasChildren = item.children && item.children.length > 0;
   const isFolder = item.isFolder || hasChildren;
@@ -108,14 +110,15 @@ function TreeItem({ item, activeItem, onItemClick, level = 0 }) {
       setIsExpanded(!isExpanded);
     }
     if (item.postId) {
+      // eslint-disable-next-line no-underscore-dangle
       onItemClick(item._id, item.postId._id || item.postId);
     }
   };
 
   return html`
     <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}" style="--indent-level: ${level}">
-      <div 
-        class="tree-item-content ${activeItem === item._id ? 'active' : ''}"
+      <div
+        class="tree-item-content ${/* eslint-disable-line no-underscore-dangle */ activeItem === item._id ? 'active' : ''}"
         onClick=${handleClick}
       >
         ${isFolder && html`
@@ -128,7 +131,7 @@ function TreeItem({ item, activeItem, onItemClick, level = 0 }) {
         <ul class="tree-children">
           ${item.children.map((child) => html`
             <${TreeItem}
-              key=${child._id}
+              key=${/* eslint-disable-line no-underscore-dangle */ child._id}
               item=${child}
               activeItem=${activeItem}
               onItemClick=${onItemClick}
@@ -159,7 +162,7 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
         <ul class="tree-list">
           ${category.items.map((item) => html`
             <${TreeItem}
-              key=${item._id}
+              key=${/* eslint-disable-line no-underscore-dangle */ item._id}
               item=${item}
               activeItem=${activeSubcategory}
               onItemClick=${(itemId, postId) => onSubcategoryClick(category.id, itemId, postId)}
@@ -181,7 +184,7 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
                 </li>
               `)
     : html`<div class="no-items">No pages yet</div>`
-  }
+}
         </ul>
       `}
     </li>
@@ -191,7 +194,8 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
 function Sidebar({ authoredCategories }) {
   // --- State ---
   const [categories, setCategories] = useState(() => loadCategories(authoredCategories));
-  const [sidebarItems, setSidebarItems] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [_sidebarItems, setSidebarItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -214,15 +218,15 @@ function Sidebar({ authoredCategories }) {
           const data = await response.json();
           if (data.success && data.items) {
             setSidebarItems(data.items);
-            
+
             // Group tree items by category
             const categoryMap = new Map();
-            
+
             // Start with existing categories
             categories.forEach((cat) => {
               categoryMap.set(cat.id, { ...cat, subcategories: [], items: [] });
             });
-            
+
             // Process tree items (root level items without parentId)
             data.items.forEach((item) => {
               const catId = toId(item.category);
@@ -235,22 +239,24 @@ function Sidebar({ authoredCategories }) {
                   items: [],
                 });
               }
-              
+
               const category = categoryMap.get(catId);
               // Add to items array for tree rendering
               category.items.push(item);
-              
+
               // Also add flat subcategories for backwards compatibility
               if (!item.isFolder && item.postId) {
+                /* eslint-disable no-underscore-dangle */
                 category.subcategories.push({
                   id: item._id,
                   name: item.title,
                   icon: item.icon || '📄',
                   postId: item.postId._id || item.postId,
                 });
+                /* eslint-enable no-underscore-dangle */
               }
             });
-            
+
             // Update categories state
             const updatedCategories = Array.from(categoryMap.values());
             setCategories(updatedCategories);
@@ -264,7 +270,7 @@ function Sidebar({ authoredCategories }) {
         setLoading(false);
       }
     };
-    
+
     fetchSidebarItems();
 
     // Listen for refresh-sidebar events
@@ -274,7 +280,7 @@ function Sidebar({ authoredCategories }) {
     };
 
     window.addEventListener('refresh-sidebar', handleRefresh);
-    
+
     return () => {
       window.removeEventListener('refresh-sidebar', handleRefresh);
     };
@@ -297,7 +303,7 @@ function Sidebar({ authoredCategories }) {
 
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
-    
+
     // Trigger custom event to load post in forum-post block
     const event = new CustomEvent('load-forum-post', {
       detail: { postId, sidebarItemId: subcategoryId },

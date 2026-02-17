@@ -1506,7 +1506,7 @@ function CreatePost() {
             body: JSON.stringify({
               title,
               category,
-              postId: result.post._id,
+              postId: result.post._id, // eslint-disable-line no-underscore-dangle
               path: sidebarPath || title, // Use title if no path specified
               autoNestES6: true, // Enable auto-nesting for ES6 related content
             }),
