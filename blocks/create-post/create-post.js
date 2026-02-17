@@ -86,7 +86,6 @@ async function loadIcons() {
         const resp = await fetch(`/icons/${file}.svg`);
         if (resp.ok) return [cmd, await resp.text()];
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error(`Failed to load icon: ${file}.svg`, e);
       }
       return [cmd, ''];
@@ -607,7 +606,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const handleLinkInsert = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
-    // eslint-disable-next-line no-alert
     const url = prompt('Enter URL:');
     if (!url) return;
     document.execCommand('createLink', false, url);
@@ -1447,9 +1445,7 @@ function CreatePost() {
       body: bodyJson,
       tags,
     };
-    // eslint-disable-next-line no-console
     console.clear();
-    // eslint-disable-next-line no-console
     console.log('Live post JSON:', postDataRef.current);
   }, [title, category, bodyJson, tags]);
 
@@ -1477,7 +1473,6 @@ function CreatePost() {
       tags: tagsWithHash,
     };
 
-    // eslint-disable-next-line no-console
     console.log('Sending post data:', postData);
 
     try {
@@ -1492,7 +1487,6 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        // eslint-disable-next-line no-console
         console.log('Post created successfully:', result);
         showToast('Your question has been posted successfully!', 'success');
         // Reset form
@@ -1502,12 +1496,10 @@ function CreatePost() {
         setBodyJson(null);
         setTags([]);
       } else {
-        // eslint-disable-next-line no-console
         console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Network error:', error);
       showToast('Network error: Unable to connect to the server.', 'error');
     }
