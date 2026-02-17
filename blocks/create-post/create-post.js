@@ -120,6 +120,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const [charCount, setCharCount] = useState(0);
   const [showTableTools, setShowTableTools] = useState(false);
   const [icons, setIcons] = useState(iconCache);
+  const [activeFormats, setActiveFormats] = useState({});
 
   // Load icons from /icons/ folder on mount
   useEffect(() => {
@@ -129,9 +130,9 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const emitChange = () => {
     const editor = editorRef.current;
     if (!editor) return;
-    const htmlContent = editor.innerHTML;
+    const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
     const jsonContent = domToJson(editor);
-    const textLength = editor.textContent.trim().length;
+    const textLength = editor.textContent.replace(/\u200B/g, '').trim().length;
     setCharCount(textLength);
     onChange(htmlContent, jsonContent);
   };
@@ -433,25 +434,41 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
+    const editor = editorRef.current;
 
     let parent = range.commonAncestorContainer;
     if (parent.nodeType === 3) parent = parent.parentElement;
     const existingCode = parent.closest('code');
-    const editor = editorRef.current;
 
     if (existingCode && editor.contains(existingCode)) {
-      const text = document.createTextNode(existingCode.textContent);
-      existingCode.replaceWith(text);
+      // Toggle OFF: insert a spacer text node after <code> so browser
+      // clearly sees the cursor as "outside code" when Enter is pressed
+      const spacer = document.createTextNode('\u200B');
+      existingCode.after(spacer);
       const newRange = document.createRange();
-      newRange.selectNodeContents(text);
+      newRange.setStart(spacer, 1);
+      newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
+      // Remove empty code elements left behind
+      if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
     } else if (!range.collapsed) {
+      // Wrap selected text in <code>
       const code = document.createElement('code');
       range.surroundContents(code);
-      sel.removeAllRanges();
       const newRange = document.createRange();
       newRange.selectNodeContents(code);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    } else {
+      // Toggle ON: create empty <code> at cursor and place cursor inside
+      const code = document.createElement('code');
+      code.textContent = '\u200B';
+      range.insertNode(code);
+      const newRange = document.createRange();
+      newRange.setStart(code.firstChild, 1);
+      newRange.collapse(true);
+      sel.removeAllRanges();
       sel.addRange(newRange);
     }
   };
@@ -468,9 +485,15 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     if (!block) return;
 
     if (block.tagName === 'PRE') {
+      // Exit code block: insert a new paragraph after it and move cursor there
       const p = document.createElement('p');
-      p.innerHTML = block.textContent || '<br>';
-      block.replaceWith(p);
+      p.innerHTML = '<br>';
+      block.after(p);
+      const newRange = document.createRange();
+      newRange.setStart(p, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
     } else {
       const pre = document.createElement('pre');
       pre.textContent = block.textContent || '';
@@ -590,6 +613,45 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     document.execCommand('createLink', false, url);
   };
 
+  const updateActiveFormats = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    if (!editor.contains(sel.anchorNode)) return;
+
+    const fmt = {
+      bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
+      strike: document.queryCommandState('strikeThrough'),
+      orderedList: document.queryCommandState('insertOrderedList'),
+      bulletList: document.queryCommandState('insertUnorderedList'),
+    };
+
+    // Walk up from cursor to detect block-level and inline elements
+    let node = sel.anchorNode;
+    while (node && node !== editor) {
+      const tag = node.nodeName;
+      if (tag === 'PRE') fmt.codeBlock = true;
+      if (tag === 'CODE' && node.parentNode?.nodeName !== 'PRE') fmt.code = true;
+      if (tag === 'BLOCKQUOTE') fmt.blockquote = true;
+      node = node.parentNode;
+    }
+
+    // Detect current block format (p, h1-h6)
+    let block = sel.anchorNode;
+    while (block && block.parentNode !== editor) {
+      block = block.parentNode;
+    }
+    if (block) {
+      const bn = block.nodeName.toLowerCase();
+      if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
+      else fmt.blockFormat = 'p';
+    }
+
+    setActiveFormats(fmt);
+  };
+
   const execFormat = (cmd, value) => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -647,6 +709,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     }
 
     emitChange();
+    updateActiveFormats();
   };
 
   // ---- useEffect: initialise editor and attach events ----
@@ -663,12 +726,31 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
     // Input handler
     const onInput = () => {
+      // Clean up inline <code> artifacts
+      editor.querySelectorAll('code').forEach((code) => {
+        if (code.closest('pre')) return; // Don't touch code inside pre blocks
+        // Strip ZWS from codes that have real content
+        if (code.textContent.includes('\u200B') && code.textContent.length > 1) {
+          code.textContent = code.textContent.replace(/\u200B/g, '');
+        }
+        // Unwrap <code> that only contains <br> (browser clones this on Enter)
+        if (code.childNodes.length === 1 && code.firstChild.nodeName === 'BR') {
+          code.parentNode.insertBefore(code.firstChild, code);
+          code.remove();
+          return;
+        }
+        // Remove completely empty <code> elements
+        if (!code.childNodes.length) {
+          code.remove();
+        }
+      });
       updatePlaceholder();
       clearImageResize();
       emitChange();
       detectTableContext();
       updateCodeLineNumbers();
       ensureLeadingParagraph();
+      updateActiveFormats();
     };
     editor.addEventListener('input', onInput);
 
@@ -677,6 +759,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       if (document.activeElement === editor
         || editor.contains(document.activeElement)) {
         detectTableContext();
+        updateActiveFormats();
       }
     };
     document.addEventListener('selectionchange', onSelectionChange);
@@ -684,6 +767,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     // Click handler for images
     const onEditorClick = (e) => {
       detectTableContext();
+      updateActiveFormats();
       if (e.target.tagName === 'IMG') {
         showImageResize(e.target);
       } else if (!e.target.closest('.img-resize-overlay')) {
@@ -734,16 +818,68 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Outside table cells ──
-      if (!editor.querySelector('table')) return;
-
-      e.stopPropagation();
-
+      // ── Find the direct-child block of the editor ──
       let block = sel.anchorNode;
       while (block && block.parentNode !== editor) {
         block = block.parentNode;
       }
       if (!block) return;
+
+      // ── Enter inside a code block (always handle, even without a table) ──
+      if (e.key === 'Enter' && block.nodeName === 'PRE') {
+        e.preventDefault();
+        e.stopPropagation();
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) range.deleteContents();
+        const nl = document.createTextNode('\n');
+        range.insertNode(nl);
+        range.setStartAfter(nl);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        emitChange();
+        updateCodeLineNumbers();
+        return;
+      }
+
+      // ── Enter inside inline <code> — exit code formatting for the new line ──
+      if (e.key === 'Enter') {
+        let codeNode = sel.anchorNode;
+        while (codeNode && codeNode !== editor) {
+          if (codeNode.nodeName === 'CODE'
+            && codeNode.parentNode?.nodeName !== 'PRE') break;
+          codeNode = codeNode.parentNode;
+        }
+        if (codeNode && codeNode.nodeName === 'CODE') {
+          e.preventDefault();
+          e.stopPropagation();
+          const range = sel.getRangeAt(0);
+          // Split: keep text before cursor in <code>, text after goes to new <p>
+          const afterRange = document.createRange();
+          afterRange.setStart(range.startContainer, range.startOffset);
+          afterRange.setEndAfter(codeNode);
+          const trailing = afterRange.extractContents().textContent;
+          // Remove empty code elements
+          if (!codeNode.textContent.replace(/\u200B/g, '')) codeNode.remove();
+          const newP = document.createElement('p');
+          newP.textContent = trailing.replace(/\u200B/g, '') || '';
+          if (!newP.textContent) newP.innerHTML = '<br>';
+          block.after(newP);
+          const nr = document.createRange();
+          nr.setStart(newP, 0);
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+          emitChange();
+          updateActiveFormats();
+          return;
+        }
+      }
+
+      // ── Outside table cells ──
+      if (!editor.querySelector('table')) return;
+
+      e.stopPropagation();
 
       const range = sel.getRangeAt(0);
 
@@ -820,20 +956,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
       // ── Enter ──
       if (e.key === 'Enter') {
-        if (block.nodeName === 'PRE') {
-          e.preventDefault();
-          if (!range.collapsed) range.deleteContents();
-          const nl = document.createTextNode('\n');
-          range.insertNode(nl);
-          range.setStartAfter(nl);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-          emitChange();
-          updateCodeLineNumbers();
-          return;
-        }
-
         e.preventDefault();
         if (!range.collapsed) range.deleteContents();
 
@@ -879,7 +1001,8 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
   // ---- Toolbar button helper ----
   const tbBtn = (cmd, title) => html`
-    <button type="button" className="ce-toolbar-btn"
+    <button type="button"
+      className=${`ce-toolbar-btn${activeFormats[cmd] ? ' active' : ''}`}
       title=${title}
       onMouseDown=${(e) => { e.preventDefault(); execFormat(cmd); }}
       dangerouslySetInnerHTML=${{ __html: icons[cmd] || '' }}
@@ -890,9 +1013,10 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       <div className="ce-toolbar">
         <span className="ce-toolbar-group">
           <select className="ce-size-select" title="Block Format"
+            value=${activeFormats.blockFormat || 'p'}
             onMouseDown=${(e) => e.stopPropagation()}
-            onChange=${(e) => { execFormat('blockFormat', e.target.value); e.target.value = 'p'; }}>
-            <option value="p" selected>Paragraph</option>
+            onChange=${(e) => { execFormat('blockFormat', e.target.value); }}>
+            <option value="p">Paragraph</option>
             <option value="h1">H1</option>
             <option value="h2">H2</option>
             <option value="h3">H3</option>

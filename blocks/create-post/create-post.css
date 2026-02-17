@@ -154,8 +154,10 @@
     background: var(--cp-bg-hover);
   }
 
-  &:active {
+  &:active,
+  &.active {
     background: var(--cp-bg-pressed);
+    color: var(--link-color, #1473e6);
   }
 
   & svg {
