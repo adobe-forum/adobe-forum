@@ -411,7 +411,13 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       const editor = editorRef.current;
       if (!editor) return;
       const first = editor.firstElementChild;
-      if (first && first.tagName === 'TABLE') {
+      if (!first) return;
+      const tag = first.tagName;
+      const needsLeading = tag === 'TABLE'
+        || /^H[1-6]$/.test(tag)
+        || tag === 'PRE'
+        || tag === 'BLOCKQUOTE';
+      if (needsLeading) {
         const p = document.createElement('p');
         p.innerHTML = '<br>';
         editor.insertBefore(p, first);
@@ -891,6 +897,34 @@ function RichTextEditor({ onChange, minChars = 20 }) {
           updateActiveFormats();
           return;
         }
+      }
+
+      // ── Enter inside a heading — next line becomes a regular paragraph ──
+      if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) range.deleteContents();
+        // Extract content after cursor
+        const afterRange = document.createRange();
+        afterRange.setStart(
+          range.startContainer,
+          range.startOffset,
+        );
+        afterRange.setEnd(block, block.childNodes.length);
+        const fragment = afterRange.extractContents();
+        const newP = document.createElement('p');
+        newP.appendChild(fragment);
+        if (!newP.textContent.trim()) newP.innerHTML = '<br>';
+        block.after(newP);
+        const nr = document.createRange();
+        nr.setStart(newP, 0);
+        nr.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(nr);
+        emitChange();
+        updateActiveFormats();
+        return;
       }
 
       // ── Outside table cells ──
