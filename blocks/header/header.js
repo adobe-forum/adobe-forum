@@ -63,6 +63,7 @@ const loadProfileData = () => {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
   } catch (e) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load profile data:', e);
   }
   return {
@@ -80,6 +81,7 @@ const saveProfileData = (data) => {
   try {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
+    // eslint-disable-next-line no-console
     console.error('Failed to save profile data:', e);
   }
 };
