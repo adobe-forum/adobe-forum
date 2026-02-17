@@ -18,9 +18,7 @@ const EXISTING_CATEGORIES = [
   'html',
 ];
 
-// ============================================
 // DOM TO JSON CONVERTER
-// ============================================
 
 function domToJson(element) {
   if (!element || element.nodeType !== 1) {
@@ -53,10 +51,7 @@ function domToJson(element) {
   return obj;
 }
 
-// ============================================
 // TOOLBAR ICONS (loaded from /icons/ folder)
-// ============================================
-
 // Map toolbar commands to icon filenames
 const ICON_FILES = {
   bold: 'bold',
@@ -107,10 +102,7 @@ const BLOCK_FORMATS = {
   h6: 'h6',
 };
 
-// ============================================
 // RICH TEXT EDITOR COMPONENT
-// ============================================
-
 function RichTextEditor({ onChange, minChars = 20 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -1166,10 +1158,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   `;
 }
 
-// ============================================
 // CATEGORY SEARCH
-// ============================================
-
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState([]);
@@ -1252,10 +1241,7 @@ function CategorySearch({ value, onChange, onSelect }) {
   `;
 }
 
-// ============================================
 // TAGS INPUT
-// ============================================
-
 function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -1378,10 +1364,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   `;
 }
 
-// ============================================
 // PREVIEW MODAL
-// ============================================
-
 function PreviewModal({
   title, category, body, tags, onBack, onPost,
 }) {
@@ -1442,10 +1425,7 @@ function PreviewModal({
   `;
 }
 
-// ============================================
 // CREATE POST
-// ============================================
-
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
