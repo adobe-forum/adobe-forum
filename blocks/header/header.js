@@ -505,6 +505,8 @@ function HeaderComponent() {
   `;
 }
 
+
+// Block Dec
 // ============================================
 // AEM BLOCK DECORATOR
 // ============================================
@@ -562,4 +564,4 @@ export default async function decorate(block) {
     console.error('Failed to load global footer', e);
   }
 }
-// Note: The header component is now integrated into the sidebar block for simplicity. In a real application, you might want to separate these into distinct blocks/components.
+
