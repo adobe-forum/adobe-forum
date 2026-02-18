@@ -505,10 +505,8 @@ function HeaderComponent() {
   `;
 }
 
-// Block Dec
-// ============================================
+
 // AEM BLOCK DECORATOR
-// ============================================
 
 export default async function decorate(block) {
   const authoredCategories = [];
