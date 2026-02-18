@@ -128,7 +128,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     onChange(htmlContent, jsonContent);
   };
 
-  // ---- Image resize overlay ----
+  // Image resize overlay
 
   const clearImageResize = () => {
     if (!resizeRef.current) return;
@@ -246,7 +246,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     }
   };
 
-  // ---- Table operations ----
+  // Table operations
 
   const addRow = (position) => {
     const cell = activeCellRef.current;
@@ -378,7 +378,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     emitChange();
   };
 
-  // ---- Helper functions ----
+  // Helper functions
 
   const updateCodeLineNumbers = () => {
     requestAnimationFrame(() => {
@@ -425,7 +425,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     editor.classList.toggle('is-empty', !hasContent);
   };
 
-  // ---- Format commands ----
+  // Format commands
 
   const handleInlineCode = () => {
     const sel = window.getSelection();
@@ -447,7 +447,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      // Remove empty code elements left behind
+      // Removing empty code elements left behind
       if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
     } else if (!range.collapsed) {
       // Wrap selected text in <code>
@@ -708,7 +708,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     updateActiveFormats();
   };
 
-  // ---- useEffect: initialise editor and attach events ----
+  // useEffect: initialise editor and attach events
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -808,7 +808,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       const sel = window.getSelection();
       if (!sel || !sel.rangeCount) return;
 
-      // ── Inside a table cell ──
+      // Inside a table cell
       let nd = sel.anchorNode;
       let insideTd = false;
       while (nd && nd !== editor) {
@@ -833,14 +833,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Find the direct-child block of the editor ──
+      // Find the direct-child block of the editor
       let block = sel.anchorNode;
       while (block && block.parentNode !== editor) {
         block = block.parentNode;
       }
       if (!block) return;
 
-      // ── Enter inside a code block (always handle, even without a table) ──
+      // Enter inside a code block (always handle, even without a table)
       if (e.key === 'Enter' && block.nodeName === 'PRE') {
         e.preventDefault();
         e.stopPropagation();
@@ -857,7 +857,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Enter inside inline <code> — exit code formatting for the new line ──
+      // Enter inside inline <code> — exit code formatting for the new line
       if (e.key === 'Enter') {
         let codeNode = sel.anchorNode;
         while (codeNode && codeNode !== editor) {
@@ -891,7 +891,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         }
       }
 
-      // ── Enter inside a heading — next line becomes a regular paragraph ──
+      // Enter inside a heading — next line becomes a regular paragraph
       if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
         e.preventDefault();
         e.stopPropagation();
@@ -919,14 +919,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Outside table cells ──
+      // Outside table cells
       if (!editor.querySelector('table')) return;
 
       e.stopPropagation();
 
       const range = sel.getRangeAt(0);
 
-      // ── Backspace ──
+      // Backspace
       if (e.key === 'Backspace') {
         if (!range.collapsed) return;
 
@@ -971,7 +971,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Delete ──
+      // Delete
       if (e.key === 'Delete') {
         if (!range.collapsed) return;
 
@@ -997,7 +997,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Enter ──
+      // Enter
       if (e.key === 'Enter') {
         e.preventDefault();
         if (!range.collapsed) range.deleteContents();
@@ -1042,7 +1042,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
   const isValid = charCount >= minChars;
 
-  // ---- Toolbar button helper ----
+  // Toolbar button helper
   const tbBtn = (cmd, title) => html`
     <button type="button"
       className=${`ce-toolbar-btn${activeFormats[cmd] ? ' active' : ''}`}
@@ -1514,20 +1514,18 @@ function CreatePost() {
             body: JSON.stringify({
               title,
               category,
-              postId: result.post._id, // eslint-disable-line no-underscore-dangle
+              postId: result.post.id,
               path: sidebarPath || title, // Use title if no path specified
               autoNestES6: true, // Enable auto-nesting for ES6 related content
             }),
           });
 
           if (sidebarResponse.ok) {
-            // eslint-disable-next-line no-console
             console.log('Sidebar item created successfully');
             // Dispatch event to refresh sidebar
             window.dispatchEvent(new CustomEvent('refresh-sidebar'));
           }
         } catch (sidebarError) {
-          // eslint-disable-next-line no-console
           console.error('Error creating sidebar item:', sidebarError);
         }
 
