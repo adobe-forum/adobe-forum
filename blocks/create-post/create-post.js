@@ -18,9 +18,7 @@ const EXISTING_CATEGORIES = [
   'html',
 ];
 
-// ============================================
 // DOM TO JSON CONVERTER
-// ============================================
 
 function domToJson(element) {
   if (!element || element.nodeType !== 1) {
@@ -53,10 +51,7 @@ function domToJson(element) {
   return obj;
 }
 
-// ============================================
 // TOOLBAR ICONS (loaded from /icons/ folder)
-// ============================================
-
 // Map toolbar commands to icon filenames
 const ICON_FILES = {
   bold: 'bold',
@@ -86,6 +81,7 @@ async function loadIcons() {
         const resp = await fetch(`/icons/${file}.svg`);
         if (resp.ok) return [cmd, await resp.text()];
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.error(`Failed to load icon: ${file}.svg`, e);
       }
       return [cmd, ''];
@@ -106,10 +102,7 @@ const BLOCK_FORMATS = {
   h6: 'h6',
 };
 
-// ============================================
 // RICH TEXT EDITOR COMPONENT
-// ============================================
-
 function RichTextEditor({ onChange, minChars = 20 }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -612,6 +605,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const handleLinkInsert = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
+    // eslint-disable-next-line no-alert
     const url = prompt('Enter URL:');
     if (!url) return;
     document.execCommand('createLink', false, url);
@@ -1164,10 +1158,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   `;
 }
 
-// ============================================
 // CATEGORY SEARCH
-// ============================================
-
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState([]);
@@ -1250,10 +1241,7 @@ function CategorySearch({ value, onChange, onSelect }) {
   `;
 }
 
-// ============================================
 // TAGS INPUT
-// ============================================
-
 function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -1361,7 +1349,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
             <div
               key=${tag}
               className="tag-option"
-              onClick=${() => addTag(tag)}
+              onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
             >
               ${tag}
             </div>
@@ -1377,10 +1365,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   `;
 }
 
-// ============================================
 // PREVIEW MODAL
-// ============================================
-
 function PreviewModal({
   title, category, body, tags, onBack, onPost,
 }) {
@@ -1441,10 +1426,7 @@ function PreviewModal({
   `;
 }
 
-// ============================================
 // CREATE POST
-// ============================================
-
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -1481,8 +1463,10 @@ function CreatePost() {
       body: bodyJson,
       tags,
     };
+    /* eslint-disable no-console */
     console.clear();
     console.log('Live post JSON:', postDataRef.current);
+    /* eslint-enable no-console */
   }, [title, category, bodyJson, tags]);
 
   const missingFields = [];
@@ -1509,8 +1493,6 @@ function CreatePost() {
       tags: tagsWithHash,
     };
 
-    console.log('Sending post data:', postData);
-
     try {
       const response = await fetch('http://localhost:5000/api/posts', {
         method: 'POST',
@@ -1523,8 +1505,6 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('Post created successfully:', result);
-
         // Create sidebar item with nested path
         try {
           const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
@@ -1561,11 +1541,9 @@ function CreatePost() {
         setTags([]);
         setSidebarPath('');
       } else {
-        console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
-      console.error('Network error:', error);
       showToast('Network error: Unable to connect to the server.', 'error');
     }
 
@@ -1660,23 +1638,6 @@ function CreatePost() {
             maxTags=${5}
           />
         </div>
-
-        <div className="form-group">
-          <label>
-            Sidebar Path
-          </label>
-          <p className="helper-text">
-            Optional: Organize in nested folders. Use ">" to create hierarchy.
-            Example: "React > Hooks > Custom Hooks". ES6-related content auto-nests.
-          </p>
-          <input
-            type="text"
-            value=${sidebarPath}
-            onInput=${(e) => setSidebarPath(e.target.value)}
-            placeholder="e.g., React > Hooks > useState"
-          />
-        </div>
-
         <div className="submit-section">
           <button type="button" className="btn btn-cancel" onClick=${handleCancel}>
             Cancel
