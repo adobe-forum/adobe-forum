@@ -1,5 +1,7 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useRef, useEffect, useCallback } from '../../vendor/preact-hooks.js';
+import {
+  useState, useRef, useEffect, useCallback,
+} from '../../vendor/preact-hooks.js';
 
 // ============================================
 // ICON COMPONENTS
@@ -55,6 +57,22 @@ const ZoomOutIcon = () => html`
     <line x1="8" y1="11" x2="14" y2="11"/>
   </svg>`;
 
+// ---- Social Brand Icons ----
+const GithubIcon = () => html`
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+  </svg>`;
+
+const LinkedinIcon = () => html`
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>`;
+
+const XTwitterIcon = () => html`
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>`;
+
 // ============================================
 // PROFILE STORAGE HELPERS
 // ============================================
@@ -65,9 +83,7 @@ const loadProfileData = () => {
   try {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (stored) return JSON.parse(stored);
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) { /* ignore */ }
   return {
     firstName: '',
     lastName: '',
@@ -76,15 +92,17 @@ const loadProfileData = () => {
     gender: '',
     dob: '',
     profileImage: null,
+    // NEW: social profile URLs
+    socialGithub: '',
+    socialLinkedin: '',
+    socialX: '',
   };
 };
 
 const saveProfileData = (data) => {
   try {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) { /* ignore */ }
 };
 
 // ============================================
@@ -112,7 +130,6 @@ const MOCK_POSTS = {
 
 // ============================================
 // IMAGE CROPPER COMPONENT
-// Pure canvas-based, no external dependencies.
 // ============================================
 
 function ImageCropper({ imageSrc, onCrop, onCancel }) {
@@ -124,7 +141,6 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
   const imgRef = useRef(new Image());
   const CANVAS_SIZE = 280;
 
-  // Load image and fit it initially
   useEffect(() => {
     const img = imgRef.current;
     img.onload = () => {
@@ -135,7 +151,6 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
     img.src = imageSrc;
   }, [imageSrc]);
 
-  // Redraw canvas whenever scale/offset changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -144,14 +159,12 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
     if (!img.complete || !img.naturalWidth) return;
 
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
     const w = img.width * scale;
     const h = img.height * scale;
     const x = (CANVAS_SIZE - w) / 2 + offset.x;
     const y = (CANVAS_SIZE - h) / 2 + offset.y;
     ctx.drawImage(img, x, y, w, h);
 
-    // Dark overlay outside circle
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -161,7 +174,6 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
     ctx.fill();
     ctx.restore();
 
-    // Circle border
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.8)';
     ctx.lineWidth = 2;
@@ -171,47 +183,22 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
     ctx.restore();
   }, [scale, offset, imageSrc]);
 
-  const handleMouseDown = (e) => {
-    setDragging(true);
-    dragStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
-  };
-
-  const handleMouseMove = useCallback((e) => {
-    if (!dragging || !dragStart.current) return;
-    setOffset({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
-  }, [dragging]);
-
+  const handleMouseDown = (e) => { setDragging(true); dragStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y }; };
+  const handleMouseMove = useCallback((e) => { if (!dragging || !dragStart.current) return; setOffset({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }); }, [dragging]);
   const handleMouseUp = () => setDragging(false);
-
-  const handleTouchStart = (e) => {
-    const t = e.touches[0];
-    setDragging(true);
-    dragStart.current = { x: t.clientX - offset.x, y: t.clientY - offset.y };
-  };
-
-  const handleTouchMove = useCallback((e) => {
-    if (!dragging || !dragStart.current) return;
-    const t = e.touches[0];
-    setOffset({ x: t.clientX - dragStart.current.x, y: t.clientY - dragStart.current.y });
-  }, [dragging]);
-
-  const handleWheel = (e) => {
-    e.preventDefault();
-    setScale((s) => Math.min(5, Math.max(0.3, s - e.deltaY * 0.001)));
-  };
+  const handleTouchStart = (e) => { const t = e.touches[0]; setDragging(true); dragStart.current = { x: t.clientX - offset.x, y: t.clientY - offset.y }; };
+  const handleTouchMove = useCallback((e) => { if (!dragging || !dragStart.current) return; const t = e.touches[0]; setOffset({ x: t.clientX - dragStart.current.x, y: t.clientY - dragStart.current.y }); }, [dragging]);
+  const handleWheel = (e) => { e.preventDefault(); setScale((s) => Math.min(5, Math.max(0.3, s - e.deltaY * 0.001))); };
 
   const handleCrop = () => {
     const out = document.createElement('canvas');
-    out.width = 200;
-    out.height = 200;
+    out.width = 200; out.height = 200;
     const ctx = out.getContext('2d');
     const img = imgRef.current;
-
     ctx.save();
     ctx.beginPath();
     ctx.arc(100, 100, 100, 0, Math.PI * 2);
     ctx.clip();
-
     const ratio = 200 / CANVAS_SIZE;
     const w = img.width * scale;
     const h = img.height * scale;
@@ -219,7 +206,6 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
     const y = ((CANVAS_SIZE - h) / 2 + offset.y) * ratio;
     ctx.drawImage(img, x, y, w * ratio, h * ratio);
     ctx.restore();
-
     onCrop(out.toDataURL('image/jpeg', 0.92));
   };
 
@@ -231,41 +217,124 @@ function ImageCropper({ imageSrc, onCrop, onCancel }) {
           <button class="pp-close-btn" type="button" onClick=${onCancel}><${CloseIcon} /></button>
         </div>
         <p class="pp-crop-hint">Drag to reposition · Scroll or use slider to zoom</p>
-
         <div
           class="pp-crop-canvas-wrap"
-          onMouseDown=${handleMouseDown}
-          onMouseMove=${handleMouseMove}
-          onMouseUp=${handleMouseUp}
-          onMouseLeave=${handleMouseUp}
-          onTouchStart=${handleTouchStart}
-          onTouchMove=${handleTouchMove}
-          onTouchEnd=${handleMouseUp}
-          onWheel=${handleWheel}
+          onMouseDown=${handleMouseDown} onMouseMove=${handleMouseMove}
+          onMouseUp=${handleMouseUp} onMouseLeave=${handleMouseUp}
+          onTouchStart=${handleTouchStart} onTouchMove=${handleTouchMove}
+          onTouchEnd=${handleMouseUp} onWheel=${handleWheel}
           style="cursor:${dragging ? 'grabbing' : 'grab'}"
         >
           <canvas ref=${canvasRef} width=${CANVAS_SIZE} height=${CANVAS_SIZE} class="pp-crop-canvas" />
         </div>
-
         <div class="pp-crop-zoom-row">
           <button class="pp-crop-zoom-btn" type="button" onClick=${() => setScale((s) => Math.max(0.3, s - 0.1))}><${ZoomOutIcon} /></button>
-          <input
-            type="range" min="30" max="500" step="1"
-            value=${Math.round(scale * 100)}
-            class="pp-crop-slider"
-            onInput=${(e) => setScale(Number(e.target.value) / 100)}
-          />
+          <input type="range" min="30" max="500" step="1" value=${Math.round(scale * 100)} class="pp-crop-slider" onInput=${(e) => setScale(Number(e.target.value) / 100)} />
           <button class="pp-crop-zoom-btn" type="button" onClick=${() => setScale((s) => Math.min(5, s + 0.1))}><${ZoomInIcon} /></button>
           <span class="pp-crop-zoom-lbl">${Math.round(scale * 100)}%</span>
         </div>
-
         <div class="pp-crop-actions">
           <button class="pp-btn pp-btn--edit" type="button" onClick=${onCancel}>Cancel</button>
           <button class="pp-btn pp-btn--save" type="button" onClick=${handleCrop}>Apply Crop</button>
         </div>
       </div>
-    </div>
-  `;
+    </div>`;
+}
+
+// ============================================
+// SOCIAL PROFILES COMPONENT
+// ============================================
+
+function SocialProfiles({ profileData, isEditing, onInputChange }) {
+  const socials = [
+    {
+      key: 'socialGithub',
+      label: 'GitHub',
+      placeholder: 'https://github.com/username',
+      icon: GithubIcon,
+      color: '#24292e',
+    },
+    {
+      key: 'socialLinkedin',
+      label: 'LinkedIn',
+      placeholder: 'https://linkedin.com/in/username',
+      icon: LinkedinIcon,
+      color: '#0077b5',
+    },
+    {
+      key: 'socialX',
+      label: 'X (Twitter)',
+      placeholder: 'https://x.com/username',
+      icon: XTwitterIcon,
+      color: '#000000',
+    },
+  ];
+
+  // Ensure URLs open safely
+  const safeHref = (url) => {
+    if (!url) return null;
+    const trimmed = url.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
+  if (isEditing) {
+    // EDIT MODE — show labelled text inputs with social icon prefix
+    return html`
+      <div class="pp-social-section">
+        <h2 class="pp-section-title">Social Profiles</h2>
+        <div class="pp-social-edit-list">
+          ${socials.map(({ key, label, placeholder, icon: Icon, color }) => html`
+            <div class="pp-social-edit-row" key=${key}>
+              <span class="pp-social-edit-icon" style="color:${color}">
+                <${Icon} />
+              </span>
+              <div class="pp-field-group" style="flex:1;">
+                <label class="pp-label">${label}</label>
+                <input
+                  type="url"
+                  class="pp-input"
+                  placeholder=${placeholder}
+                  value=${profileData[key] || ''}
+                  onInput=${(e) => onInputChange(key, e.target.value)}
+                />
+              </div>
+            </div>
+          `)}
+        </div>
+      </div>`;
+  }
+
+  // VIEW MODE — show brand-colored clickable icons only
+  const hasAnySocial = socials.some(({ key }) => profileData[key]);
+
+  return html`
+    <div class="pp-social-section">
+      <h2 class="pp-section-title">Social Profiles</h2>
+      <div class="pp-social-icons-row">
+        ${socials.map(({ key, icon: Icon, label, color }) => {
+          const href = safeHref(profileData[key]);
+          if (!href) return null;
+          return html`
+            <a
+              key=${key}
+              href=${href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="pp-social-view-link"
+              title=${label}
+              style="color:${color}"
+            >
+              <${Icon} />
+            </a>`;
+        })}
+        ${!hasAnySocial && html`
+          <span class="pp-social-empty">No social profiles added yet.</span>
+        `}
+      </div>
+    </div>`;
 }
 
 // ============================================
@@ -285,43 +354,35 @@ function ActivityStats() {
 
   const renderPopular = () => html`
     <table class="pp-stats-table">
-      <thead>
-        <tr>
-          <th class="pp-th pp-th--title">Post</th>
-          <th class="pp-th">Category</th>
-          <th class="pp-th pp-th--num"><${HeartIcon} /></th>
-          <th class="pp-th pp-th--num"><${CommentIcon} /></th>
-          <th class="pp-th pp-th--num"><${EyeStatIcon} /></th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th class="pp-th pp-th--title">Post</th>
+        <th class="pp-th">Category</th>
+        <th class="pp-th pp-th--num"><${HeartIcon} /></th>
+        <th class="pp-th pp-th--num"><${CommentIcon} /></th>
+        <th class="pp-th pp-th--num"><${EyeStatIcon} /></th>
+      </tr></thead>
       <tbody>
         ${MOCK_POSTS.popular.map((p, i) => html`
           <tr key=${p.id} class="pp-tr">
-            <td class="pp-td pp-td--title">
-              <span class="pp-rank">${i + 1}</span>
-              <span class="pp-post-title">${p.title}</span>
-            </td>
+            <td class="pp-td pp-td--title"><span class="pp-rank">${i + 1}</span><span class="pp-post-title">${p.title}</span></td>
             <td class="pp-td"><span class="pp-tag">${p.category}</span></td>
             <td class="pp-td pp-td--num">${formatNum(p.likes)}</td>
             <td class="pp-td pp-td--num">${formatNum(p.comments)}</td>
             <td class="pp-td pp-td--num">${formatNum(p.views)}</td>
-          </tr>
-        `)}
+          </tr>`)}
       </tbody>
     </table>`;
 
   const renderRecent = () => html`
     <table class="pp-stats-table">
-      <thead>
-        <tr>
-          <th class="pp-th pp-th--title">Post</th>
-          <th class="pp-th">Category</th>
-          <th class="pp-th">Date</th>
-          <th class="pp-th pp-th--num"><${HeartIcon} /></th>
-          <th class="pp-th pp-th--num"><${CommentIcon} /></th>
-          <th class="pp-th pp-th--num"><${EyeStatIcon} /></th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th class="pp-th pp-th--title">Post</th>
+        <th class="pp-th">Category</th>
+        <th class="pp-th">Date</th>
+        <th class="pp-th pp-th--num"><${HeartIcon} /></th>
+        <th class="pp-th pp-th--num"><${CommentIcon} /></th>
+        <th class="pp-th pp-th--num"><${EyeStatIcon} /></th>
+      </tr></thead>
       <tbody>
         ${MOCK_POSTS.recent.map((p) => html`
           <tr key=${p.id} class="pp-tr">
@@ -331,35 +392,28 @@ function ActivityStats() {
             <td class="pp-td pp-td--num">${formatNum(p.likes)}</td>
             <td class="pp-td pp-td--num">${formatNum(p.comments)}</td>
             <td class="pp-td pp-td--num">${formatNum(p.views)}</td>
-          </tr>
-        `)}
+          </tr>`)}
       </tbody>
     </table>`;
 
   const renderCategories = () => html`
     <table class="pp-stats-table">
-      <thead>
-        <tr>
-          <th class="pp-th pp-th--title">Category</th>
-          <th class="pp-th pp-th--num">Posts</th>
-          <th class="pp-th pp-th--num"><${HeartIcon} /></th>
-          <th class="pp-th pp-th--num"><${CommentIcon} /></th>
-          <th class="pp-th pp-th--num"><${EyeStatIcon} /></th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th class="pp-th pp-th--title">Category</th>
+        <th class="pp-th pp-th--num">Posts</th>
+        <th class="pp-th pp-th--num"><${HeartIcon} /></th>
+        <th class="pp-th pp-th--num"><${CommentIcon} /></th>
+        <th class="pp-th pp-th--num"><${EyeStatIcon} /></th>
+      </tr></thead>
       <tbody>
         ${MOCK_POSTS.categories.map((c) => html`
           <tr key=${c.name} class="pp-tr">
-            <td class="pp-td pp-td--title">
-              <span class="pp-cat-dot"></span>
-              <span class="pp-post-title">${c.name}</span>
-            </td>
+            <td class="pp-td pp-td--title"><span class="pp-cat-dot"></span><span class="pp-post-title">${c.name}</span></td>
             <td class="pp-td pp-td--num pp-td--bold">${c.posts}</td>
             <td class="pp-td pp-td--num">${formatNum(c.likes)}</td>
             <td class="pp-td pp-td--num">${formatNum(c.comments)}</td>
             <td class="pp-td pp-td--num">${formatNum(c.views)}</td>
-          </tr>
-        `)}
+          </tr>`)}
       </tbody>
     </table>`;
 
@@ -374,13 +428,7 @@ function ActivityStats() {
       </div>
       <div class="pp-tabs">
         ${tabs.map((t) => html`
-          <button
-            key=${t.id}
-            class="pp-tab ${activeTab === t.id ? 'pp-tab--active' : ''}"
-            type="button"
-            onClick=${() => setActiveTab(t.id)}
-          >${t.label}</button>
-        `)}
+          <button key=${t.id} class="pp-tab ${activeTab === t.id ? 'pp-tab--active' : ''}" type="button" onClick=${() => setActiveTab(t.id)}>${t.label}</button>`)}
       </div>
       <div class="pp-table-wrap">
         ${activeTab === 'popular' ? renderPopular() : ''}
@@ -402,9 +450,7 @@ function ProfilePopup({ onClose }) {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && !cropSrc) onClose();
-    };
+    const handleKeyDown = (e) => { if (e.key === 'Escape' && !cropSrc) onClose(); };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, cropSrc]);
@@ -414,7 +460,6 @@ function ProfilePopup({ onClose }) {
   const handleCancel = () => { setProfileData({ ...savedData }); setIsEditing(false); };
   const handleInputChange = (field, value) => setProfileData((prev) => ({ ...prev, [field]: value }));
 
-  // Step 1 — pick file → open cropper
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -424,28 +469,24 @@ function ProfilePopup({ onClose }) {
     e.target.value = '';
   };
 
-  // Step 2 — cropper returns final cropped image
   const handleCropDone = (croppedDataUrl) => {
     setCropSrc(null);
     setProfileData((prev) => ({ ...prev, profileImage: croppedDataUrl }));
     saveProfileData({ ...profileData, profileImage: croppedDataUrl });
   };
 
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
+  // Clicking the transparent overlay backdrop closes the modal
+  const handleOverlayClick = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   return html`
     ${cropSrc && html`
-      <${ImageCropper}
-        imageSrc=${cropSrc}
-        onCrop=${handleCropDone}
-        onCancel=${() => setCropSrc(null)}
-      />`}
+      <${ImageCropper} imageSrc=${cropSrc} onCrop=${handleCropDone} onCancel=${() => setCropSrc(null)} />`}
 
     <div class="pp-overlay" onClick=${handleOverlayClick}>
       <div class="pp-modal">
-        <button class="pp-close-btn" onClick=${onClose} type="button" aria-label="Close">
+
+        <!-- STICKY CLOSE BUTTON — sits inside the scrollable modal but sticks to top -->
+        <button class="pp-close-btn pp-close-btn--sticky" onClick=${onClose} type="button" aria-label="Close">
           <${CloseIcon} />
         </button>
 
@@ -508,12 +549,19 @@ function ProfilePopup({ onClose }) {
             </div>
           </div>
 
+          <!-- SOCIAL PROFILES — placed between form fields and action buttons -->
+          <div class="pp-divider" style="margin: 8px 0 16px;"></div>
+          <${SocialProfiles}
+            profileData=${profileData}
+            isEditing=${isEditing}
+            onInputChange=${handleInputChange}
+          />
+
           <div class="pp-actions">
             ${!isEditing
               ? html`
                   <button class="pp-btn pp-btn--edit" type="button" onClick=${handleEdit}>
-                    <${EditIcon} />
-                    <span>Edit</span>
+                    <${EditIcon} /><span>Edit Profile</span>
                   </button>
                   <button class="pp-btn pp-btn--save pp-btn--disabled" type="button" disabled>Save Changes</button>`
               : html`

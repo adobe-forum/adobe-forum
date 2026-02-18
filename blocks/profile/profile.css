@@ -34,15 +34,18 @@
 }
 
 /* ---- OVERLAY ---- */
+/* Centered with blurred/dimmed background */
 .pp-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: var(--stvt-z-modal);
-  backdrop-filter: blur(2px);
+  pointer-events: all;
   animation: ppFadeIn 0.18s ease;
 }
 
@@ -60,9 +63,12 @@
   max-width: 620px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
-  padding: var(--stvt-space-3xl) 36px 36px;
+  overflow-x: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.10);
+  /* Top padding leaves room for the sticky close button */
+  padding: 52px 36px 36px;
   animation: ppSlideIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: all;
 }
 
 @keyframes ppSlideIn {
@@ -70,11 +76,8 @@
   to   { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* ---- CLOSE BUTTON ---- */
+/* ---- CLOSE BUTTON — base ---- */
 .pp-close-btn {
-  position: absolute;
-  top: var(--stvt-space-lg);
-  right: var(--stvt-space-lg);
   background: none;
   border: none;
   cursor: pointer;
@@ -93,6 +96,35 @@
   color: var(--stvt-text-primary);
 }
 
+/* ---- CLOSE BUTTON — STICKY variant ----
+   Uses `position: sticky` so it scrolls with the modal
+   but sticks to the top-right corner while the user scrolls down.
+   The negative margin pulls content under it rather than pushing it down. */
+.pp-close-btn--sticky {
+  position: sticky;
+  top: 12px;
+  /* Float to the right inside the modal flow */
+  float: right;
+  /* Pull up so it overlaps the padding area, not the content */
+  margin-top: -40px;
+  margin-bottom: 4px;
+  margin-right: -8px;
+  z-index: 10;
+  background: var(--stvt-surface-primary);
+  border: 1px solid var(--stvt-border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.pp-close-btn--sticky:hover {
+  background: var(--stvt-color-accent);
+  color: var(--stvt-text-on-accent);
+  border-color: var(--stvt-color-accent);
+}
+
 /* ---- AVATAR SECTION ---- */
 .pp-avatar-section {
   display: flex;
@@ -101,6 +133,7 @@
   margin-bottom: var(--stvt-space-3xl);
   padding-bottom: var(--stvt-space-2xl);
   border-bottom: 1px solid var(--stvt-border-divider);
+  clear: both; /* clear the floated sticky close btn */
 }
 
 .pp-avatar-wrap {
@@ -261,10 +294,7 @@ input:disabled.pp-phone-number {
   transition: border-color 0.15s, background 0.15s;
 }
 
-.pp-phone-code:focus {
-  border-color: var(--stvt-color-accent);
-  z-index: 1;
-}
+.pp-phone-code:focus { border-color: var(--stvt-color-accent); z-index: 1; }
 
 .pp-phone-number {
   flex: 1;
@@ -313,9 +343,7 @@ input:disabled.pp-phone-number {
   color: var(--stvt-text-primary);
 }
 
-.pp-btn--edit:hover {
-  background: var(--stvt-surface-hover);
-}
+.pp-btn--edit:hover { background: var(--stvt-surface-hover); }
 
 .pp-btn--save {
   background: var(--stvt-color-accent);
@@ -344,6 +372,78 @@ input:disabled.pp-phone-number {
   height: 1px;
   background: var(--stvt-border-divider);
   margin: var(--stvt-space-2xl) 0;
+}
+
+/* ============================================
+   SOCIAL PROFILES SECTION
+============================================ */
+.pp-social-section {
+  margin: var(--stvt-space-xl) 0 var(--stvt-space-md);
+}
+
+/* VIEW MODE — horizontal row of clickable brand icons */
+.pp-social-icons-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  padding: 4px 0 8px;
+  flex-wrap: wrap;
+}
+
+.pp-social-view-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--stvt-surface-subtle);
+  border: 1px solid var(--stvt-border-subtle);
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.pp-social-view-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  background: #fff;
+  border-color: var(--stvt-border-default);
+}
+
+.pp-social-empty {
+  font-size: 13px;
+  color: var(--stvt-text-placeholder);
+  font-style: italic;
+}
+
+/* EDIT MODE — stacked rows with icon prefix + URL input */
+.pp-social-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stvt-space-lg);
+}
+
+.pp-social-edit-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--stvt-space-md);
+}
+
+.pp-social-edit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: var(--stvt-input-height);
+  flex-shrink: 0;
+  /* Optically align with the input box */
+  padding-bottom: 1px;
+}
+
+/* Ensure social URL inputs stretch full width */
+.pp-social-edit-row .pp-field-group {
+  flex: 1;
 }
 
 /* ============================================
@@ -411,10 +511,7 @@ input:disabled.pp-phone-number {
   -webkit-user-select: none;
 }
 
-.pp-crop-canvas {
-  display: block;
-  border-radius: 10px;
-}
+.pp-crop-canvas { display: block; border-radius: 10px; }
 
 .pp-crop-zoom-row {
   display: flex;
@@ -495,9 +592,7 @@ input:disabled.pp-phone-number {
   color: #ccc;
 }
 
-.pp-crop-modal .pp-btn--edit:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
+.pp-crop-modal .pp-btn--edit:hover { background: rgba(255, 255, 255, 0.08); }
 
 /* ============================================
    ACTIVITY STATS
@@ -675,8 +770,8 @@ input:disabled.pp-phone-number {
 @media (max-width: 600px) {
   .pp-modal {
     margin: var(--stvt-space-lg);
-    padding: var(--stvt-space-2xl) var(--stvt-space-xl) var(--stvt-space-3xl);
-    max-height: 95vh;
+    max-height: 92vh;
+    padding: 52px var(--stvt-space-xl) var(--stvt-space-3xl);
   }
 
   .pp-field-row { grid-template-columns: 1fr; }
@@ -693,112 +788,7 @@ input:disabled.pp-phone-number {
   .pp-tabs { overflow-x: auto; }
 
   .pp-crop-modal { width: calc(100vw - 32px); }
-}
-/* ============================================
-   SOCIAL LINKS SECTION
-============================================ */
-.pp-social-section {
-  margin: var(--stvt-space-xl) 0;
-}
 
-/* Horizontal layout for icons in View Mode */
-.pp-social-grid {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--stvt-space-2xl);
-  padding: var(--stvt-space-md) 0;
-}
-
-/* Vertical layout for inputs in Edit Mode */
-.pp-social-grid--editing {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--stvt-space-lg);
-  justify-items: stretch;
-}
-
-.pp-social-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--stvt-surface-subtle);
-  color: var(--stvt-text-secondary);
-  transition: all 0.2s ease;
-  border: 1px solid var(--stvt-border-subtle);
-}
-
-.pp-social-link:hover:not(.pp-social-link--disabled) {
-  background: var(--stvt-color-accent);
-  color: var(--stvt-text-on-accent);
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px var(--stvt-color-accent-shadow);
-  border-color: transparent;
-}
-
-.pp-social-link--disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  filter: grayscale(1);
-}
-
-.pp-social-item .pp-field-group {
-  width: 100%;
-}
-
-@media (max-width: 600px) {
-  .pp-social-grid:not(.pp-social-grid--editing) {
-    gap: var(--stvt-space-lg);
-  }
-}
-/* 1. Horizontal Social Icons with Uniform Spacing */
-.pp-social-icons-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 24px; /* Adjust this for uniform distance */
-  padding: 12px 0;
-}
-
-.pp-social-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-  color: var(--spectrum-gray-800);
-  text-decoration: none;
-}
-
-.pp-social-link:hover {
-  transform: translateY(-2px);
-  color: #eb1000; /* Adobe Red hover effect */
-}
-
-/* 2. Sticky Close Button */
-.pp-modal {
-  position: relative;
-  overflow-y: auto; /* Allows modal to scroll internally */
-  max-height: 90vh;
-}
-
-.sticky-close {
-  position: sticky !important;
-  top: 15px;
-  right: 15px;
-  float: right;
-  z-index: 100;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  padding: 8px;
-  margin-bottom: -40px; /* Pulls content up so button floats over it */
-}
-
-/* 3. Background Fix */
-body.modal-open {
-  overflow: hidden;
-  height: 100vh;
+  .pp-social-edit-row { flex-direction: column; align-items: flex-start; }
+  .pp-social-edit-icon { height: auto; width: auto; }
 }
