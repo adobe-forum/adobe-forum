@@ -1523,17 +1523,18 @@ function CreatePost() {
               title,
               category,
               postId: result.post.id,
-              path: sidebarPath || title, // Use title if no path specified
-              autoNestES6: true, // Enable auto-nesting for ES6 related content
             }),
           });
 
-          if (sidebarResponse.ok) {
-            console.log('Sidebar item created successfully');
+          const sidebarResult = await sidebarResponse.json();
+          if (sidebarResult.success) {
+            // eslint-disable-next-line no-console
+            console.log('Sidebar item added:', sidebarResult.action);
             // Dispatch event to refresh sidebar
             window.dispatchEvent(new CustomEvent('refresh-sidebar'));
           }
         } catch (sidebarError) {
+          // eslint-disable-next-line no-console
           console.error('Error creating sidebar item:', sidebarError);
         }
 
