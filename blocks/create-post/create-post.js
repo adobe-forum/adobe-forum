@@ -1461,7 +1461,6 @@ function CreatePost() {
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
-  const [sidebarPath, setSidebarPath] = useState(''); // e.g., "React > Hooks > Custom Hooks"
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -1566,7 +1565,6 @@ function CreatePost() {
         setBody('');
         setBodyJson(null);
         setTags([]);
-        setSidebarPath('');
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }
