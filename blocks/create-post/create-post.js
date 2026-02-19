@@ -4,20 +4,7 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-// Mock categories data - replace with your actual API call
-const EXISTING_CATEGORIES = [
-  'sql-server',
-  'objective-c',
-  'ajax',
-  'javascript',
-  'python',
-  'java',
-  'react',
-  'node.js',
-  'css',
-  'html',
-];
-
+// ============================================
 // DOM TO JSON CONVERTER
 
 function domToJson(element) {
@@ -103,7 +90,7 @@ const BLOCK_FORMATS = {
 };
 
 // RICH TEXT EDITOR COMPONENT
-function RichTextEditor({ onChange, minChars = 20 }) {
+function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const activeCellRef = useRef(null);
@@ -129,7 +116,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     onChange(htmlContent, jsonContent);
   };
 
-  // ---- Image resize overlay ----
+  // Image resize overlay
 
   const clearImageResize = () => {
     if (!resizeRef.current) return;
@@ -247,7 +234,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     }
   };
 
-  // ---- Table operations ----
+  // Table operations
 
   const addRow = (position) => {
     const cell = activeCellRef.current;
@@ -379,7 +366,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     emitChange();
   };
 
-  // ---- Helper functions ----
+  // Helper functions
 
   const updateCodeLineNumbers = () => {
     requestAnimationFrame(() => {
@@ -426,7 +413,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     editor.classList.toggle('is-empty', !hasContent);
   };
 
-  // ---- Format commands ----
+  // Format commands
 
   const handleInlineCode = () => {
     const sel = window.getSelection();
@@ -448,7 +435,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      // Remove empty code elements left behind
+      // Removing empty code elements left behind
       if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
     } else if (!range.collapsed) {
       // Wrap selected text in <code>
@@ -710,14 +697,16 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     updateActiveFormats();
   };
 
-  // ---- useEffect: initialise editor and attach events ----
+  // useEffect: initialise editor and attach events
 
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return undefined;
 
-    // Start with one empty paragraph
-    if (!editor.innerHTML.trim()) {
+    // Restore content or start with one empty paragraph
+    if (initialValue) {
+      editor.innerHTML = initialValue;
+    } else if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
     }
     updatePlaceholder();
@@ -810,7 +799,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       const sel = window.getSelection();
       if (!sel || !sel.rangeCount) return;
 
-      // ── Inside a table cell ──
+      // Inside a table cell
       let nd = sel.anchorNode;
       let insideTd = false;
       while (nd && nd !== editor) {
@@ -835,14 +824,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Find the direct-child block of the editor ──
+      // Find the direct-child block of the editor
       let block = sel.anchorNode;
       while (block && block.parentNode !== editor) {
         block = block.parentNode;
       }
       if (!block) return;
 
-      // ── Enter inside a code block (always handle, even without a table) ──
+      // Enter inside a code block (always handle, even without a table)
       if (e.key === 'Enter' && block.nodeName === 'PRE') {
         e.preventDefault();
         e.stopPropagation();
@@ -859,7 +848,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Enter inside inline <code> — exit code formatting for the new line ──
+      // Enter inside inline <code> — exit code formatting for the new line
       if (e.key === 'Enter') {
         let codeNode = sel.anchorNode;
         while (codeNode && codeNode !== editor) {
@@ -893,7 +882,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         }
       }
 
-      // ── Enter inside a heading — next line becomes a regular paragraph ──
+      // Enter inside a heading — next line becomes a regular paragraph
       if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
         e.preventDefault();
         e.stopPropagation();
@@ -921,14 +910,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Outside table cells ──
+      // Outside table cells
       if (!editor.querySelector('table')) return;
 
       e.stopPropagation();
 
       const range = sel.getRangeAt(0);
 
-      // ── Backspace ──
+      // Backspace
       if (e.key === 'Backspace') {
         if (!range.collapsed) return;
 
@@ -973,7 +962,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Delete ──
+      // Delete
       if (e.key === 'Delete') {
         if (!range.collapsed) return;
 
@@ -999,7 +988,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Enter ──
+      // Enter
       if (e.key === 'Enter') {
         e.preventDefault();
         if (!range.collapsed) range.deleteContents();
@@ -1044,7 +1033,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
   const isValid = charCount >= minChars;
 
-  // ---- Toolbar button helper ----
+  // Toolbar button helper
   const tbBtn = (cmd, title) => html`
     <button type="button"
       className=${`ce-toolbar-btn${activeFormats[cmd] ? ' active' : ''}`}
@@ -1162,8 +1151,30 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState([]);
+  const [existingCategories, setExistingCategories] = useState([]);
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
+
+  // Fetch existing categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/sidebar/categories');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.categories) {
+            // Extract category names
+            const categoryNames = data.categories.map((cat) => cat.name);
+            setExistingCategories(categoryNames);
+          }
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1181,7 +1192,7 @@ function CategorySearch({ value, onChange, onSelect }) {
     onChange(searchValue);
 
     if (searchValue.trim()) {
-      const filtered = EXISTING_CATEGORIES.filter(
+      const filtered = existingCategories.filter(
         (cat) => cat.toLowerCase().includes(
           searchValue.toLowerCase(),
         ),
@@ -1207,7 +1218,7 @@ function CategorySearch({ value, onChange, onSelect }) {
   };
 
   const showAddButton = value.trim()
-    && !EXISTING_CATEGORIES.some((cat) => cat.toLowerCase() === value.toLowerCase());
+    && !existingCategories.some((cat) => cat.toLowerCase() === value.toLowerCase());
 
   return html`
     <div className="category-search-wrapper" ref=${wrapperRef}>
@@ -1365,14 +1376,15 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   `;
 }
 
-// PREVIEW MODAL
-function PreviewModal({
+// INLINE PREVIEW
+function InlinePreview({
   title, category, body, tags, onBack, onPost,
 }) {
   const bodyRef = useRef(null);
 
-  // Add line numbers to code blocks after the body HTML is rendered
+  // Scroll to top and add line numbers to code blocks on mount
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (!bodyRef.current) return;
     bodyRef.current.querySelectorAll('pre').forEach((pre) => {
       const lineArr = pre.textContent.split('\n');
@@ -1387,40 +1399,37 @@ function PreviewModal({
   }, [body]);
 
   return html`
-    <div className="preview-modal-overlay" onClick=${onBack}>
-      <div className="preview-modal" onClick=${(e) => e.stopPropagation()}>
-        <div className="preview-modal-body">
-          <div className="preview-post">
-            ${tags.length > 0 && html`
-              <div className="preview-tags">
-                ${tags.map((tag) => html`
-                  <span key=${tag} className="preview-tag">#${tag}</span>
-                `)}
-              </div>
-            `}
-            <h1 className="preview-title">${title}</h1>
-            <div className="preview-meta">
-              <span className="preview-author">You</span>
-              ${category && html`
-                <span className="preview-meta-sep">\u00B7</span>
-                <span className="preview-category">${category}</span>
-              `}
-            </div>
-            <div
-              ref=${bodyRef}
-              className="preview-body-content"
-              dangerouslySetInnerHTML=${{ __html: body }}
-            />
+    <div className="preview-inline">
+      <h1 className="preview-heading">Preview your page before posting</h1>
+      <div className="preview-post">
+        ${tags.length > 0 && html`
+          <div className="preview-tags">
+            ${tags.map((tag) => html`
+              <span key=${tag} className="preview-tag">#${tag}</span>
+            `)}
           </div>
+        `}
+        <h1 className="preview-title">${title}</h1>
+        <div className="preview-meta">
+          <span className="preview-author">You</span>
+          ${category && html`
+            <span className="preview-meta-sep">\u00B7</span>
+            <span className="preview-category">${category}</span>
+          `}
         </div>
-        <div className="preview-modal-footer">
-          <button type="button" className="btn btn-cancel" onClick=${onBack}>
-            Back to Edit
-          </button>
-          <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
-            Post
-          </button>
-        </div>
+        <div
+          ref=${bodyRef}
+          className="preview-body-content"
+          dangerouslySetInnerHTML=${{ __html: body }}
+        />
+      </div>
+      <div className="preview-inline-footer">
+        <button type="button" className="btn btn-cancel" onClick=${onBack}>
+          Back to Edit
+        </button>
+        <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
+          Post
+        </button>
       </div>
     </div>
   `;
@@ -1434,7 +1443,6 @@ function CreatePost() {
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
-  const [sidebarPath, setSidebarPath] = useState(''); // e.g., "React > Hooks > Custom Hooks"
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -1505,32 +1513,8 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        // Create sidebar item with nested path
-        try {
-          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              title,
-              category,
-              postId: result.post._id, // eslint-disable-line no-underscore-dangle
-              path: sidebarPath || title, // Use title if no path specified
-              autoNestES6: true, // Enable auto-nesting for ES6 related content
-            }),
-          });
-
-          if (sidebarResponse.ok) {
-            // eslint-disable-next-line no-console
-            console.log('Sidebar item created successfully');
-            // Dispatch event to refresh sidebar
-            window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-          }
-        } catch (sidebarError) {
-          // eslint-disable-next-line no-console
-          console.error('Error creating sidebar item:', sidebarError);
-        }
+        // eslint-disable-next-line no-console
+        console.log('Post created successfully:', result);
 
         showToast('Your question has been posted successfully!', 'success');
         // Reset form
@@ -1539,7 +1523,6 @@ function CreatePost() {
         setBody('');
         setBodyJson(null);
         setTags([]);
-        setSidebarPath('');
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }
@@ -1558,111 +1541,8 @@ function CreatePost() {
 
   return html`
     <div className="create-post">
-      <h1>
-        Post your thoughts
-        <span className="required-text">Required fields *</span>
-      </h1>
-
-      <form onSubmit=${handleSubmit}>
-        <div className="form-group">
-          <label>
-            Title<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Be specific and imagine you're asking a question to another person. Min 15 characters.
-          </p>
-          <input
-            type="text"
-            value=${title}
-            onInput=${(e) => setTitle(e.target.value)}
-            placeholder=""
-          />
-          ${title.length < 15 && html`
-            <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
-              ${title.length} / 15 characters minimum
-            </div>
-          `}
-        </div>
-
-        <div className="form-group">
-          <label>
-            Category<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Search for an existing category or create a new one.
-          </p>
-          ${category ? html`
-            <div className="category-chip">
-              <span>${category}</span>
-              <button
-                type="button"
-                className="category-remove"
-                onClick=${() => setCategory('')}
-                aria-label="Remove category"
-              >
-                ×
-              </button>
-            </div>
-          ` : html`
-            <${CategorySearch}
-              value=${categorySearch}
-              onChange=${setCategorySearch}
-              onSelect=${setCategory}
-            />
-          `}
-        </div>
-
-        <div className="form-group">
-          <label>
-            Body<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Include all the information someone would need to answer your question. Min 20 characters.
-          </p>
-          <${RichTextEditor}
-            onChange=${handleBodyChange}
-            minChars=${20}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>
-            Tags<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
-          </p>
-          <${TagsInput}
-            tags=${tags}
-            onTagsChange=${setTags}
-            maxTags=${5}
-          />
-        </div>
-        <div className="submit-section">
-          <button type="button" className="btn btn-cancel" onClick=${handleCancel}>
-            Cancel
-          </button>
-          <div className="submit-btn-wrapper">
-            <button
-              type="submit"
-              className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
-              disabled=${!isFormValid}
-            >
-              Post
-            </button>
-            ${!isFormValid && html`
-              <div className="submit-tooltip">
-                <strong>Missing fields:</strong>
-                <ul>
-                  ${missingFields.map((f) => html`<li key=${f}>${f}</li>`)}
-                </ul>
-              </div>
-            `}
-          </div>
-        </div>
-      </form>
-      ${showPreview && html`
-        <${PreviewModal}
+      ${showPreview ? html`
+        <${InlinePreview}
           title=${title}
           category=${category}
           body=${body}
@@ -1670,6 +1550,112 @@ function CreatePost() {
           onBack=${() => setShowPreview(false)}
           onPost=${handlePost}
         />
+      ` : html`
+        <h1>
+          Post your thoughts
+          <span className="required-text">Required fields *</span>
+        </h1>
+
+        <form onSubmit=${handleSubmit}>
+          <div className="form-group">
+            <label>
+              Title<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Be specific and imagine you're asking a question to another person. Min 15 characters.
+            </p>
+            <input
+              type="text"
+              value=${title}
+              onInput=${(e) => setTitle(e.target.value)}
+              placeholder=""
+            />
+            ${title.length < 15 && html`
+              <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
+                ${title.length} / 15 characters minimum
+              </div>
+            `}
+          </div>
+
+          <div className="form-group">
+            <label>
+              Category<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Search for an existing category or create a new one.
+            </p>
+            ${category ? html`
+              <div className="category-chip">
+                <span>${category}</span>
+                <button
+                  type="button"
+                  className="category-remove"
+                  onClick=${() => setCategory('')}
+                  aria-label="Remove category"
+                >
+                  ×
+                </button>
+              </div>
+            ` : html`
+              <${CategorySearch}
+                value=${categorySearch}
+                onChange=${setCategorySearch}
+                onSelect=${setCategory}
+              />
+            `}
+          </div>
+
+          <div className="form-group">
+            <label>
+              Body<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Include all the information someone would need to answer your question. Min 20 characters.
+            </p>
+            <${RichTextEditor}
+              onChange=${handleBodyChange}
+              minChars=${20}
+              initialValue=${body}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>
+              Tags<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
+            </p>
+            <${TagsInput}
+              tags=${tags}
+              onTagsChange=${setTags}
+              maxTags=${5}
+            />
+          </div>
+
+          <div className="submit-section">
+            <button type="button" className="btn btn-cancel" onClick=${handleCancel}>
+              Cancel
+            </button>
+            <div className="submit-btn-wrapper">
+              <button
+                type="submit"
+                className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
+                disabled=${!isFormValid}
+              >
+                Preview
+              </button>
+              ${!isFormValid && html`
+                <div className="submit-tooltip">
+                  <strong>Missing fields:</strong>
+                  <ul>
+                    ${missingFields.map((f) => html`<li key=${f}>${f}</li>`)}
+                  </ul>
+                </div>
+              `}
+            </div>
+          </div>
+        </form>
       `}
       ${toast && html`
         <div className=${`cp-toast cp-toast-${toast.type}`}>

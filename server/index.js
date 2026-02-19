@@ -2,11 +2,16 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
 
 /* eslint-disable no-console */
-dotenv.config();
+// Load .env from parent directory (project root)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -269,7 +274,7 @@ const buildTree = (items) => {
 app.get('/api/sidebar-items', async (req, res) => {
   try {
     const items = await SidebarItem.find()
-      .populate('postId')
+      .populate('postId', '_id title body')
       .sort({ category: 1, order: 1, createdAt: 1 });
     
     const tree = buildTree(items);
@@ -289,7 +294,7 @@ app.get('/api/sidebar-items/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
     const items = await SidebarItem.find({ category })
-      .populate('postId')
+      .populate('postId', '_id title body')
       .sort({ order: 1 });
     res.json({ success: true, items });
   } catch (error) {
@@ -314,7 +319,7 @@ app.get('/api/sidebar-items/:id', async (req, res) => {
 app.post('/api/sidebar-items', async (req, res) => {
   try {
     const {
-      title, category, icon, postId, order, path,
+      title, category, icon, postId, order, path, isFolder,
     } = req.body;
 
     if (!title) {
@@ -323,24 +328,24 @@ app.post('/api/sidebar-items', async (req, res) => {
     if (!category) {
       return res.status(400).json({ error: 'Category is required' });
     }
-    if (!postId) {
-      return res.status(400).json({ error: 'Post ID is required' });
-    }
 
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
+    // postId is only required if it's not a folder
+    if (!isFolder && postId) {
+      const post = await Post.findById(postId);
+      if (!post) {
+        return res.status(404).json({ error: 'Post not found' });
+      }
     }
 
     const savedItem = await createNestedStructure(
       path || '',
-      postId,
+      postId || null,
       category,
       title,
       icon || '📄',
     );
 
-    const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId');
+    const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId', '_id title body');
 
     return res.status(201).json({
       success: true,
@@ -353,6 +358,198 @@ app.post('/api/sidebar-items', async (req, res) => {
       error: 'Failed to create sidebar item',
       details: error.message,
     });
+  }
+});
+
+// ============================================
+// SMART-ADD: Handles duplicates & tree transformation
+// ============================================
+app.post('/api/sidebar-items/smart-add', async (req, res) => {
+  try {
+    const {
+      title, category, postId, parentId = null,
+    } = req.body;
+
+    if (!title || !category) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title and category are required',
+      });
+    }
+
+    const normalizedCategory = category.trim();
+    const normalizedTitle = title.trim();
+
+    // Convert postId string to ObjectId if provided
+    let postIdObjectId = null;
+    if (postId) {
+      try {
+        postIdObjectId = new mongoose.Types.ObjectId(postId);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid postId format: ${postId}`,
+        });
+      }
+    }
+
+    // Find existing item with same title in same category and parent
+    const existingItem = await SidebarItem.findOne({
+      title: { $regex: new RegExp(`^${normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      parentId: parentId || null,
+    });
+
+    if (existingItem) {
+      if (existingItem.isFolder) {
+        // Already a folder, just add new item as child
+        const childCount = await SidebarItem.countDocuments({ parentId: existingItem._id });
+        const newItem = new SidebarItem({
+          title: normalizedTitle,
+          category: existingItem.category,
+          parentId: existingItem._id,
+          postId: postIdObjectId,
+          icon: '📄',
+          isFolder: false,
+          order: childCount,
+        });
+
+        await newItem.save();
+        await newItem.populate('postId', '_id title body');
+
+        return res.status(201).json({
+          success: true,
+          action: 'added_to_existing_folder',
+          item: newItem.toObject(),
+          parent: existingItem.toObject(),
+        });
+      }
+
+      // Transform existing file into a folder
+      const originalPostId = existingItem.postId;
+
+      // Update existing item to be a folder
+      existingItem.isFolder = true;
+      existingItem.icon = '📁';
+      existingItem.postId = null;
+      await existingItem.save();
+
+      // Create child for the original file
+      const originalChild = new SidebarItem({
+        title: `${normalizedTitle} (1)`,
+        category: existingItem.category,
+        parentId: existingItem._id,
+        postId: originalPostId,
+        icon: '📄',
+        isFolder: false,
+        order: 0,
+      });
+      await originalChild.save();
+
+      // Create child for the new file
+      const newChild = new SidebarItem({
+        title: `${normalizedTitle} (2)`,
+        category: existingItem.category,
+        parentId: existingItem._id,
+        postId: postIdObjectId,
+        icon: '📄',
+        isFolder: false,
+        order: 1,
+      });
+      await newChild.save();
+      await newChild.populate('postId', '_id title body');
+
+      // Fetch updated parent with children
+      const children = await SidebarItem.find({ parentId: existingItem._id })
+        .populate('postId', '_id title body')
+        .sort({ order: 1 });
+
+      return res.status(200).json({
+        success: true,
+        action: 'transformed_to_folder',
+        parent: { ...existingItem.toObject(), children },
+        newItem: newChild,
+      });
+    }
+
+    // CASE: No duplicate - Create new item
+    const itemCount = await SidebarItem.countDocuments({
+      category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      parentId: parentId || null,
+    });
+
+    const newItem = new SidebarItem({
+      title: normalizedTitle,
+      category: normalizedCategory,
+      parentId: parentId || null,
+      postId: postIdObjectId,
+      icon: '📄',
+      isFolder: false,
+      order: itemCount,
+    });
+
+    await newItem.save();
+    await newItem.populate('postId', '_id title body');
+
+    return res.status(201).json({
+      success: true,
+      action: 'created_new',
+      item: newItem.toObject(),
+    });
+  } catch (error) {
+    console.error('Error in smart-add:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// GET: Fetch sidebar as categorized tree structure
+// ============================================
+app.get('/api/sidebar/categories', async (req, res) => {
+  try {
+    // Fetch all sidebar items and populate post details (including _id)
+    const items = await SidebarItem.find()
+      .populate('postId', '_id title body category tags')
+      .sort({ category: 1, order: 1, createdAt: 1 });
+
+    // Group by category
+    const categoryMap = new Map();
+
+    items.forEach((item) => {
+      const catName = item.category;
+      if (!categoryMap.has(catName)) {
+        categoryMap.set(catName, []);
+      }
+      if (!item.postId && !item.isFolder) {
+        console.warn(`Warning: Item "${item.title}" has no postId`);
+      }
+      categoryMap.get(catName).push(item);
+    });
+
+    // Build tree for each category
+    const categories = [];
+    categoryMap.forEach((categoryItems, categoryName) => {
+      const tree = buildTree(categoryItems);
+      
+      categories.push({
+        id: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: categoryName,
+        icon: '📁',
+        items: tree,
+      });
+    });
+
+    // Sort categories alphabetically
+    categories.sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ 
+      success: true, 
+      categories,
+      totalItems: items.length,
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -373,7 +570,7 @@ app.put('/api/sidebar-items/:id', async (req, res) => {
       req.params.id,
       updateData,
       { new: true, runValidators: true },
-    ).populate('postId');
+    ).populate('postId', '_id title body');
 
     if (!updatedItem) {
       return res.status(404).json({ error: 'Sidebar item not found' });
@@ -393,15 +590,36 @@ app.put('/api/sidebar-items/:id', async (req, res) => {
   }
 });
 
+// Helper function to recursively delete sidebar items and their children
+const recursivelyDeleteSidebarItem = async (itemId) => {
+  const item = await SidebarItem.findById(itemId);
+  if (!item) return;
+
+  // If it's a folder, delete all children first
+  if (item.isFolder) {
+    const children = await SidebarItem.find({ parentId: itemId });
+    for (const child of children) {
+      await recursivelyDeleteSidebarItem(child._id);
+    }
+  }
+
+  // Delete the item itself
+  await SidebarItem.findByIdAndDelete(itemId);
+};
+
 app.delete('/api/sidebar-items/:id', async (req, res) => {
   try {
-    const deletedItem = await SidebarItem.findByIdAndDelete(req.params.id);
-    if (!deletedItem) {
+    const itemToDelete = await SidebarItem.findById(req.params.id);
+    if (!itemToDelete) {
       return res.status(404).json({ error: 'Sidebar item not found' });
     }
+
+    // Use recursive delete to handle cascading deletion of children
+    await recursivelyDeleteSidebarItem(req.params.id);
+
     return res.json({
       success: true,
-      message: 'Sidebar item deleted successfully',
+      message: 'Sidebar item and all children deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting sidebar item:', error);
