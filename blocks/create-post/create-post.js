@@ -4,20 +4,7 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-// Mock categories data - replace with your actual API call
-const EXISTING_CATEGORIES = [
-  'sql-server',
-  'objective-c',
-  'ajax',
-  'javascript',
-  'python',
-  'java',
-  'react',
-  'node.js',
-  'css',
-  'html',
-];
-
+// ============================================
 // DOM TO JSON CONVERTER
 
 function domToJson(element) {
@@ -81,6 +68,7 @@ async function loadIcons() {
         const resp = await fetch(`/icons/${file}.svg`);
         if (resp.ok) return [cmd, await resp.text()];
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.error(`Failed to load icon: ${file}.svg`, e);
       }
       return [cmd, ''];
@@ -604,6 +592,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const handleLinkInsert = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
+    // eslint-disable-next-line no-alert
     const url = prompt('Enter URL:');
     if (!url) return;
     document.execCommand('createLink', false, url);
@@ -1162,8 +1151,30 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState([]);
+  const [existingCategories, setExistingCategories] = useState([]);
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
+
+  // Fetch existing categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/sidebar/categories');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.categories) {
+            // Extract category names
+            const categoryNames = data.categories.map((cat) => cat.name);
+            setExistingCategories(categoryNames);
+          }
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1181,7 +1192,7 @@ function CategorySearch({ value, onChange, onSelect }) {
     onChange(searchValue);
 
     if (searchValue.trim()) {
-      const filtered = EXISTING_CATEGORIES.filter(
+      const filtered = existingCategories.filter(
         (cat) => cat.toLowerCase().includes(
           searchValue.toLowerCase(),
         ),
@@ -1207,7 +1218,7 @@ function CategorySearch({ value, onChange, onSelect }) {
   };
 
   const showAddButton = value.trim()
-    && !EXISTING_CATEGORIES.some((cat) => cat.toLowerCase() === value.toLowerCase());
+    && !existingCategories.some((cat) => cat.toLowerCase() === value.toLowerCase());
 
   return html`
     <div className="category-search-wrapper" ref=${wrapperRef}>
@@ -1459,8 +1470,10 @@ function CreatePost() {
       body: bodyJson,
       tags,
     };
+    /* eslint-disable no-console */
     console.clear();
     console.log('Live post JSON:', postDataRef.current);
+    /* eslint-enable no-console */
   }, [title, category, bodyJson, tags]);
 
   const missingFields = [];
@@ -1487,8 +1500,6 @@ function CreatePost() {
       tags: tagsWithHash,
     };
 
-    console.log('Sending post data:', postData);
-
     try {
       const response = await fetch('http://localhost:5000/api/posts', {
         method: 'POST',
@@ -1501,7 +1512,35 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
+<<<<<<< HEAD
         console.log('Post created successfully:', result);
+=======
+        // Create sidebar item using smart-add (handles duplicates automatically)
+        try {
+          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              title,
+              category,
+              postId: result.post.id,
+            }),
+          });
+
+          const sidebarResult = await sidebarResponse.json();
+          if (sidebarResult.success) {
+            // eslint-disable-next-line no-console
+            console.log('Sidebar item added:', sidebarResult.action);
+            // Dispatch event to refresh sidebar
+            window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+          }
+        } catch (sidebarError) {
+          // eslint-disable-next-line no-console
+          console.error('Error creating sidebar item:', sidebarError);
+        }
+>>>>>>> 4f202af2869d1a4dba7905202a17c07fd6b0d532
 
         showToast('Your question has been posted successfully!', 'success');
         // Reset form
@@ -1511,11 +1550,9 @@ function CreatePost() {
         setBodyJson(null);
         setTags([]);
       } else {
-        console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
-      console.error('Network error:', error);
       showToast('Network error: Unable to connect to the server.', 'error');
     }
 
