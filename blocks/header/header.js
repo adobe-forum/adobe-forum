@@ -2,6 +2,13 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 // ============================================
+// CONSTANTS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+const toId = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+// ============================================
 // ICON COMPONENTS
 // ============================================
 
@@ -32,75 +39,73 @@ const UserIcon = () => html`
 `;
 
 // ============================================
-// SIDEBAR COMPONENTS
+// API FUNCTIONS
 // ============================================
 
-const toId = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+// Fetch all sidebar items from backend
+const fetchSidebarItems = async () => {
+  const response = await fetch(`${API_BASE_URL}/sidebar-items`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch sidebar items: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.success ? data.items : [];
+};
 
-const STORAGE_KEY = 'sidebar-categories';
+// Create a new category in the backend
+const createCategory = async (name) => {
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, icon: '📁' }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create category: ${response.status}`);
+  }
+  return response.json();
+};
 
-const initialCategoryData = [
-  {
-    id: 'javascript',
-    name: 'JavaScript',
-    icon: '📁',
-    subcategories: [],
-  },
-  {
-    id: 'python',
-    name: 'Python',
-    icon: '📁',
-    subcategories: [],
-  },
-  {
-    id: 'css-design',
-    name: 'CSS & Design',
-    icon: '📁',
-    subcategories: [],
-  },
-  {
-    id: 'devops',
-    name: 'DevOps',
-    icon: '📁',
-    subcategories: [],
-  },
-];
+// Group items by category
+const groupItemsByCategory = (items) => {
+  const categoryMap = new Map();
 
-// Load categories from localStorage
-const loadCategories = (authoredCategories) => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Return stored categories if they exist and are valid
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+  items.forEach((item) => {
+    const catId = toId(item.category);
+
+    if (!categoryMap.has(catId)) {
+      categoryMap.set(catId, {
+        id: catId,
+        name: item.category,
+        icon: '📁',
+        items: [],
+        subcategories: [],
+      });
     }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to load categories from localStorage:', e);
-  }
-  // Fall back to authored or initial data
-  return authoredCategories && authoredCategories.length > 0
-    ? authoredCategories
-    : initialCategoryData;
+
+    const category = categoryMap.get(catId);
+    category.items.push(item);
+
+    // Also maintain flat subcategories for backward compatibility
+    if (!item.isFolder && item.postId) {
+      /* eslint-disable no-underscore-dangle */
+      category.subcategories.push({
+        id: item._id,
+        name: item.title,
+        icon: item.icon || '📄',
+        postId: item.postId._id || item.postId,
+      });
+      /* eslint-enable no-underscore-dangle */
+    }
+  });
+
+  return Array.from(categoryMap.values());
 };
 
-// Save categories to localStorage
-const saveCategories = (categories) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to save categories to localStorage:', e);
-  }
-};
+// ============================================
+// TREE ITEM COMPONENT
+// ============================================
 
-// Recursive TreeItem component for nested structure
-function TreeItem({
-  item, activeItem, onItemClick, level = 0,
-}) {
+function TreeItem({ item, activeItem, onItemClick, level = 0 }) {
   const [isExpanded, setIsExpanded] = useState(level === 0);
   const hasChildren = item.children && item.children.length > 0;
   const isFolder = item.isFolder || hasChildren;
@@ -144,11 +149,13 @@ function TreeItem({
   `;
 }
 
+// ============================================
+// CATEGORY ITEM COMPONENT
+// ============================================
+
 function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
-
-  // Handle tree items (items with children property)
   const hasTreeItems = category.items && category.items.length > 0;
 
   return html`
@@ -172,111 +179,50 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
         </ul>
       ` : html`
         <ul class="subcategory-list">
-          ${category.subcategories && category.subcategories.length > 0
-    ? category.subcategories.map((sub) => html`
-                <li 
-                  key=${sub.id}
-                  class="subcategory-item ${activeSubcategory === sub.id ? 'active' : ''}"
-                  onClick=${() => onSubcategoryClick(category.id, sub.id, sub.postId)}
-                >
-                  <span class="subcategory-icon">${sub.icon || '📄'}</span>
-                  <span>${sub.name}</span>
-                </li>
-              `)
-    : html`<div class="no-items">No pages yet</div>`
-}
+          <div class="no-items">No pages yet</div>
         </ul>
       `}
     </li>
   `;
 }
 
-function Sidebar({ authoredCategories }) {
-  // --- State ---
-  const [categories, setCategories] = useState(() => loadCategories(authoredCategories));
-  // eslint-disable-next-line no-unused-vars
-  const [_sidebarItems, setSidebarItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+// ============================================
+// SIDEBAR COMPONENT
+// ============================================
 
+function Sidebar() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
-
-  // New Category Creation State
   const [isCreating, setIsCreating] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [creationError, setCreationError] = useState('');
 
   const inputRef = useRef(null);
 
-  // --- Effects ---
-  // Fetch sidebar items from API
-  useEffect(() => {
-    const fetchSidebarItems = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/sidebar-items');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.items) {
-            setSidebarItems(data.items);
-
-            // Group tree items by category
-            const categoryMap = new Map();
-
-            // Start with existing categories
-            categories.forEach((cat) => {
-              categoryMap.set(cat.id, { ...cat, subcategories: [], items: [] });
-            });
-
-            // Process tree items (root level items without parentId)
-            data.items.forEach((item) => {
-              const catId = toId(item.category);
-              if (!categoryMap.has(catId)) {
-                categoryMap.set(catId, {
-                  id: catId,
-                  name: item.category,
-                  icon: '📁',
-                  subcategories: [],
-                  items: [],
-                });
-              }
-
-              const category = categoryMap.get(catId);
-              // Add to items array for tree rendering
-              category.items.push(item);
-
-              // Also add flat subcategories for backwards compatibility
-              if (!item.isFolder && item.postId) {
-                /* eslint-disable no-underscore-dangle */
-                category.subcategories.push({
-                  id: item._id,
-                  name: item.title,
-                  icon: item.icon || '📄',
-                  postId: item.postId._id || item.postId,
-                });
-                /* eslint-enable no-underscore-dangle */
-              }
-            });
-
-            // Update categories state
-            const updatedCategories = Array.from(categoryMap.values());
-            setCategories(updatedCategories);
-            saveCategories(updatedCategories);
-          }
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch sidebar items:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSidebarItems();
-
-    // Listen for refresh-sidebar events
-    const handleRefresh = () => {
+  // Fetch categories from backend
+  const loadCategories = async () => {
+    try {
       setLoading(true);
-      fetchSidebarItems();
+      const items = await fetchSidebarItems();
+      const grouped = groupItemsByCategory(items);
+      setCategories(grouped);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch sidebar items:', error);
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch + refresh listener
+  useEffect(() => {
+    loadCategories();
+
+    const handleRefresh = () => {
+      loadCategories();
     };
 
     window.addEventListener('refresh-sidebar', handleRefresh);
@@ -286,25 +232,19 @@ function Sidebar({ authoredCategories }) {
     };
   }, []);
 
-  // Focus input when creation mode starts
+  // Auto-focus input when creating
   useEffect(() => {
     if (isCreating && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isCreating]);
 
-  // Save to localStorage whenever categories change
-  useEffect(() => {
-    saveCategories(categories);
-  }, [categories]);
-
-  // --- Handlers ---
+  // Handlers
   const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
 
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
 
-    // Trigger custom event to load post in forum-post block
     const event = new CustomEvent('load-forum-post', {
       detail: { postId, sidebarItemId: subcategoryId },
     });
@@ -323,17 +263,20 @@ function Sidebar({ authoredCategories }) {
     setCreationError('');
   };
 
-  const handleCreateKeyDown = (e) => {
+  const handleCreateKeyDown = async (e) => {
     if (e.key === 'Escape') {
       cancelCreating();
-    } else if (e.key === 'Enter') {
+      return;
+    }
+
+    if (e.key === 'Enter') {
       const trimmedName = newCatName.trim();
+
       if (!trimmedName) {
         setCreationError('Name cannot be empty');
         return;
       }
 
-      // Duplicate Check (Case-insensitive)
       const exists = categories.some(
         (c) => c.name.toLowerCase() === trimmedName.toLowerCase(),
       );
@@ -343,41 +286,32 @@ function Sidebar({ authoredCategories }) {
         return;
       }
 
-      // Add Category
-      const newCategory = {
-        id: toId(trimmedName),
-        name: trimmedName,
-        icon: '📁',
-        subcategories: [],
-      };
-
-      setCategories([newCategory, ...categories]);
-      cancelCreating();
+      try {
+        await createCategory(trimmedName);
+        await loadCategories();
+        cancelCreating();
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to create category:', error);
+        setCreationError('Failed to save. Try again.');
+      }
     }
   };
 
   const handleCreateInput = (e) => {
     setNewCatName(e.target.value);
-    if (creationError) setCreationError(''); // Clear error while typing
+    if (creationError) setCreationError('');
   };
 
-  // --- Filtering Logic ---
-  const filteredCategories = categories.map((category) => {
-    if (searchTerm === '') return category;
-    const categoryMatches = category.name.toLowerCase().includes(searchTerm);
-    // Fix: Broken into multiple lines to satisfy max-len rule
-    const filteredSubs = category.subcategories.filter((sub) => (
-      sub.name.toLowerCase().includes(searchTerm)
-    ));
-
-    if (categoryMatches || filteredSubs.length > 0) {
-      return {
-        ...category,
-        subcategories: filteredSubs.length > 0 ? filteredSubs : category.subcategories,
-      };
-    }
-    return null;
-  }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+  // Filter and sort
+  const filteredCategories = categories
+    .filter((category) => {
+      if (!searchTerm) return true;
+      const categoryMatches = category.name.toLowerCase().includes(searchTerm);
+      const itemMatch = category.items?.some((item) => item.title?.toLowerCase().includes(searchTerm));
+      return categoryMatches || itemMatch;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return html`
     <div class="sidebar">
@@ -398,7 +332,7 @@ function Sidebar({ authoredCategories }) {
             ref=${inputRef}
             type="text" 
             class="new-category-input ${creationError ? 'error' : ''}"
-            placeholder="Add category"
+            placeholder="Category name..."
             value=${newCatName}
             onKeyDown=${handleCreateKeyDown}
             onInput=${handleCreateInput}
@@ -408,27 +342,30 @@ function Sidebar({ authoredCategories }) {
         </div>
       `}
 
-      ${loading && html`<div class="loading">Loading...</div>`}
-
-      <ul class="category-list">
-        ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
-              <${CategoryItem}
-                key=${category.id}
-                category=${category}
-                activeSubcategory=${activeSubcategory}
-                onSubcategoryClick=${handleSubcategoryClick}
-              />
-            `)
-    : html`<div class="no-results">No match found</div>`
-}
-      </ul>
+      ${loading 
+        ? html`<div class="loading">Loading...</div>` 
+        : html`
+            <ul class="category-list">
+              ${filteredCategories.length > 0
+                ? filteredCategories.map((category) => html`
+                    <${CategoryItem}
+                      key=${category.id}
+                      category=${category}
+                      activeSubcategory=${activeSubcategory}
+                      onSubcategoryClick=${handleSubcategoryClick}
+                    />
+                  `)
+                : html`<div class="no-results">No categories found</div>`
+              }
+            </ul>
+          `
+      }
     </div>
   `;
 }
 
 // ============================================
-// HEADER COMPONENT (Same as before)
+// HEADER COMPONENT
 // ============================================
 
 function HeaderComponent() {
@@ -438,7 +375,6 @@ function HeaderComponent() {
   const toggleMenu = () => {
     const newState = !isMobileMenuOpen;
     setIsMobileMenuOpen(newState);
-    // Toggle sidebar visibility on mobile
     const sidebarWrapper = document.querySelector('.sidebar-wrapper');
     if (sidebarWrapper) {
       sidebarWrapper.classList.toggle('mobile-open', newState);
@@ -463,10 +399,10 @@ function HeaderComponent() {
             src="/icons/logo.svg"
             alt="Adobe Logo"
             onError=${(e) => {
-    if (e.target.src.endsWith('.svg')) {
-      e.target.src = '/icons/logo.png';
-    }
-  }}
+              if (e.target.src.endsWith('.svg')) {
+                e.target.src = '/icons/logo.png';
+              }
+            }}
           />
         </a>
 
@@ -494,8 +430,9 @@ function HeaderComponent() {
             <a href="/profile" class="profile-link">
               <div class="profile-avatar">
                 ${!profileImageError
-    ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
-    : html`<${UserIcon} />`}
+                  ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
+                  : html`<${UserIcon} />`
+                }
               </div>
             </a>
           </li>
@@ -505,30 +442,13 @@ function HeaderComponent() {
   `;
 }
 
-
+// ============================================
 // AEM BLOCK DECORATOR
+// ============================================
 
 export default async function decorate(block) {
-  const authoredCategories = [];
-  const ul = block.querySelector('ul');
-  if (ul) {
-    ul.querySelectorAll(':scope > li').forEach((li) => {
-      const categoryName = li.childNodes[0].textContent.trim();
-      const subList = li.querySelector('ul');
-      const subcategories = [];
-      if (subList) {
-        subList.querySelectorAll('li').forEach((subLi) => {
-          const name = subLi.textContent.trim();
-          subcategories.push({ id: toId(name), name, icon: '📄' });
-        });
-      }
-      authoredCategories.push({
-        id: toId(categoryName), name: categoryName, icon: '📁', subcategories,
-      });
-    });
-  }
-
   block.textContent = '';
+  
   const headerWrapper = document.createElement('div');
   headerWrapper.className = 'header-wrapper';
   const sidebarWrapper = document.createElement('div');
@@ -539,7 +459,7 @@ export default async function decorate(block) {
 
   try {
     render(html`<${HeaderComponent} />`, headerWrapper);
-    render(html`<${Sidebar} authoredCategories=${authoredCategories} />`, sidebarWrapper);
+    render(html`<${Sidebar} />`, sidebarWrapper);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Render error:', err);
@@ -558,6 +478,7 @@ export default async function decorate(block) {
       footer.classList.add('global-footer');
     }
   } catch (e) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load global footer', e);
   }
 }
