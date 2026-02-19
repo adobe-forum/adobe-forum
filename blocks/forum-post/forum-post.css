@@ -218,37 +218,45 @@
 
 .block-code {
   margin: 24px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--post-code-bg);
 
-  pre {
-    position: relative;
-    background: var(--post-code-bg);
-    color: var(--post-code-text);
-    border-radius: 6px;
-    margin: 0;
-    padding: 16px 16px 16px 3.5em;
+  .code-inner {
+    display: flex;
     overflow-x: auto;
+  }
+
+  .code-line-nums {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 8px;
+    text-align: right;
+    color: var(--post-line-nums);
+    border-right: 1px solid var(--post-line-nums-border);
+    user-select: none;
     font-family: monospace;
     font-size: 14px;
     line-height: 1.6;
+    min-width: 2.5em;
+    flex-shrink: 0;
 
-    &::before {
-      content: var(--line-nums, "");
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2.5em;
-      padding: 16px 8px 16px 0;
-      text-align: right;
-      color: var(--post-line-nums);
-      border-right: 1px solid var(--post-line-nums-border);
-      white-space: pre;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
-      pointer-events: none;
-      user-select: none;
+    span {
+      display: block;
     }
+  }
+
+  .code-content {
+    flex: 1;
+    margin: 0;
+    padding: 16px;
+    color: var(--post-code-text);
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: transparent;
+    overflow-x: visible;
+    white-space: pre;
   }
 
   code {

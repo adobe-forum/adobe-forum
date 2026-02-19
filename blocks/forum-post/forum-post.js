@@ -77,12 +77,15 @@ const ContentBlock = ({ block }) => {
     case 'image':
       return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
     case 'code': {
-      const lineCount = block.value.split('\n').length;
-      const nums = Array.from({ length: lineCount }, (_, i) => i + 1).join('\\a ');
+      const lines = block.value.split('\n');
+      const lineNumbers = lines.map((_, i) => html`<span>${i + 1}</span>`);
 
       return html`
         <div class="block-code">
-          <pre style="--line-nums: '${nums}'">${block.value}</pre>
+          <div class="code-inner">
+            <div class="code-line-nums">${lineNumbers}</div>
+            <pre class="code-content">${block.value}</pre>
+          </div>
         </div>
       `;
     }
@@ -103,22 +106,12 @@ const ForumPost = () => {
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
-  if (!post) {
-    return html`
-      <div class="forum-post-wrapper">
-        <div class="loading-state">
-          Loading post...
-        </div>
-      </div>
-    `;
-  }
-
   // Auto-scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
-  }, [post.comments]);
+  }, [post ? post.comments : null]);
 
   // Listen for sidebar click events
   useEffect(() => {
@@ -193,6 +186,16 @@ const ForumPost = () => {
     };
     // No dependency array means setup only once
   }, []);
+
+  if (!post) {
+    return html`
+      <div class="forum-post-wrapper">
+        <div class="loading-state">
+          ${loading ? 'Loading post...' : 'Select a post from the sidebar to view it.'}
+        </div>
+      </div>
+    `;
+  }
 
   const addComment = () => {
     if (!inputValue.trim()) return;
