@@ -207,7 +207,7 @@ function Sidebar() {
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
     // eslint-disable-next-line no-console
     console.log('Sidebar item clicked:', { categoryId, subcategoryId, postId });
-    
+
     setActiveSubcategory(subcategoryId);
 
     // Validate postId exists

@@ -1514,8 +1514,9 @@ function CreatePost() {
       if (response.ok) {
         // Create sidebar item using smart-add (handles duplicates automatically)
         try {
+          // eslint-disable-next-line no-underscore-dangle
           const postIdToSend = result.post?._id;
-          
+
           if (!postIdToSend) {
             throw new Error('Post _id is missing from API response');
           }
@@ -1533,7 +1534,7 @@ function CreatePost() {
           });
 
           const sidebarResult = await sidebarResponse.json();
-          
+
           if (sidebarResult.success) {
             // eslint-disable-next-line no-console
             console.log('Sidebar item added:', sidebarResult.action);

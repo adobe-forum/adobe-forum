@@ -180,15 +180,15 @@ const ForumPost = () => {
         // eslint-disable-next-line no-console
         console.log('🚀 Fetching post from:', url);
         const response = await fetch(url);
-        
+
         // eslint-disable-next-line no-console
         console.log('📡 Response status:', response.status, response.statusText);
-        
+
         if (response.ok) {
           const data = await response.json();
           // eslint-disable-next-line no-console
           console.log('📦 Response data:', data);
-          
+
           if (data.success && data.post) {
             // Transform the post data to match the expected format
             const fetchedPost = data.post;
