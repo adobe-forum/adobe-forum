@@ -1512,6 +1512,7 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
+        // eslint-disable-next-line no-console
         console.log('Post created successfully:', result);
 
         showToast('Your question has been posted successfully!', 'success');

@@ -166,16 +166,34 @@ const ForumPost = () => {
   useEffect(() => {
     const handleLoadPost = async (event) => {
       const { postId } = event.detail;
-      if (!postId) return;
+      // eslint-disable-next-line no-console
+      console.log('🔵 load-forum-post event received with postId:', postId);
+      if (!postId) {
+        // eslint-disable-next-line no-console
+        console.warn('⚠️ No postId provided to load-forum-post event');
+        return;
+      }
 
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:5000/api/posts/${postId}`);
+        const url = `http://localhost:5000/api/posts/${postId}`;
+        // eslint-disable-next-line no-console
+        console.log('🚀 Fetching post from:', url);
+        const response = await fetch(url);
+
+        // eslint-disable-next-line no-console
+        console.log('📡 Response status:', response.status, response.statusText);
+
         if (response.ok) {
           const data = await response.json();
+          // eslint-disable-next-line no-console
+          console.log('📦 Response data:', data);
+
           if (data.success && data.post) {
             // Transform the post data to match the expected format
             const fetchedPost = data.post;
+            // eslint-disable-next-line no-console
+            console.log('✓ Post fetched successfully:', fetchedPost.title);
 
             // Parse HTML body to extract code blocks and other content
             const contentBlocks = parseHtmlToContentBlocks(fetchedPost.body);
@@ -187,14 +205,25 @@ const ForumPost = () => {
               author: 'User', // Default author since it's not in the schema
               tags: fetchedPost.tags || [],
               content: contentBlocks,
-              comments: post.comments || [], // Keep existing comments
+              comments: [], // Start with empty comments for new post
             };
+            // eslint-disable-next-line no-console
+            console.log('✓ Post loaded and displayed:', transformedPost.title);
             setPost(transformedPost);
+          } else {
+            // eslint-disable-next-line no-console
+            console.error('❌ API returned unsuccessful response:', data);
           }
+        } else {
+          // eslint-disable-next-line no-console
+          console.error('❌ HTTP Error - Status:', response.status);
+          const errorData = await response.json().catch(() => ({}));
+          // eslint-disable-next-line no-console
+          console.error('Error details:', errorData);
         }
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Failed to load post:', error);
+        console.error('❌ Network/fetch error:', error.message);
       } finally {
         setLoading(false);
       }
@@ -204,7 +233,8 @@ const ForumPost = () => {
     return () => {
       window.removeEventListener('load-forum-post', handleLoadPost);
     };
-  }, [post.comments]);
+    // No dependency array means setup only once
+  }, []);
 
   const addComment = () => {
     if (!inputValue.trim()) return;
