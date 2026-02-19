@@ -102,7 +102,7 @@ const BLOCK_FORMATS = {
 };
 
 // RICH TEXT EDITOR COMPONENT
-function RichTextEditor({ onChange, minChars = 20 }) {
+function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const activeCellRef = useRef(null);
@@ -714,8 +714,10 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const editor = editorRef.current;
     if (!editor) return undefined;
 
-    // Start with one empty paragraph
-    if (!editor.innerHTML.trim()) {
+    // Restore content or start with one empty paragraph
+    if (initialValue) {
+      editor.innerHTML = initialValue;
+    } else if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
     }
     updatePlaceholder();
@@ -1362,14 +1364,15 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   `;
 }
 
-// PREVIEW MODAL
-function PreviewModal({
+// INLINE PREVIEW
+function InlinePreview({
   title, category, body, tags, onBack, onPost,
 }) {
   const bodyRef = useRef(null);
 
-  // Add line numbers to code blocks after the body HTML is rendered
+  // Scroll to top and add line numbers to code blocks on mount
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (!bodyRef.current) return;
     bodyRef.current.querySelectorAll('pre').forEach((pre) => {
       const lineArr = pre.textContent.split('\n');
@@ -1384,40 +1387,37 @@ function PreviewModal({
   }, [body]);
 
   return html`
-    <div className="preview-modal-overlay" onClick=${onBack}>
-      <div className="preview-modal" onClick=${(e) => e.stopPropagation()}>
-        <div className="preview-modal-body">
-          <div className="preview-post">
-            ${tags.length > 0 && html`
-              <div className="preview-tags">
-                ${tags.map((tag) => html`
-                  <span key=${tag} className="preview-tag">#${tag}</span>
-                `)}
-              </div>
-            `}
-            <h1 className="preview-title">${title}</h1>
-            <div className="preview-meta">
-              <span className="preview-author">You</span>
-              ${category && html`
-                <span className="preview-meta-sep">\u00B7</span>
-                <span className="preview-category">${category}</span>
-              `}
-            </div>
-            <div
-              ref=${bodyRef}
-              className="preview-body-content"
-              dangerouslySetInnerHTML=${{ __html: body }}
-            />
+    <div className="preview-inline">
+      <h1 className="preview-heading">Preview your page before posting</h1>
+      <div className="preview-post">
+        ${tags.length > 0 && html`
+          <div className="preview-tags">
+            ${tags.map((tag) => html`
+              <span key=${tag} className="preview-tag">#${tag}</span>
+            `)}
           </div>
+        `}
+        <h1 className="preview-title">${title}</h1>
+        <div className="preview-meta">
+          <span className="preview-author">You</span>
+          ${category && html`
+            <span className="preview-meta-sep">\u00B7</span>
+            <span className="preview-category">${category}</span>
+          `}
         </div>
-        <div className="preview-modal-footer">
-          <button type="button" className="btn btn-cancel" onClick=${onBack}>
-            Back to Edit
-          </button>
-          <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
-            Post
-          </button>
-        </div>
+        <div
+          ref=${bodyRef}
+          className="preview-body-content"
+          dangerouslySetInnerHTML=${{ __html: body }}
+        />
+      </div>
+      <div className="preview-inline-footer">
+        <button type="button" className="btn btn-cancel" onClick=${onBack}>
+          Back to Edit
+        </button>
+        <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
+          Post
+        </button>
       </div>
     </div>
   `;
@@ -1557,128 +1557,8 @@ function CreatePost() {
 
   return html`
     <div className="create-post">
-      <h1>
-        Post your thoughts
-        <span className="required-text">Required fields *</span>
-      </h1>
-
-      <form onSubmit=${handleSubmit}>
-        <div className="form-group">
-          <label>
-            Title<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Be specific and imagine you're asking a question to another person. Min 15 characters.
-          </p>
-          <input
-            type="text"
-            value=${title}
-            onInput=${(e) => setTitle(e.target.value)}
-            placeholder=""
-          />
-          ${title.length < 15 && html`
-            <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
-              ${title.length} / 15 characters minimum
-            </div>
-          `}
-        </div>
-
-        <div className="form-group">
-          <label>
-            Category<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Search for an existing category or create a new one.
-          </p>
-          ${category ? html`
-            <div className="category-chip">
-              <span>${category}</span>
-              <button
-                type="button"
-                className="category-remove"
-                onClick=${() => setCategory('')}
-                aria-label="Remove category"
-              >
-                ×
-              </button>
-            </div>
-          ` : html`
-            <${CategorySearch}
-              value=${categorySearch}
-              onChange=${setCategorySearch}
-              onSelect=${setCategory}
-            />
-          `}
-        </div>
-
-        <div className="form-group">
-          <label>
-            Body<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Include all the information someone would need to answer your question. Min 20 characters.
-          </p>
-          <${RichTextEditor}
-            onChange=${handleBodyChange}
-            minChars=${20}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>
-            Tags<span className="required">*</span>
-          </label>
-          <p className="helper-text">
-            Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
-          </p>
-          <${TagsInput}
-            tags=${tags}
-            onTagsChange=${setTags}
-            maxTags=${5}
-          />
-        </div>
-
-        <div className="form-group" style=${{ display: 'none' }}>
-          <label>
-            Sidebar Path
-          </label>
-          <p className="helper-text">
-            Optional: Organize in nested folders. Use ">" to create hierarchy.
-            Example: "React > Hooks > Custom Hooks". ES6-related content auto-nests.
-          </p>
-          <input
-            type="text"
-            value=${sidebarPath}
-            onInput=${(e) => setSidebarPath(e.target.value)}
-            placeholder="e.g., React > Hooks > useState"
-          />
-        </div>
-
-        <div className="submit-section">
-          <button type="button" className="btn btn-cancel" onClick=${handleCancel}>
-            Cancel
-          </button>
-          <div className="submit-btn-wrapper">
-            <button
-              type="submit"
-              className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
-              disabled=${!isFormValid}
-            >
-              Post
-            </button>
-            ${!isFormValid && html`
-              <div className="submit-tooltip">
-                <strong>Missing fields:</strong>
-                <ul>
-                  ${missingFields.map((f) => html`<li key=${f}>${f}</li>`)}
-                </ul>
-              </div>
-            `}
-          </div>
-        </div>
-      </form>
-      ${showPreview && html`
-        <${PreviewModal}
+      ${showPreview ? html`
+        <${InlinePreview}
           title=${title}
           category=${category}
           body=${body}
@@ -1686,6 +1566,128 @@ function CreatePost() {
           onBack=${() => setShowPreview(false)}
           onPost=${handlePost}
         />
+      ` : html`
+        <h1>
+          Post your thoughts
+          <span className="required-text">Required fields *</span>
+        </h1>
+
+        <form onSubmit=${handleSubmit}>
+          <div className="form-group">
+            <label>
+              Title<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Be specific and imagine you're asking a question to another person. Min 15 characters.
+            </p>
+            <input
+              type="text"
+              value=${title}
+              onInput=${(e) => setTitle(e.target.value)}
+              placeholder=""
+            />
+            ${title.length < 15 && html`
+              <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
+                ${title.length} / 15 characters minimum
+              </div>
+            `}
+          </div>
+
+          <div className="form-group">
+            <label>
+              Category<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Search for an existing category or create a new one.
+            </p>
+            ${category ? html`
+              <div className="category-chip">
+                <span>${category}</span>
+                <button
+                  type="button"
+                  className="category-remove"
+                  onClick=${() => setCategory('')}
+                  aria-label="Remove category"
+                >
+                  ×
+                </button>
+              </div>
+            ` : html`
+              <${CategorySearch}
+                value=${categorySearch}
+                onChange=${setCategorySearch}
+                onSelect=${setCategory}
+              />
+            `}
+          </div>
+
+          <div className="form-group">
+            <label>
+              Body<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Include all the information someone would need to answer your question. Min 20 characters.
+            </p>
+            <${RichTextEditor}
+              onChange=${handleBodyChange}
+              minChars=${20}
+              initialValue=${body}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>
+              Tags<span className="required">*</span>
+            </label>
+            <p className="helper-text">
+              Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
+            </p>
+            <${TagsInput}
+              tags=${tags}
+              onTagsChange=${setTags}
+              maxTags=${5}
+            />
+          </div>
+
+          <div className="form-group" style=${{ display: 'none' }}>
+            <label>
+              Sidebar Path
+            </label>
+            <p className="helper-text">
+              Optional: Organize in nested folders. Use ">" to create hierarchy.
+              Example: "React > Hooks > Custom Hooks". ES6-related content auto-nests.
+            </p>
+            <input
+              type="text"
+              value=${sidebarPath}
+              onInput=${(e) => setSidebarPath(e.target.value)}
+              placeholder="e.g., React > Hooks > useState"
+            />
+          </div>
+
+          <div className="submit-section">
+            <button type="button" className="btn btn-cancel" onClick=${handleCancel}>
+              Cancel
+            </button>
+            <div className="submit-btn-wrapper">
+              <button
+                type="submit"
+                className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
+                disabled=${!isFormValid}
+              >
+                Preview
+              </button>
+              ${!isFormValid && html`
+                <div className="submit-tooltip">
+                  <strong>Missing fields:</strong>
+                  <ul>
+                    ${missingFields.map((f) => html`<li key=${f}>${f}</li>`)}
+                  </ul>
+                </div>
+              `}
+            </div>
+          </div>
+        </form>
       `}
       ${toast && html`
         <div className=${`cp-toast cp-toast-${toast.type}`}>
