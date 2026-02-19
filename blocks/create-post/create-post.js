@@ -4,20 +4,7 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-// Mock categories data - replace with your actual API call
-const EXISTING_CATEGORIES = [
-  'sql-server',
-  'objective-c',
-  'ajax',
-  'javascript',
-  'python',
-  'java',
-  'react',
-  'node.js',
-  'css',
-  'html',
-];
-
+// ============================================
 // DOM TO JSON CONVERTER
 
 function domToJson(element) {
@@ -129,7 +116,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     onChange(htmlContent, jsonContent);
   };
 
-  // ---- Image resize overlay ----
+  // Image resize overlay
 
   const clearImageResize = () => {
     if (!resizeRef.current) return;
@@ -247,7 +234,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     }
   };
 
-  // ---- Table operations ----
+  // Table operations
 
   const addRow = (position) => {
     const cell = activeCellRef.current;
@@ -379,7 +366,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     emitChange();
   };
 
-  // ---- Helper functions ----
+  // Helper functions
 
   const updateCodeLineNumbers = () => {
     requestAnimationFrame(() => {
@@ -426,7 +413,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     editor.classList.toggle('is-empty', !hasContent);
   };
 
-  // ---- Format commands ----
+  // Format commands
 
   const handleInlineCode = () => {
     const sel = window.getSelection();
@@ -448,7 +435,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      // Remove empty code elements left behind
+      // Removing empty code elements left behind
       if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
     } else if (!range.collapsed) {
       // Wrap selected text in <code>
@@ -710,7 +697,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     updateActiveFormats();
   };
 
-  // ---- useEffect: initialise editor and attach events ----
+  // useEffect: initialise editor and attach events
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -810,7 +797,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       const sel = window.getSelection();
       if (!sel || !sel.rangeCount) return;
 
-      // ── Inside a table cell ──
+      // Inside a table cell
       let nd = sel.anchorNode;
       let insideTd = false;
       while (nd && nd !== editor) {
@@ -835,14 +822,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Find the direct-child block of the editor ──
+      // Find the direct-child block of the editor
       let block = sel.anchorNode;
       while (block && block.parentNode !== editor) {
         block = block.parentNode;
       }
       if (!block) return;
 
-      // ── Enter inside a code block (always handle, even without a table) ──
+      // Enter inside a code block (always handle, even without a table)
       if (e.key === 'Enter' && block.nodeName === 'PRE') {
         e.preventDefault();
         e.stopPropagation();
@@ -859,7 +846,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Enter inside inline <code> — exit code formatting for the new line ──
+      // Enter inside inline <code> — exit code formatting for the new line
       if (e.key === 'Enter') {
         let codeNode = sel.anchorNode;
         while (codeNode && codeNode !== editor) {
@@ -893,7 +880,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         }
       }
 
-      // ── Enter inside a heading — next line becomes a regular paragraph ──
+      // Enter inside a heading — next line becomes a regular paragraph
       if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
         e.preventDefault();
         e.stopPropagation();
@@ -921,14 +908,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Outside table cells ──
+      // Outside table cells
       if (!editor.querySelector('table')) return;
 
       e.stopPropagation();
 
       const range = sel.getRangeAt(0);
 
-      // ── Backspace ──
+      // Backspace
       if (e.key === 'Backspace') {
         if (!range.collapsed) return;
 
@@ -973,7 +960,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Delete ──
+      // Delete
       if (e.key === 'Delete') {
         if (!range.collapsed) return;
 
@@ -999,7 +986,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         return;
       }
 
-      // ── Enter ──
+      // Enter
       if (e.key === 'Enter') {
         e.preventDefault();
         if (!range.collapsed) range.deleteContents();
@@ -1044,7 +1031,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
   const isValid = charCount >= minChars;
 
-  // ---- Toolbar button helper ----
+  // Toolbar button helper
   const tbBtn = (cmd, title) => html`
     <button type="button"
       className=${`ce-toolbar-btn${activeFormats[cmd] ? ' active' : ''}`}
@@ -1162,8 +1149,30 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 function CategorySearch({ value, onChange, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState([]);
+  const [existingCategories, setExistingCategories] = useState([]);
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
+
+  // Fetch existing categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/sidebar/categories');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.categories) {
+            // Extract category names
+            const categoryNames = data.categories.map((cat) => cat.name);
+            setExistingCategories(categoryNames);
+          }
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -1181,7 +1190,7 @@ function CategorySearch({ value, onChange, onSelect }) {
     onChange(searchValue);
 
     if (searchValue.trim()) {
-      const filtered = EXISTING_CATEGORIES.filter(
+      const filtered = existingCategories.filter(
         (cat) => cat.toLowerCase().includes(
           searchValue.toLowerCase(),
         ),
@@ -1207,7 +1216,7 @@ function CategorySearch({ value, onChange, onSelect }) {
   };
 
   const showAddButton = value.trim()
-    && !EXISTING_CATEGORIES.some((cat) => cat.toLowerCase() === value.toLowerCase());
+    && !existingCategories.some((cat) => cat.toLowerCase() === value.toLowerCase());
 
   return html`
     <div className="category-search-wrapper" ref=${wrapperRef}>
@@ -1433,7 +1442,6 @@ function CreatePost() {
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
-  const [sidebarPath, setSidebarPath] = useState(''); // e.g., "React > Hooks > Custom Hooks"
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -1504,9 +1512,9 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        // Create sidebar item with nested path
+        // Create sidebar item using smart-add (handles duplicates automatically)
         try {
-          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
+          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1514,15 +1522,14 @@ function CreatePost() {
             body: JSON.stringify({
               title,
               category,
-              postId: result.post._id, // eslint-disable-line no-underscore-dangle
-              path: sidebarPath || title, // Use title if no path specified
-              autoNestES6: true, // Enable auto-nesting for ES6 related content
+              postId: result.post.id,
             }),
           });
 
-          if (sidebarResponse.ok) {
+          const sidebarResult = await sidebarResponse.json();
+          if (sidebarResult.success) {
             // eslint-disable-next-line no-console
-            console.log('Sidebar item created successfully');
+            console.log('Sidebar item added:', sidebarResult.action);
             // Dispatch event to refresh sidebar
             window.dispatchEvent(new CustomEvent('refresh-sidebar'));
           }
@@ -1538,7 +1545,6 @@ function CreatePost() {
         setBody('');
         setBodyJson(null);
         setTags([]);
-        setSidebarPath('');
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }

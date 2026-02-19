@@ -2,11 +2,16 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
 
 /* eslint-disable no-console */
-dotenv.config();
+// Load .env from parent directory (project root)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -353,6 +358,178 @@ app.post('/api/sidebar-items', async (req, res) => {
       error: 'Failed to create sidebar item',
       details: error.message,
     });
+  }
+});
+
+// ============================================
+// SMART-ADD: Handles duplicates & tree transformation
+// ============================================
+app.post('/api/sidebar-items/smart-add', async (req, res) => {
+  try {
+    const {
+      title, category, postId, parentId = null,
+    } = req.body;
+
+    if (!title || !category) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title and category are required',
+      });
+    }
+
+    const normalizedCategory = category.trim();
+    const normalizedTitle = title.trim();
+
+    // Find existing item with same title in same category and parent
+    const existingItem = await SidebarItem.findOne({
+      title: { $regex: new RegExp(`^${normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      parentId: parentId || null,
+    });
+
+    if (existingItem) {
+      // CASE: Duplicate file name found - Transform to tree structure
+
+      if (existingItem.isFolder) {
+        // Already a folder, just add new item as child
+        const childCount = await SidebarItem.countDocuments({ parentId: existingItem._id });
+        const newItem = new SidebarItem({
+          title: normalizedTitle,
+          category: existingItem.category,
+          parentId: existingItem._id,
+          postId: postId || null,
+          icon: '📄',
+          isFolder: false,
+          order: childCount,
+        });
+
+        await newItem.save();
+        await newItem.populate('postId');
+
+        return res.status(201).json({
+          success: true,
+          action: 'added_to_existing_folder',
+          item: newItem,
+          parent: existingItem,
+        });
+      }
+
+      // Transform existing file into a folder
+      const originalPostId = existingItem.postId;
+
+      // Update existing item to be a folder
+      existingItem.isFolder = true;
+      existingItem.icon = '📁';
+      existingItem.postId = null;
+      await existingItem.save();
+
+      // Create child for the original file
+      const originalChild = new SidebarItem({
+        title: `${normalizedTitle} (1)`,
+        category: existingItem.category,
+        parentId: existingItem._id,
+        postId: originalPostId,
+        icon: '📄',
+        isFolder: false,
+        order: 0,
+      });
+      await originalChild.save();
+
+      // Create child for the new file
+      const newChild = new SidebarItem({
+        title: `${normalizedTitle} (2)`,
+        category: existingItem.category,
+        parentId: existingItem._id,
+        postId: postId || null,
+        icon: '📄',
+        isFolder: false,
+        order: 1,
+      });
+      await newChild.save();
+      await newChild.populate('postId');
+
+      // Fetch updated parent with children
+      const children = await SidebarItem.find({ parentId: existingItem._id })
+        .populate('postId')
+        .sort({ order: 1 });
+
+      return res.status(200).json({
+        success: true,
+        action: 'transformed_to_folder',
+        parent: { ...existingItem.toObject(), children },
+        newItem: newChild,
+      });
+    }
+
+    // CASE: No duplicate - Create new item
+    const itemCount = await SidebarItem.countDocuments({
+      category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      parentId: parentId || null,
+    });
+
+    const newItem = new SidebarItem({
+      title: normalizedTitle,
+      category: normalizedCategory,
+      parentId: parentId || null,
+      postId: postId || null,
+      icon: '📄',
+      isFolder: false,
+      order: itemCount,
+    });
+
+    await newItem.save();
+    await newItem.populate('postId');
+
+    return res.status(201).json({
+      success: true,
+      action: 'created_new',
+      item: newItem,
+    });
+  } catch (error) {
+    console.error('Error in smart-add:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// GET: Fetch sidebar as categorized tree structure
+// ============================================
+app.get('/api/sidebar/categories', async (req, res) => {
+  try {
+    const items = await SidebarItem.find()
+      .populate('postId', 'title body')
+      .sort({ order: 1, createdAt: 1 });
+
+    // Group by category
+    const categoryMap = new Map();
+
+    items.forEach((item) => {
+      const catName = item.category;
+      if (!categoryMap.has(catName)) {
+        categoryMap.set(catName, []);
+      }
+      categoryMap.get(catName).push(item);
+    });
+
+    // Build tree for each category
+    const categories = [];
+    categoryMap.forEach((categoryItems, categoryName) => {
+      const tree = buildTree(categoryItems);
+      categories.push({
+        id: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: categoryName,
+        icon: '📁',
+        items: tree,
+      });
+    });
+
+    // Sort categories alphabetically
+    categories.sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
