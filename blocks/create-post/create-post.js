@@ -1512,35 +1512,7 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-<<<<<<< HEAD
         console.log('Post created successfully:', result);
-=======
-        // Create sidebar item using smart-add (handles duplicates automatically)
-        try {
-          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              title,
-              category,
-              postId: result.post.id,
-            }),
-          });
-
-          const sidebarResult = await sidebarResponse.json();
-          if (sidebarResult.success) {
-            // eslint-disable-next-line no-console
-            console.log('Sidebar item added:', sidebarResult.action);
-            // Dispatch event to refresh sidebar
-            window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-          }
-        } catch (sidebarError) {
-          // eslint-disable-next-line no-console
-          console.error('Error creating sidebar item:', sidebarError);
-        }
->>>>>>> 4f202af2869d1a4dba7905202a17c07fd6b0d532
 
         showToast('Your question has been posted successfully!', 'success');
         // Reset form
