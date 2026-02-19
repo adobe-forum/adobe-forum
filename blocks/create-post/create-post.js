@@ -1514,6 +1514,12 @@ function CreatePost() {
       if (response.ok) {
         // Create sidebar item using smart-add (handles duplicates automatically)
         try {
+          const postIdToSend = result.post?._id;
+          
+          if (!postIdToSend) {
+            throw new Error('Post _id is missing from API response');
+          }
+
           const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
             method: 'POST',
             headers: {
@@ -1522,11 +1528,12 @@ function CreatePost() {
             body: JSON.stringify({
               title,
               category,
-              postId: result.post.id,
+              postId: postIdToSend,
             }),
           });
 
           const sidebarResult = await sidebarResponse.json();
+          
           if (sidebarResult.success) {
             // eslint-disable-next-line no-console
             console.log('Sidebar item added:', sidebarResult.action);

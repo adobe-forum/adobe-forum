@@ -49,9 +49,14 @@ function TreeItem({
     if (isFolder) {
       setIsExpanded(!isExpanded);
     }
+    // Extract postId - handle both string IDs and populated objects
     if (item.postId) {
       // eslint-disable-next-line no-underscore-dangle
-      onItemClick(item._id, item.postId._id || item.postId);
+      const postId = typeof item.postId === 'string' ? item.postId : (item.postId._id || item.postId.id);
+      if (postId) {
+        // eslint-disable-next-line no-underscore-dangle
+        onItemClick(item._id, postId);
+      }
     }
   };
 
@@ -96,7 +101,6 @@ function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
         <span class="category-toggle">▼</span>
         <span class="category-icon">${category.icon || '📁'}</span>
         <span class="category-name">${category.name}</span>
-        <span class="category-count">${category.items?.length || 0}</span>
       </div>
       ${!isCollapsed && html`
         <ul class="tree-list">
@@ -148,6 +152,23 @@ function Sidebar() {
 
       const data = await response.json();
       if (data.success && data.categories) {
+        // Validate that postIds are present in items
+        data.categories.forEach((cat) => {
+          const flattenItems = (items) => {
+            items.forEach((item) => {
+              if (!item.isFolder && !item.postId) {
+                // eslint-disable-next-line no-console
+                console.warn(`Item "${item.title}" in category "${cat.name}" has no postId`);
+              }
+              if (item.postId) {
+                // eslint-disable-next-line no-console
+                console.log(`✓ Item "${item.title}" has postId:`, item.postId);
+              }
+              if (item.children) flattenItems(item.children);
+            });
+          };
+          flattenItems(cat.items || []);
+        });
         setCategories(data.categories);
       } else {
         throw new Error(data.error || 'Failed to fetch categories');
@@ -184,12 +205,24 @@ function Sidebar() {
   const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
 
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
+    // eslint-disable-next-line no-console
+    console.log('Sidebar item clicked:', { categoryId, subcategoryId, postId });
+    
     setActiveSubcategory(subcategoryId);
+
+    // Validate postId exists
+    if (!postId) {
+      // eslint-disable-next-line no-console
+      console.warn('No postId available for this item. Item may be a folder without an associated post.');
+      return;
+    }
 
     // Trigger custom event to load post in forum-post block
     const event = new CustomEvent('load-forum-post', {
       detail: { postId, sidebarItemId: subcategoryId },
     });
+    // eslint-disable-next-line no-console
+    console.log('Dispatching load-forum-post event with postId:', postId);
     window.dispatchEvent(event);
   };
 
