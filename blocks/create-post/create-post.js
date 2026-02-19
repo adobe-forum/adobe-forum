@@ -1431,7 +1431,6 @@ function CreatePost() {
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
-  const [sidebarPath, setSidebarPath] = useState(''); // e.g., "React > Hooks > Custom Hooks"
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -1504,31 +1503,6 @@ function CreatePost() {
       if (response.ok) {
         console.log('Post created successfully:', result);
 
-        // Create sidebar item with nested path
-        try {
-          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              title,
-              category,
-              postId: result.post.id,
-              path: sidebarPath || title, // Use title if no path specified
-              autoNestES6: true, // Enable auto-nesting for ES6 related content
-            }),
-          });
-
-          if (sidebarResponse.ok) {
-            console.log('Sidebar item created successfully');
-            // Dispatch event to refresh sidebar
-            window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-          }
-        } catch (sidebarError) {
-          console.error('Error creating sidebar item:', sidebarError);
-        }
-
         showToast('Your question has been posted successfully!', 'success');
         // Reset form
         setTitle('');
@@ -1536,7 +1510,6 @@ function CreatePost() {
         setBody('');
         setBodyJson(null);
         setTags([]);
-        setSidebarPath('');
       } else {
         console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
@@ -1646,22 +1619,6 @@ function CreatePost() {
               tags=${tags}
               onTagsChange=${setTags}
               maxTags=${5}
-            />
-          </div>
-
-          <div className="form-group" style=${{ display: 'none' }}>
-            <label>
-              Sidebar Path
-            </label>
-            <p className="helper-text">
-              Optional: Organize in nested folders. Use ">" to create hierarchy.
-              Example: "React > Hooks > Custom Hooks". ES6-related content auto-nests.
-            </p>
-            <input
-              type="text"
-              value=${sidebarPath}
-              onInput=${(e) => setSidebarPath(e.target.value)}
-              placeholder="e.g., React > Hooks > useState"
             />
           </div>
 
