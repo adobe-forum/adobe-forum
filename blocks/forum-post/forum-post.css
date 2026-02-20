@@ -6,37 +6,21 @@
   color: var(--text-color);
   padding: 20px 20px 60px;
   line-height: 1.6;
+
+  /* Local variables for code blocks */
+  --post-code-bg: #1e1e1e;
+  --post-code-text: #d4d4d4;
+  --post-line-nums: rgb(212 212 212 / 30%);
+  --post-line-nums-border: rgb(212 212 212 / 15%);
 }
 
-/* ── Back button — fires show-cards event ── */
-.forum-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  color: var(--spectrum-accent-color-900);
-  font-size: var(--body-font-size-xs);
-  font-family: var(--body-font-family);
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  margin: 0 0 24px;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2rem;
+  color: var(--spectrum-gray-600);
 }
 
-.forum-back-btn:hover {
-  opacity: 0.75;
-  background: none;
-  text-decoration: underline;
-}
-
-.forum-back-btn svg {
-  flex-shrink: 0;
-}
-
-/* --- 2. Header Section --- */
 .tags-row {
   display: flex;
   flex-wrap: wrap;
@@ -80,7 +64,6 @@
   color: var(--spectrum-gray-300);
 }
 
-/* --- 3. Content Area --- */
 .post-content-area {
   font-size: 1.125rem;
   color: var(--text-color);
@@ -147,17 +130,33 @@
   line-height: 1.3;
 }
 
-.block-text h1 { font-size: 2em; }
-.block-text h2 { font-size: 1.5em; }
-.block-text h3 { font-size: 1.25em; }
+.block-text h1 {
+  font-size: 2em;
+}
+
+.block-text h2 {
+  font-size: 1.5em;
+}
+
+.block-text h3 {
+  font-size: 1.25em;
+}
 
 .block-text .ql-align-center  { text-align: center; }
 .block-text .ql-align-right   { text-align: right; }
 .block-text .ql-align-justify { text-align: justify; }
 
-.block-text .ql-indent-1 { padding-left: 3em; }
-.block-text .ql-indent-2 { padding-left: 6em; }
-.block-text .ql-indent-3 { padding-left: 9em; }
+.block-text .ql-indent-1 {
+  padding-left: 3em;
+}
+
+.block-text .ql-indent-2 {
+  padding-left: 6em;
+}
+
+.block-text .ql-indent-3 {
+  padding-left: 9em;
+}
 
 .block-text table {
   border-collapse: collapse;
@@ -193,40 +192,47 @@
   border: 1px solid var(--spectrum-gray-200);
 }
 
-/* --- Code Block --- */
 .block-code {
   margin: 24px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--post-code-bg);
 
-  pre {
-    position: relative;
-    background: #1e1e1e;
-    color: #d4d4d4;
-    border-radius: 6px;
-    margin: 0;
-    padding: 16px 16px 16px 3.5em;
+  .code-inner {
+    display: flex;
     overflow-x: auto;
+  }
+
+  .code-line-nums {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 8px;
+    text-align: right;
+    color: var(--post-line-nums);
+    border-right: 1px solid var(--post-line-nums-border);
+    user-select: none;
     font-family: monospace;
     font-size: 14px;
     line-height: 1.6;
+    min-width: 2.5em;
+    flex-shrink: 0;
 
-    &::before {
-      content: var(--line-nums, "");
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2.5em;
-      padding: 16px 8px 16px 0;
-      text-align: right;
-      color: rgb(212 212 212 / 30%);
-      border-right: 1px solid rgb(212 212 212 / 15%);
-      white-space: pre;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
-      pointer-events: none;
-      user-select: none;
+    span {
+      display: block;
     }
+  }
+
+  .code-content {
+    flex: 1;
+    margin: 0;
+    padding: 16px;
+    color: var(--post-code-text);
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: transparent;
+    overflow-x: visible;
+    white-space: pre;
   }
 
   code {
@@ -235,7 +241,6 @@
   }
 }
 
-/* --- 4. Discussion Section --- */
 .post-divider {
   border: none;
   border-top: 1px solid var(--spectrum-gray-200);
@@ -245,7 +250,6 @@
 
 .discussion-section {
   padding-top: 10px;
-  display: none;
 }
 
 .discussion-header {
@@ -264,8 +268,8 @@
   padding-right: 12px;
 }
 
-.comments-list::-webkit-scrollbar { 
-  width: 8px; 
+.comments-list::-webkit-scrollbar {
+  width: 8px;
 }
 
 .comments-list::-webkit-scrollbar-track { 

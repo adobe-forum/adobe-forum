@@ -276,12 +276,12 @@ app.get('/api/sidebar-items', async (req, res) => {
     const items = await SidebarItem.find()
       .populate('postId', '_id title body')
       .sort({ category: 1, order: 1, createdAt: 1 });
-    
+
     const tree = buildTree(items);
-    
-    res.json({ 
-      success: true, 
-      items: tree, 
+
+    res.json({
+      success: true,
+      items: tree,
       flatItems: items,
     });
   } catch (error) {
