@@ -38,35 +38,61 @@
   @media (max-width: 1024px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 600px)  { .cards-grid { grid-template-columns: 1fr; } }
   
-  /* Card — critical overflow fixes */
+  /* ── Card ── */
   .card {
     background: var(--spectrum-gray-50);
     border: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
     border-radius: var(--spectrum-border-radius-200);
-    overflow: hidden;        /* clips anything that escapes */
+    overflow: hidden;
     cursor: pointer;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
     display: flex;
     flex-direction: column;
-    min-width: 0;            /* CRITICAL — allows grid cell to shrink */
-    max-width: 100%;         /* never exceed column width */
+    min-width: 0;
+    max-width: 100%;
     box-sizing: border-box;
+    position: relative;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  }
+  
+  /* Colored top border slides in on hover */
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--spectrum-accent-color-900);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+    z-index: 1;
   }
   
   .card:hover {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.10);
+    transform: translateY(-3px);
+    border-color: var(--spectrum-gray-300);
   }
   
-  /* Image */
+  .card:hover::before {
+    transform: scaleX(1);
+  }
+  
+  /* ── Image wrapper — holds image + category badge ── */
+  .card-img-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+  
   .card-img-box {
     width: 100%;
     height: 180px;
     object-fit: cover;
     display: block;
-    flex-shrink: 0;
   }
   
+  /* ── Better placeholder ── */
   .card-img--placeholder {
     background: linear-gradient(135deg, var(--spectrum-gray-100) 0%, var(--spectrum-gray-200) 100%);
     height: 180px;
@@ -85,15 +111,32 @@
     opacity: 0.5;
   }
   
-  /* Body — overflow control on ALL children */
+  /* ── Category badge overlaid on image ── */
+  .card-category-badge {
+    position: absolute;
+    bottom: var(--spectrum-spacing-200);
+    left: var(--spectrum-spacing-200);
+    background: rgba(0, 0, 0, 0.60);
+    color: #fff;
+    font-size: 11px;
+    font-family: var(--body-font-family);
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Body */
   .card-body {
     padding: var(--spectrum-spacing-400);
     display: flex;
     flex-direction: column;
     gap: var(--spectrum-spacing-200);
     flex: 1;
-    min-width: 0;           /* CRITICAL */
-    overflow: hidden;       /* clip any rogue children */
+    min-width: 0;
+    overflow: hidden;
     box-sizing: border-box;
   }
   
@@ -119,7 +162,7 @@
     text-overflow: ellipsis;
   }
   
-  /* Title — 2 line clamp */
+  /* Title */
   .card-title {
     font-family: var(--heading-font-family);
     font-size: var(--heading-font-size-xs);
@@ -127,17 +170,15 @@
     color: var(--spectrum-gray-900);
     margin: 0;
     line-height: 1.3;
-    /* Clamp to 2 lines */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    /* Break long unbreakable strings */
     word-break: break-word;
     overflow-wrap: break-word;
   }
   
-  /* Meta */
+  /* Meta row — avatar + author */
   .card-meta {
     display: flex;
     align-items: center;
@@ -146,6 +187,22 @@
     margin: 0;
     min-width: 0;
     overflow: hidden;
+  }
+  
+  /* ── Author avatar circle with initials ── */
+  .card-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    font-family: var(--body-font-family);
+    letter-spacing: 0.02em;
   }
   
   .card-author {
@@ -167,7 +224,7 @@
     min-width: 0;
   }
   
-  /* Description — 3 line clamp + break long words */
+  /* Description */
   .card-desc {
     font-size: var(--body-font-size-xs);
     color: var(--spectrum-gray-600);
@@ -177,18 +234,42 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    word-break: break-word;    /* breaks AAAAAAA... strings */
+    word-break: break-word;
     overflow-wrap: break-word;
   }
   
+  /* ── Read more — fades in on hover ── */
+  .card-read-more {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: var(--spectrum-spacing-200) var(--spectrum-spacing-400);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--spectrum-accent-color-900);
+    font-family: var(--body-font-family);
+    border-top: var(--spectrum-border-width-100) solid var(--spectrum-gray-100);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  .card:hover .card-read-more { opacity: 1; }
+  
   /* No results */
   .cards-no-results {
-    text-align: center;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     padding: var(--spectrum-spacing-600) 0;
-    color: var(--spectrum-gray-500);
-    font-size: var(--body-font-size-s);
-    font-family: var(--body-font-family);
+    gap: var(--spectrum-spacing-200);
+    text-align: center;
   }
+  
+  .cards-no-results svg { stroke: var(--spectrum-gray-400); margin-bottom: var(--spectrum-spacing-200); }
+  .cards-no-results p   { font-size: var(--body-font-size-s); font-weight: 600; color: var(--spectrum-gray-700); margin: 0; }
+  .cards-no-results span { font-size: var(--body-font-size-xs); color: var(--spectrum-gray-500); }
   
   /* Empty / Error */
   .cards-empty,
@@ -222,43 +303,8 @@
     100% { background-position: -200% 0; }
   }
   
-  @media (max-width: 768px) {
-    .cards-display { padding: var(--spectrum-spacing-400) 0; }
-    .cards-title   { font-size: var(--heading-font-size-m); }
-  }
-  
-  /* ── No Results State ── */
-  .cards-no-results {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spectrum-spacing-600) 0 var(--spectrum-spacing-600);
-    gap: var(--spectrum-spacing-200);
-    text-align: center;
-  }
-  
-  .cards-no-results svg {
-    stroke: var(--spectrum-gray-400);
-    margin-bottom: var(--spectrum-spacing-200);
-  }
-  
-  .cards-no-results p {
-    font-size: var(--body-font-size-s);
-    font-weight: 600;
-    color: var(--spectrum-gray-700);
-    margin: 0;
-  }
-  
-  .cards-no-results span {
-    font-size: var(--body-font-size-xs);
-    color: var(--spectrum-gray-500);
-  }
-  
-  /* ── Pagination ── */
-  .cards-pagination-wrapper {
-    margin-top: var(--spectrum-spacing-600);
-  }
+  /* Pagination */
+  .cards-pagination-wrapper { margin-top: var(--spectrum-spacing-600); }
   
   .cards-pagination {
     display: flex;
@@ -319,4 +365,9 @@
     font-size: var(--body-font-size-xs);
     font-family: var(--body-font-family);
     user-select: none;
+  }
+  
+  @media (max-width: 768px) {
+    .cards-display { padding: var(--spectrum-spacing-400) 0; }
+    .cards-title   { font-size: var(--heading-font-size-m); }
   }

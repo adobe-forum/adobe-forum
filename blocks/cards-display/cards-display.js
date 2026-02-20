@@ -12,9 +12,29 @@ function extractImage(body) {
 // ── Extract plain text excerpt ────────────────────────────────────────
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
-  const doc   = new DOMParser().parseFromString(body, 'text/html');
-  const text  = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+  const doc  = new DOMParser().parseFromString(body, 'text/html');
+  const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+// ── Avatar initials ───────────────────────────────────────────────────
+function avatarInitials(name) {
+  if (!name || name === 'Anonymous') return '?';
+  const parts = name.trim().split(' ');
+  return parts.length >= 2
+    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+    : name[0].toUpperCase();
+}
+
+// ── Consistent avatar color from name ────────────────────────────────
+function avatarColor(name) {
+  const colors = ['#DA1F26', '#0265DC', '#12805C', '#7B2D8B', '#E68619', '#1473E6'];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i += 1) {
+    // eslint-disable-next-line no-bitwise
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
 }
 
 // ── Build card HTML ───────────────────────────────────────────────────
@@ -22,7 +42,7 @@ function buildCard(post) {
   /* eslint-disable no-underscore-dangle */
   const id = post._id || post.id;
 
-  const tags = (post.tags || [])
+  const tags = (post.tags || []).slice(0, 3)
     .map((tag) => {
       const clean = tag.startsWith('#') ? tag : `#${tag}`;
       return `<span class="card-tag">${clean}</span>`;
@@ -33,23 +53,35 @@ function buildCard(post) {
     ? `<img src="${imgSrc}" alt="${post.title}" class="card-img-box" loading="lazy" />`
     : `<div class="card-img-box card-img--placeholder"></div>`;
 
-  const author = post.author?.name || post.author?.username || post.author
+  const author   = post.author?.name || post.author?.username || post.author
     || post.createdBy?.name || post.createdBy?.username || post.createdBy
     || post.userId?.name   || post.userId?.username || 'Anonymous';
 
-  const excerpt = extractExcerpt(post.body || post.description || post.content || '');
+  const initials = avatarInitials(author);
+  const avColor  = avatarColor(author);
+  const excerpt  = extractExcerpt(post.body || post.description || post.content || '');
 
   return `
     <article class="card" data-post-id="${id}">
-      ${image}
+      <div class="card-img-wrapper">
+        ${image}
+        ${post.category ? `<span class="card-category-badge">${post.category}</span>` : ''}
+      </div>
       <div class="card-body">
         ${tags ? `<div class="card-tags">${tags}</div>` : ''}
         <h3 class="card-title">${post.title}</h3>
         <p class="card-meta">
+          <span class="card-avatar" style="background:${avColor}">${initials}</span>
           <span class="card-author">${author}</span>
-          ${post.category ? `<span class="card-dot">•</span><span class="card-category">${post.category}</span>` : ''}
         </p>
         ${excerpt ? `<p class="card-desc">${excerpt}</p>` : ''}
+      </div>
+      <div class="card-read-more">
+        Read more
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
       </div>
     </article>
   `;
@@ -62,15 +94,13 @@ function buildPagination(currentPage, totalPages) {
 
   let pages = '';
 
-  // Prev button
   pages += `<button class="page-btn page-prev" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </button>`;
 
-  // Page number buttons — show max 5 around current page
-  const delta  = 2;
-  const start  = Math.max(1, currentPage - delta);
-  const end    = Math.min(totalPages, currentPage + delta);
+  const delta = 2;
+  const start = Math.max(1, currentPage - delta);
+  const end   = Math.min(totalPages, currentPage + delta);
 
   if (start > 1) {
     pages += `<button class="page-btn" data-page="1">1</button>`;
@@ -86,7 +116,6 @@ function buildPagination(currentPage, totalPages) {
     pages += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
   }
 
-  // Next button
   pages += `<button class="page-btn page-next" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
   </button>`;
@@ -115,11 +144,10 @@ export default async function decorate(block) {
     <div class="cards-pagination-wrapper"></div>
   `;
 
-  const grid        = block.querySelector('.cards-grid');
-  const noResults   = block.querySelector('.cards-no-results');
-  const pagWrapper  = block.querySelector('.cards-pagination-wrapper');
+  const grid       = block.querySelector('.cards-grid');
+  const noResults  = block.querySelector('.cards-no-results');
+  const pagWrapper = block.querySelector('.cards-pagination-wrapper');
 
-  // Skeleton
   grid.innerHTML = Array(6).fill(`
     <div class="card card--skeleton">
       <div class="card-img-box skeleton-box"></div>
@@ -131,7 +159,6 @@ export default async function decorate(block) {
     </div>
   `).join('');
 
-  // ── Toggle helpers ────────────────────────────────────────────────
   const getCardsWrapper  = () => document.querySelector('.cards-display-wrapper');
   const getForumWrapper  = () => document.querySelector('.forum-post-wrapper');
   const getSearchWrapper = () => document.querySelector('.search-bar-wrapper');
@@ -164,10 +191,9 @@ export default async function decorate(block) {
     if (fw) fw.style.display = 'none';
   });
 
-  // ── Fetch posts ───────────────────────────────────────────────────
   try {
-    const res   = await fetch(`${API_BASE_URL}/posts`);
-    const data  = await res.json();
+    const res      = await fetch(`${API_BASE_URL}/posts`);
+    const data     = await res.json();
     const allPosts = data.posts || data || [];
 
     if (!allPosts.length) {
@@ -175,10 +201,9 @@ export default async function decorate(block) {
       return;
     }
 
-    let currentPage    = 1;
-    let filteredPosts  = [...allPosts];
+    let currentPage   = 1;
+    let filteredPosts = [...allPosts];
 
-    // ── Render page ───────────────────────────────────────────────
     const renderPage = (page) => {
       currentPage = page;
       const totalPages = Math.ceil(filteredPosts.length / PAGE_SIZE);
@@ -187,15 +212,12 @@ export default async function decorate(block) {
 
       grid.innerHTML = pagePosts.map(buildCard).join('');
 
-      // Attach click handlers
       grid.querySelectorAll('.card').forEach((card) => {
         card.addEventListener('click', () => showPost(card.dataset.postId));
       });
 
-      // Render pagination
       pagWrapper.innerHTML = buildPagination(currentPage, totalPages);
 
-      // Attach pagination click handlers
       pagWrapper.querySelectorAll('.page-btn:not([disabled])').forEach((btn) => {
         btn.addEventListener('click', () => {
           renderPage(Number(btn.dataset.page));
@@ -206,14 +228,13 @@ export default async function decorate(block) {
 
     renderPage(1);
 
-    // ── Search filter ─────────────────────────────────────────────
     window.addEventListener('search-posts', (e) => {
       const query = e.detail.query.toLowerCase().trim();
 
       if (!query) {
         filteredPosts = [...allPosts];
-        noResults.style.display = 'none';
-        grid.style.display      = '';
+        noResults.style.display  = 'none';
+        grid.style.display       = '';
         pagWrapper.style.display = '';
         renderPage(1);
         return;
