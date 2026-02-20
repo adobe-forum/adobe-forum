@@ -26,20 +26,17 @@ function parseHtmlToContentBlocks(htmlString) {
     }
   };
 
-  // Process all children of the body
   Array.from(doc.body.childNodes).forEach((node) => {
-    // Code block - flush text buffer and add as separate block
     if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'PRE' && node.classList.contains('ql-syntax')) {
       flushTextBuffer();
       contentBlocks.push({
         type: 'code',
-        lang: 'javascript', // Default language, could be enhanced
+        lang: 'javascript',
         value: node.textContent,
       });
       return;
     }
 
-    // Image - flush text buffer and add as separate block
     if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
       flushTextBuffer();
       contentBlocks.push({
@@ -49,7 +46,6 @@ function parseHtmlToContentBlocks(htmlString) {
       return;
     }
 
-    // All other content - add to text buffer
     if (node.nodeType === Node.ELEMENT_NODE) {
       const tempDiv = document.createElement('div');
       tempDiv.appendChild(node.cloneNode(true));
@@ -59,10 +55,8 @@ function parseHtmlToContentBlocks(htmlString) {
     }
   });
 
-  // Flush any remaining text
   flushTextBuffer();
 
-  // If no blocks were created, return the original HTML as a single text block
   if (contentBlocks.length === 0 && htmlString.trim()) {
     return [{ type: 'text', value: htmlString }];
   }
@@ -70,10 +64,6 @@ function parseHtmlToContentBlocks(htmlString) {
   return contentBlocks;
 }
 
-/**
- * 1. SYNCHRONOUS DUMMY DATA
- * No promises, no timeouts. This data is instantly available to pass PSI checks.
- */
 const DUMMY_POST_DATA = {
   id: '123',
   title: 'Frontend Resources',
@@ -83,7 +73,7 @@ const DUMMY_POST_DATA = {
   content: [
     {
       type: 'text',
-      value: '<p>React hooks have changed how we write components. Before we dive in, let’s look at the lifecycle.</p>',
+      value: '<p>React hooks have changed how we write components. Before we dive in, let\'s look at the lifecycle.</p>',
     },
     {
       type: 'image',
@@ -114,9 +104,6 @@ const DUMMY_POST_DATA = {
   ],
 };
 
-/**
- * Helper: Content Renderer
- */
 const ContentBlock = ({ block }) => {
   switch (block.type) {
     case 'text':
@@ -124,7 +111,6 @@ const ContentBlock = ({ block }) => {
     case 'image':
       return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
     case 'code': {
-      // Calculate line numbers for the gutter
       const lineCount = block.value.split('\n').length;
       const nums = Array.from({ length: lineCount }, (_, i) => i + 1).join('\\a ');
 
@@ -146,23 +132,25 @@ const ArrowIcon = () => html`
   </svg>
 `;
 
-/**
- * 2. MAIN COMPONENT
- */
+// ── Back arrow icon for the back button ───────────────────────────────
+const BackIcon = () => html`
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+`;
+
 const ForumPost = () => {
   const [post, setPost] = useState(DUMMY_POST_DATA);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
-  // Auto-scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
   }, [post.comments]);
 
-  // Listen for sidebar click events
   useEffect(() => {
     const handleLoadPost = async (event) => {
       const { postId } = event.detail;
@@ -180,7 +168,6 @@ const ForumPost = () => {
         // eslint-disable-next-line no-console
         console.log('🚀 Fetching post from:', url);
         const response = await fetch(url);
-
         // eslint-disable-next-line no-console
         console.log('📡 Response status:', response.status, response.statusText);
 
@@ -190,22 +177,20 @@ const ForumPost = () => {
           console.log('📦 Response data:', data);
 
           if (data.success && data.post) {
-            // Transform the post data to match the expected format
             const fetchedPost = data.post;
             // eslint-disable-next-line no-console
             console.log('✓ Post fetched successfully:', fetchedPost.title);
 
-            // Parse HTML body to extract code blocks and other content
             const contentBlocks = parseHtmlToContentBlocks(fetchedPost.body);
 
             const transformedPost = {
               id: fetchedPost._id, // eslint-disable-line no-underscore-dangle
               title: fetchedPost.title,
               topic: fetchedPost.category,
-              author: 'User', // Default author since it's not in the schema
+              author: 'User',
               tags: fetchedPost.tags || [],
               content: contentBlocks,
-              comments: [], // Start with empty comments for new post
+              comments: [],
             };
             // eslint-disable-next-line no-console
             console.log('✓ Post loaded and displayed:', transformedPost.title);
@@ -233,13 +218,11 @@ const ForumPost = () => {
     return () => {
       window.removeEventListener('load-forum-post', handleLoadPost);
     };
-    // No dependency array means setup only once
   }, []);
 
   const addComment = () => {
     if (!inputValue.trim()) return;
     const newComment = { user: 'You', text: inputValue };
-
     setPost({
       ...post,
       comments: [...post.comments, newComment],
@@ -247,10 +230,22 @@ const ForumPost = () => {
     setInputValue('');
   };
 
+  // ── Back to cards ──────────────────────────────────────────────────
+  const handleBack = () => {
+    window.dispatchEvent(new CustomEvent('show-cards'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return html`
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
-      
+
+      <!-- Back button — fires show-cards event so cards-display shows again -->
+      <button class="forum-back-btn" onClick=${handleBack}>
+        <${BackIcon} />
+        Back to Posts
+      </button>
+
       <div class="tags-row">
         ${post.tags.map((tag) => html`<span class="tag-pill">${tag}</span>`)}
       </div>
@@ -299,7 +294,6 @@ const ForumPost = () => {
             </button>
           </div>
         </div>
-        
       </div>
     </div>
   `;

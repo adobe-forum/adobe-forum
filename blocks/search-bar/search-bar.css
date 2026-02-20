@@ -3,25 +3,20 @@
    Variables from styles.css
    ============================================ */
 
-/*
-  styles.css sets main > .section { background: var(--light-color) }
-  Both search-bar and forum-post sections share that bg — they visually merge.
-  Fix: give the search-bar SECTION a white background + bottom border
-*/
-.section.search-bar-container {
-    background: var(--background-color) !important;  /* matches main = #fafafa */
+   .section.search-bar-container {
+    background: var(--background-color) !important;
     border-bottom: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
   }
   
-  /* Block */
+  /* Block — minimal padding to reduce gap from nav */
   .search-bar {
     background: transparent;
-    padding: var(--spectrum-spacing-500) 0;  /* 20px top/bottom */
+    padding: var(--spectrum-spacing-200) 0;  /* 8px — tight, no big gap */
     margin: 0;
     width: 100%;
   }
   
-  /* Reset any AEM-injected padding on child divs */
+  /* Reset AEM child div styles */
   .search-bar > div {
     all: unset;
     display: block;
@@ -36,12 +31,16 @@
     padding: 0;
   }
   
-  /* Input row — full width */
+  /*
+    Input row — width matches forum-post block
+    styles.css: main > .section > div { max-width: 1200px; padding: 0 24px / 0 32px }
+    Both sections use the same container so width auto-matches
+  */
   .search-form-inner {
     display: flex;
     align-items: center;
     width: 100%;
-    height: 44px;
+    height: 40px;
     padding: 0 var(--spectrum-spacing-100) 0 var(--spectrum-spacing-400);
     background: var(--spectrum-gray-50);
     border: var(--spectrum-border-width-100) solid var(--spectrum-gray-300);
@@ -51,7 +50,6 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
-  /* Focus — Adobe Red */
   .search-form-inner:focus-within {
     border-color: var(--spectrum-accent-color-900);
     box-shadow: 0 0 0 2px rgba(218, 31, 38, 0.1);
@@ -59,8 +57,8 @@
   
   /* Search icon */
   .search-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     fill: var(--spectrum-gray-500);
     flex-shrink: 0;
     margin-right: var(--spectrum-spacing-300);
@@ -84,9 +82,7 @@
     min-width: 0;
   }
   
-  .search-input::placeholder {
-    color: var(--spectrum-gray-400);
-  }
+  .search-input::placeholder { color: var(--spectrum-gray-400); }
   
   .search-input::-webkit-search-cancel-button,
   .search-input::-webkit-search-decoration { -webkit-appearance: none; }
@@ -106,13 +102,11 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   
-  .search-clear svg        { width: 16px; height: 16px; fill: currentColor; display: block; }
+  .search-clear svg        { width: 14px; height: 14px; fill: currentColor; display: block; }
   .search-clear.is-visible { display: flex; }
   .search-clear:hover      { background: var(--spectrum-gray-100); color: var(--spectrum-gray-800); }
   
   /* Mobile */
   @media (max-width: 768px) {
-    .search-bar {
-      padding: var(--spectrum-spacing-400) 0 var(--spectrum-spacing-300);
-    }
+    .search-bar { padding: var(--spectrum-spacing-100) 0; }  /* 4px — even tighter on mobile */
   }
