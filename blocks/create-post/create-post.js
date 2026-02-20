@@ -4,20 +4,6 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-// Mock categories data - replace with your actual API call
-const EXISTING_CATEGORIES = [
-  'sql-server',
-  'objective-c',
-  'ajax',
-  'javascript',
-  'python',
-  'java',
-  'react',
-  'node.js',
-  'css',
-  'html',
-];
-
 // ============================================
 // DOM TO JSON CONVERTER
 // ============================================
@@ -83,8 +69,8 @@ async function loadIcons() {
       try {
         const resp = await fetch(`/icons/${file}.svg`);
         if (resp.ok) return [cmd, await resp.text()];
-      } catch (e) {
-        console.error(`Failed to load icon: ${file}.svg`, e);
+      } catch {
+        // icon failed to load, use empty string fallback
       }
       return [cmd, ''];
     }),
@@ -561,7 +547,8 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const handleLinkInsert = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
-    const url = prompt('Enter URL:');
+    // eslint-disable-next-line no-alert
+    const url = window.prompt('Enter URL:');
     if (!url) return;
     document.execCommand('createLink', false, url);
   };
@@ -826,9 +813,13 @@ function RichTextEditor({ onChange, minChars = 20 }) {
           }
           block.remove();
           const nr = document.createRange();
-          if (mergeNode && mergeNode.nodeType === 3) { nr.setStart(mergeNode, mergeOff); }
-          else if (mergeNode) { nr.setStartAfter(mergeNode); }
-          else { nr.setStart(prev, 0); }
+          if (mergeNode && mergeNode.nodeType === 3) {
+            nr.setStart(mergeNode, mergeOff);
+          } else if (mergeNode) {
+            nr.setStartAfter(mergeNode);
+          } else {
+            nr.setStart(prev, 0);
+          }
           nr.collapse(true);
           sel.removeAllRanges();
           sel.addRange(nr);
@@ -1015,7 +1006,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 // ============================================
 
 function PreviewModal({
-  title, category, categoryPath, body, tags, onBack, onPost,
+  title, categoryPath, body, tags, onBack, onPost,
 }) {
   const bodyRef = useRef(null);
 
@@ -1149,8 +1140,6 @@ function CreatePost() {
       body: bodyJson,
       tags,
     };
-    console.clear();
-    console.log('Live post JSON:', postDataRef.current);
   }, [title, category, categoryPath, bodyJson, tags]);
 
   const missingFields = [];
@@ -1177,8 +1166,6 @@ function CreatePost() {
       tags: tagsWithHash,
     };
 
-    console.log('Sending post data:', postData);
-
     try {
       const response = await fetch('http://localhost:5000/api/posts', {
         method: 'POST',
@@ -1189,8 +1176,6 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('Post created successfully:', result);
-
         try {
           const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
             method: 'POST',
@@ -1206,11 +1191,10 @@ function CreatePost() {
           });
 
           if (sidebarResponse.ok) {
-            console.log('Sidebar item created successfully');
             window.dispatchEvent(new CustomEvent('refresh-sidebar'));
           }
-        } catch (sidebarError) {
-          console.error('Error creating sidebar item:', sidebarError);
+        } catch {
+          // sidebar update failed silently
         }
 
         showToast('Your question has been posted successfully!', 'success');
@@ -1222,11 +1206,9 @@ function CreatePost() {
         setTags([]);
         setSidebarPath('');
       } else {
-        console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
       }
-    } catch (error) {
-      console.error('Network error:', error);
+    } catch {
       showToast('Network error: Unable to connect to the server.', 'error');
     }
 
@@ -1462,7 +1444,6 @@ function CreatePost() {
       ${showPreview && html`
         <${PreviewModal}
           title=${title}
-          category=${category}
           categoryPath=${categoryPath}
           body=${body}
           tags=${tags}
