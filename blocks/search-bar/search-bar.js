@@ -31,9 +31,13 @@ export default function decorate(block) {
     form.addEventListener('submit', (e) => e.preventDefault());
   
     input.addEventListener('input', () => {
-      const query = input.value.trim();
-      clearBtn.classList.toggle('is-visible', query.length > 0);
-      window.dispatchEvent(new CustomEvent('search-posts', { detail: { query } }));
+      // Send RAW value (no trim) so trailing space is preserved.
+      // This lets cards-display split "salman " correctly when user
+      // starts typing the next word e.g. "salman vishnu".
+      // cards-display does: query.split(/\s+/).filter(Boolean) — OR match.
+      const raw = input.value;
+      clearBtn.classList.toggle('is-visible', raw.length > 0);
+      window.dispatchEvent(new CustomEvent('search-posts', { detail: { query: raw } }));
     });
   
     clearBtn.addEventListener('click', () => {

@@ -240,6 +240,10 @@ export default async function decorate(block) {
         return;
       }
 
+      // Split query by spaces — each word is a separate term
+      // A card matches if it contains ANY of the words (OR logic)
+      const terms = query.split(/\s+/).filter(Boolean);
+
       filteredPosts = allPosts.filter((post) => {
         const searchable = [
           post.title,
@@ -248,7 +252,8 @@ export default async function decorate(block) {
           ...(post.tags || []),
           extractExcerpt(post.body || ''),
         ].join(' ').toLowerCase();
-        return searchable.includes(query);
+        // Match if ANY term is found in the searchable text
+        return terms.some((term) => searchable.includes(term));
       });
 
       if (!filteredPosts.length) {
