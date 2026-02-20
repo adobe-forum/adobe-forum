@@ -4,20 +4,6 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-// Mock categories data - replace with your actual API call
-const EXISTING_CATEGORIES = [
-  'sql-server',
-  'objective-c',
-  'ajax',
-  'javascript',
-  'python',
-  'java',
-  'react',
-  'node.js',
-  'css',
-  'html',
-];
-
 // ============================================
 // DOM TO JSON CONVERTER
 // ============================================
@@ -57,7 +43,6 @@ function domToJson(element) {
 // TOOLBAR ICONS (loaded from /icons/ folder)
 // ============================================
 
-// Map toolbar commands to icon filenames
 const ICON_FILES = {
   bold: 'bold',
   italic: 'italic',
@@ -75,7 +60,6 @@ const ICON_FILES = {
   clean: 'clean',
 };
 
-// Shared icon cache — survives component re-renders
 const iconCache = {};
 
 async function loadIcons() {
@@ -85,9 +69,8 @@ async function loadIcons() {
       try {
         const resp = await fetch(`/icons/${file}.svg`);
         if (resp.ok) return [cmd, await resp.text()];
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(`Failed to load icon: ${file}.svg`, e);
+      } catch {
+        // icon failed to load, use empty string fallback
       }
       return [cmd, ''];
     }),
@@ -96,7 +79,6 @@ async function loadIcons() {
   return iconCache;
 }
 
-// Block format tags for the heading / paragraph dropdown
 const BLOCK_FORMATS = {
   p: 'p',
   h1: 'h1',
@@ -122,7 +104,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const [icons, setIcons] = useState(iconCache);
   const [activeFormats, setActiveFormats] = useState({});
 
-  // Load icons from /icons/ folder on mount
   useEffect(() => {
     loadIcons().then((loaded) => setIcons({ ...loaded }));
   }, []);
@@ -137,8 +118,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     onChange(htmlContent, jsonContent);
   };
 
-  // ---- Image resize overlay ----
-
   const clearImageResize = () => {
     if (!resizeRef.current) return;
     const { overlay } = resizeRef.current;
@@ -149,20 +128,13 @@ function RichTextEditor({ onChange, minChars = 20 }) {
   const showImageResize = (img) => {
     const editor = editorRef.current;
     if (!editor) return;
-
-    // Don't re-create overlay for the same image
     if (resizeRef.current && resizeRef.current.img === img) return;
     clearImageResize();
-
     const ceContainer = containerRef.current;
     if (!ceContainer) return;
-
-    // Prevent native browser image drag
     img.setAttribute('draggable', 'false');
-
     const overlay = document.createElement('div');
     overlay.className = 'img-resize-overlay';
-
     const corners = ['nw', 'ne', 'sw', 'se'];
     corners.forEach((pos) => {
       const handle = document.createElement('div');
@@ -170,11 +142,8 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       handle.dataset.pos = pos;
       overlay.appendChild(handle);
     });
-
     ceContainer.appendChild(overlay);
     resizeRef.current = { img, overlay };
-
-    // Position overlay on top of the image, accounting for editor scroll
     const positionOverlay = () => {
       const cRect = ceContainer.getBoundingClientRect();
       const iRect = img.getBoundingClientRect();
@@ -184,20 +153,16 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       overlay.style.height = `${iRect.height}px`;
     };
     positionOverlay();
-
-    // Attach drag logic directly on each handle
     corners.forEach((pos) => {
       const handle = overlay.querySelector(`.img-resize-handle-${pos}`);
       handle.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-
         const startX = e.clientX;
         const startW = img.getBoundingClientRect().width;
         const startH = img.getBoundingClientRect().height;
         const ratio = startH / startW;
         const maxW = ceContainer.clientWidth;
-
         const onMouseMove = (ev) => {
           ev.preventDefault();
           const isLeft = pos.endsWith('w');
@@ -206,33 +171,26 @@ function RichTextEditor({ onChange, minChars = 20 }) {
           if (newW < 50) newW = 50;
           if (newW > maxW) newW = maxW;
           const newH = Math.round(newW * ratio);
-
           img.style.width = `${newW}px`;
           img.style.height = `${newH}px`;
           overlay.style.width = `${newW}px`;
           overlay.style.height = `${newH}px`;
-
-          // Re-position overlay
           const cRect = ceContainer.getBoundingClientRect();
           const iRect = img.getBoundingClientRect();
           overlay.style.top = `${iRect.top - cRect.top + editor.scrollTop}px`;
           overlay.style.left = `${iRect.left - cRect.left + editor.scrollLeft}px`;
         };
-
         const onMouseUp = () => {
           document.removeEventListener('mousemove', onMouseMove);
           document.removeEventListener('mouseup', onMouseUp);
           document.body.style.userSelect = '';
-
           const finalW = img.getBoundingClientRect().width;
           img.setAttribute('width', Math.round(finalW));
           img.removeAttribute('height');
           img.style.height = 'auto';
-
           positionOverlay();
           emitChange();
         };
-
         document.body.style.userSelect = 'none';
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
@@ -254,8 +212,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       setShowTableTools(false);
     }
   };
-
-  // ---- Table operations ----
 
   const addRow = (position) => {
     const cell = activeCellRef.current;
@@ -387,8 +343,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     emitChange();
   };
 
-  // ---- Helper functions ----
-
   const updateCodeLineNumbers = () => {
     requestAnimationFrame(() => {
       const editor = editorRef.current;
@@ -434,21 +388,15 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     editor.classList.toggle('is-empty', !hasContent);
   };
 
-  // ---- Format commands ----
-
   const handleInlineCode = () => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
     const editor = editorRef.current;
-
     let parent = range.commonAncestorContainer;
     if (parent.nodeType === 3) parent = parent.parentElement;
     const existingCode = parent.closest('code');
-
     if (existingCode && editor.contains(existingCode)) {
-      // Toggle OFF: insert a spacer text node after <code> so browser
-      // clearly sees the cursor as "outside code" when Enter is pressed
       const spacer = document.createTextNode('\u200B');
       existingCode.after(spacer);
       const newRange = document.createRange();
@@ -456,10 +404,8 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      // Remove empty code elements left behind
       if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
     } else if (!range.collapsed) {
-      // Wrap selected text in <code>
       const code = document.createElement('code');
       range.surroundContents(code);
       const newRange = document.createRange();
@@ -467,7 +413,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       sel.removeAllRanges();
       sel.addRange(newRange);
     } else {
-      // Toggle ON: create empty <code> at cursor and place cursor inside
       const code = document.createElement('code');
       code.textContent = '\u200B';
       range.insertNode(code);
@@ -483,15 +428,12 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const editor = editorRef.current;
-
     let block = sel.anchorNode;
     while (block && block.parentNode !== editor) {
       block = block.parentNode;
     }
     if (!block) return;
-
     if (block.tagName === 'PRE') {
-      // Exit code block: insert a new paragraph after it and move cursor there
       const p = document.createElement('p');
       p.innerHTML = '<br>';
       block.after(p);
@@ -517,13 +459,11 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const editor = editorRef.current;
-
     let block = sel.anchorNode;
     while (block && block.parentNode !== editor) {
       block = block.parentNode;
     }
     if (!block) return;
-
     if (block.tagName === 'BLOCKQUOTE') {
       const p = document.createElement('p');
       p.innerHTML = block.innerHTML || '<br>';
@@ -548,23 +488,19 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       });
       table.appendChild(tr);
     });
-
     const trailing = document.createElement('p');
     trailing.innerHTML = '<br>';
-
     let insertAfter = null;
     const sel = window.getSelection();
     if (sel && sel.rangeCount) {
       let node = sel.anchorNode;
-      while (node && node !== editor
-        && node.parentNode !== editor) {
+      while (node && node !== editor && node.parentNode !== editor) {
         node = node.parentNode;
       }
       if (node && node.parentNode === editor) {
         insertAfter = node;
       }
     }
-
     if (insertAfter && insertAfter.nextSibling) {
       editor.insertBefore(trailing, insertAfter.nextSibling);
       editor.insertBefore(table, trailing);
@@ -572,7 +508,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       editor.appendChild(table);
       editor.appendChild(trailing);
     }
-
     const firstCell = table.querySelector('td');
     if (firstCell) {
       const domRange = document.createRange();
@@ -583,7 +518,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         sel.addRange(domRange);
       }
     }
-
     updatePlaceholder();
     emitChange();
     detectTableContext();
@@ -614,7 +548,7 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     // eslint-disable-next-line no-alert
-    const url = prompt('Enter URL:');
+    const url = window.prompt('Enter URL:');
     if (!url) return;
     document.execCommand('createLink', false, url);
   };
@@ -625,7 +559,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     if (!editor.contains(sel.anchorNode)) return;
-
     const fmt = {
       bold: document.queryCommandState('bold'),
       italic: document.queryCommandState('italic'),
@@ -633,8 +566,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       orderedList: document.queryCommandState('insertOrderedList'),
       bulletList: document.queryCommandState('insertUnorderedList'),
     };
-
-    // Walk up from cursor to detect block-level and inline elements
     let node = sel.anchorNode;
     while (node && node !== editor) {
       const tag = node.nodeName;
@@ -643,8 +574,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       if (tag === 'BLOCKQUOTE') fmt.blockquote = true;
       node = node.parentNode;
     }
-
-    // Detect current block format (p, h1-h6)
     let block = sel.anchorNode;
     while (block && block.parentNode !== editor) {
       block = block.parentNode;
@@ -654,7 +583,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
       if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
       else fmt.blockFormat = 'p';
     }
-
     setActiveFormats(fmt);
   };
 
@@ -662,89 +590,50 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     const editor = editorRef.current;
     if (!editor) return;
     editor.focus();
-
     switch (cmd) {
-      case 'bold':
-        document.execCommand('bold', false, null);
-        break;
-      case 'italic':
-        document.execCommand('italic', false, null);
-        break;
-      case 'strike':
-        document.execCommand('strikeThrough', false, null);
-        break;
-      case 'orderedList':
-        document.execCommand('insertOrderedList', false, null);
-        break;
-      case 'bulletList':
-        document.execCommand('insertUnorderedList', false, null);
-        break;
-      case 'indent':
-        document.execCommand('indent', false, null);
-        break;
-      case 'outdent':
-        document.execCommand('outdent', false, null);
-        break;
-      case 'link':
-        handleLinkInsert();
-        break;
-      case 'image':
-        if (fileInputRef.current) fileInputRef.current.click();
-        return; // Don't emit change yet — wait for file input
-      case 'blockFormat':
-        handleBlockFormat(value);
-        break;
-      case 'code':
-        handleInlineCode();
-        break;
-      case 'codeBlock':
-        handleCodeBlock();
-        break;
-      case 'blockquote':
-        handleBlockquote();
-        break;
-      case 'table':
-        handleTableInsert();
-        return; // Already calls emitChange
+      case 'bold': document.execCommand('bold', false, null); break;
+      case 'italic': document.execCommand('italic', false, null); break;
+      case 'strike': document.execCommand('strikeThrough', false, null); break;
+      case 'orderedList': document.execCommand('insertOrderedList', false, null); break;
+      case 'bulletList': document.execCommand('insertUnorderedList', false, null); break;
+      case 'indent': document.execCommand('indent', false, null); break;
+      case 'outdent': document.execCommand('outdent', false, null); break;
+      case 'link': handleLinkInsert(); break;
+      case 'image': if (fileInputRef.current) fileInputRef.current.click(); return;
+      case 'blockFormat': handleBlockFormat(value); break;
+      case 'code': handleInlineCode(); break;
+      case 'codeBlock': handleCodeBlock(); break;
+      case 'blockquote': handleBlockquote(); break;
+      case 'table': handleTableInsert(); return;
       case 'clean':
         document.execCommand('removeFormat', false, null);
         document.execCommand('unlink', false, null);
         break;
-      default:
-        break;
+      default: break;
     }
-
     emitChange();
     updateActiveFormats();
   };
 
-  // ---- useEffect: initialise editor and attach events ----
-
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return undefined;
-
-    // Start with one empty paragraph
     if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
     }
     updatePlaceholder();
 
-    // Input handler
     const onInput = () => {
-      // Clean up inline <code> artifacts
       const sel = window.getSelection();
       const cursorNode = sel?.anchorNode;
       const cursorOffset = sel?.anchorOffset;
       editor.querySelectorAll('code').forEach((code) => {
-        if (code.closest('pre')) return; // Don't touch code inside pre blocks
-        // Strip ZWS from codes that have real content, preserving cursor
+        if (code.closest('pre')) return;
         if (code.textContent.includes('\u200B') && code.textContent.length > 1) {
           code.childNodes.forEach((child) => {
             if (child.nodeType === 3 && child.nodeValue.includes('\u200B')) {
               const old = child.nodeValue;
               child.nodeValue = old.replace(/\u200B/g, '');
-              // Restore cursor at the correct offset
               if (sel && child === cursorNode) {
                 const zwsBefore = (old.substring(0, cursorOffset).match(/\u200B/g) || []).length;
                 const adjusted = cursorOffset - zwsBefore;
@@ -758,13 +647,11 @@ function RichTextEditor({ onChange, minChars = 20 }) {
             }
           });
         }
-        // Unwrap <code> that only contains <br> (browser clones this on Enter)
         if (code.childNodes.length === 1 && code.firstChild.nodeName === 'BR') {
           code.parentNode.insertBefore(code.firstChild, code);
           code.remove();
           return;
         }
-        // Remove completely empty <code> elements
         if (!code.childNodes.length) {
           code.remove();
         }
@@ -779,17 +666,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     };
     editor.addEventListener('input', onInput);
 
-    // Selection change
     const onSelectionChange = () => {
-      if (document.activeElement === editor
-        || editor.contains(document.activeElement)) {
+      if (document.activeElement === editor || editor.contains(document.activeElement)) {
         detectTableContext();
         updateActiveFormats();
       }
     };
     document.addEventListener('selectionchange', onSelectionChange);
 
-    // Click handler for images
     const onEditorClick = (e) => {
       detectTableContext();
       updateActiveFormats();
@@ -801,31 +685,23 @@ function RichTextEditor({ onChange, minChars = 20 }) {
     };
     editor.addEventListener('click', onEditorClick);
 
-    // Clear resize overlay when clicking outside the editor
     const onDocMouseDown = (e) => {
-      if (resizeRef.current
-        && !containerRef.current.contains(e.target)) {
+      if (resizeRef.current && !containerRef.current.contains(e.target)) {
         clearImageResize();
       }
     };
     document.addEventListener('mousedown', onDocMouseDown);
 
-    // Keyboard handler for tables and structural keys
     const onKeyDown = (e) => {
-      if (e.key !== 'Backspace' && e.key !== 'Delete'
-        && e.key !== 'Enter') return;
-
+      if (e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Enter') return;
       const sel = window.getSelection();
       if (!sel || !sel.rangeCount) return;
-
-      // ── Inside a table cell ──
       let nd = sel.anchorNode;
       let insideTd = false;
       while (nd && nd !== editor) {
         if (nd.nodeName === 'TD') { insideTd = true; break; }
         nd = nd.parentNode;
       }
-
       if (insideTd) {
         e.stopPropagation();
         if (e.key === 'Enter') {
@@ -842,15 +718,11 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         }
         return;
       }
-
-      // ── Find the direct-child block of the editor ──
       let block = sel.anchorNode;
       while (block && block.parentNode !== editor) {
         block = block.parentNode;
       }
       if (!block) return;
-
-      // ── Enter inside a code block (always handle, even without a table) ──
       if (e.key === 'Enter' && block.nodeName === 'PRE') {
         e.preventDefault();
         e.stopPropagation();
@@ -866,25 +738,20 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         updateCodeLineNumbers();
         return;
       }
-
-      // ── Enter inside inline <code> — exit code formatting for the new line ──
       if (e.key === 'Enter') {
         let codeNode = sel.anchorNode;
         while (codeNode && codeNode !== editor) {
-          if (codeNode.nodeName === 'CODE'
-            && codeNode.parentNode?.nodeName !== 'PRE') break;
+          if (codeNode.nodeName === 'CODE' && codeNode.parentNode?.nodeName !== 'PRE') break;
           codeNode = codeNode.parentNode;
         }
         if (codeNode && codeNode.nodeName === 'CODE') {
           e.preventDefault();
           e.stopPropagation();
           const range = sel.getRangeAt(0);
-          // Split: keep text before cursor in <code>, text after goes to new <p>
           const afterRange = document.createRange();
           afterRange.setStart(range.startContainer, range.startOffset);
           afterRange.setEndAfter(codeNode);
           const trailing = afterRange.extractContents().textContent;
-          // Remove empty code elements
           if (!codeNode.textContent.replace(/\u200B/g, '')) codeNode.remove();
           const newP = document.createElement('p');
           newP.textContent = trailing.replace(/\u200B/g, '') || '';
@@ -900,19 +767,13 @@ function RichTextEditor({ onChange, minChars = 20 }) {
           return;
         }
       }
-
-      // ── Enter inside a heading — next line becomes a regular paragraph ──
       if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
         e.preventDefault();
         e.stopPropagation();
         const range = sel.getRangeAt(0);
         if (!range.collapsed) range.deleteContents();
-        // Extract content after cursor
         const afterRange = document.createRange();
-        afterRange.setStart(
-          range.startContainer,
-          range.startOffset,
-        );
+        afterRange.setStart(range.startContainer, range.startOffset);
         afterRange.setEnd(block, block.childNodes.length);
         const fragment = afterRange.extractContents();
         const newP = document.createElement('p');
@@ -928,41 +789,27 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         updateActiveFormats();
         return;
       }
-
-      // ── Outside table cells ──
       if (!editor.querySelector('table')) return;
-
       e.stopPropagation();
-
       const range = sel.getRangeAt(0);
-
-      // ── Backspace ──
       if (e.key === 'Backspace') {
         if (!range.collapsed) return;
-
         const preRange = document.createRange();
         preRange.setStart(block, 0);
         preRange.setEnd(range.startContainer, range.startOffset);
         const atStart = preRange.toString().length === 0;
-
         if (atStart) {
           e.preventDefault();
           const prev = block.previousElementSibling;
           if (!prev || prev.tagName === 'TABLE') return;
-
-          if (prev.lastChild && prev.lastChild.nodeName === 'BR'
-            && !prev.textContent.trim()) {
+          if (prev.lastChild && prev.lastChild.nodeName === 'BR' && !prev.textContent.trim()) {
             prev.removeChild(prev.lastChild);
           }
           const mergeNode = prev.lastChild;
-          const mergeOff = mergeNode && mergeNode.nodeType === 3
-            ? mergeNode.textContent.length : 0;
-          const isEmpty = !block.textContent.trim()
-            && block.childNodes.length <= 1;
+          const mergeOff = mergeNode && mergeNode.nodeType === 3 ? mergeNode.textContent.length : 0;
+          const isEmpty = !block.textContent.trim() && block.childNodes.length <= 1;
           if (!isEmpty) {
-            while (block.firstChild) {
-              prev.appendChild(block.firstChild);
-            }
+            while (block.firstChild) { prev.appendChild(block.firstChild); }
           }
           block.remove();
           const nr = document.createRange();
@@ -980,44 +827,33 @@ function RichTextEditor({ onChange, minChars = 20 }) {
         }
         return;
       }
-
-      // ── Delete ──
       if (e.key === 'Delete') {
         if (!range.collapsed) return;
-
         const postRange = document.createRange();
         postRange.setStart(range.endContainer, range.endOffset);
         postRange.setEnd(block, block.childNodes.length);
         const atEnd = postRange.toString().length === 0;
-
         if (atEnd) {
           e.preventDefault();
           const next = block.nextElementSibling;
           if (!next || next.tagName === 'TABLE') return;
-          const isNextEmpty = !next.textContent.trim()
-            && next.childNodes.length <= 1;
+          const isNextEmpty = !next.textContent.trim() && next.childNodes.length <= 1;
           if (!isNextEmpty) {
-            while (next.firstChild) {
-              block.appendChild(next.firstChild);
-            }
+            while (next.firstChild) { block.appendChild(next.firstChild); }
           }
           next.remove();
           emitChange();
         }
         return;
       }
-
-      // ── Enter ──
       if (e.key === 'Enter') {
         e.preventDefault();
         if (!range.collapsed) range.deleteContents();
-
         const newP = document.createElement('p');
         const afterRange = document.createRange();
         afterRange.setStart(range.startContainer, range.startOffset);
         afterRange.setEnd(block, block.childNodes.length);
         const frag = afterRange.extractContents();
-
         if (frag.textContent.trim() || frag.querySelector('img')) {
           newP.appendChild(frag);
         } else {
@@ -1052,7 +888,6 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 
   const isValid = charCount >= minChars;
 
-  // ---- Toolbar button helper ----
   const tbBtn = (cmd, title) => html`
     <button type="button"
       className=${`ce-toolbar-btn${activeFormats[cmd] ? ' active' : ''}`}
@@ -1167,227 +1002,14 @@ function RichTextEditor({ onChange, minChars = 20 }) {
 }
 
 // ============================================
-// CATEGORY SEARCH
-// ============================================
-
-function CategorySearch({ value, onChange, onSelect }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [filteredCategories, setFilteredCategories] = useState([]);
-  const inputRef = useRef(null);
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleInputChange = (e) => {
-    const searchValue = e.target.value;
-    onChange(searchValue);
-
-    if (searchValue.trim()) {
-      const filtered = EXISTING_CATEGORIES.filter(
-        (cat) => cat.toLowerCase().includes(
-          searchValue.toLowerCase(),
-        ),
-      );
-      setFilteredCategories(filtered);
-      setIsOpen(true);
-    } else {
-      setFilteredCategories([]);
-      setIsOpen(false);
-    }
-  };
-
-  const handleSelectCategory = (category) => {
-    onSelect(category);
-    onChange('');
-    setIsOpen(false);
-  };
-
-  const handleAddNewCategory = () => {
-    onSelect(value);
-    onChange('');
-    setIsOpen(false);
-  };
-
-  const showAddButton = value.trim()
-    && !EXISTING_CATEGORIES.some((cat) => cat.toLowerCase() === value.toLowerCase());
-
-  return html`
-    <div className="category-search-wrapper" ref=${wrapperRef}>
-      <input
-        ref=${inputRef}
-        type="text"
-        value=${value}
-        onInput=${handleInputChange}
-        onFocus=${() => value.trim() && setIsOpen(true)}
-        placeholder="Search for a category..."
-      />
-      ${isOpen && (filteredCategories.length > 0 || showAddButton) && html`
-        <div className="category-dropdown">
-          ${filteredCategories.map((category) => html`
-            <div
-              key=${category}
-              className="category-option"
-              onClick=${() => handleSelectCategory(category)}
-            >
-              ${category}
-            </div>
-          `)}
-          ${showAddButton && html`
-            <div className="add-category-btn" onClick=${handleAddNewCategory}>
-              Create "${value}"
-            </div>
-          `}
-        </div>
-      `}
-    </div>
-  `;
-}
-
-// ============================================
-// TAGS INPUT
-// ============================================
-
-function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
-  const [inputValue, setInputValue] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const inputRef = useRef(null);
-  const wrapperRef = useRef(null);
-
-  // Mock tag suggestions - replace with your actual data
-  const TAG_SUGGESTIONS = [
-    'sql-server', 'objective-c', 'ajax', 'javascript', 'python',
-    'java', 'react', 'node.js', 'css', 'html', 'angular',
-    'vue', 'typescript', 'mongodb', 'postgresql',
-  ];
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleInputChange = (e) => {
-    const { value } = e.target;
-    setInputValue(value);
-
-    if (value.trim()) {
-      const filtered = TAG_SUGGESTIONS.filter(
-        (tag) => tag.toLowerCase().includes(
-          value.toLowerCase(),
-        ) && !tags.includes(tag),
-      );
-      setSuggestions(filtered);
-      setIsOpen(true);
-    } else {
-      setSuggestions([]);
-      setIsOpen(false);
-    }
-  };
-
-  const addTag = (tag) => {
-    if (tags.length < maxTags && !tags.includes(tag)) {
-      onTagsChange([...tags, tag]);
-      setInputValue('');
-      setIsOpen(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  const removeTag = (tagToRemove) => {
-    onTagsChange(tags.filter((tag) => tag !== tagToRemove));
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
-      e.preventDefault();
-      addTag(inputValue.trim());
-    } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
-    }
-  };
-
-  const handleBlur = () => {
-    if (inputValue.trim()) {
-      addTag(inputValue.trim());
-    }
-  };
-
-  return html`
-    <div className="tags-wrapper" ref=${wrapperRef}>
-      <div className="tags-input-container">
-        ${tags.map((tag) => html`
-          <span key=${tag} className="tag-chip">
-            ${tag}
-            <button
-              type="button"
-              className="tag-remove"
-              onClick=${() => removeTag(tag)}
-              aria-label=${`Remove ${tag}`}
-            >
-              ×
-            </button>
-          </span>
-        `)}
-        <input
-          ref=${inputRef}
-          type="text"
-          className="tags-input"
-          value=${inputValue}
-          onInput=${handleInputChange}
-          onKeyDown=${handleKeyDown}
-          onBlur=${handleBlur}
-          onFocus=${() => inputValue.trim() && setIsOpen(true)}
-          placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
-          disabled=${tags.length >= maxTags}
-        />
-      </div>
-      ${isOpen && suggestions.length > 0 && html`
-        <div className="tags-dropdown">
-          ${suggestions.map((tag) => html`
-            <div
-              key=${tag}
-              className="tag-option"
-              onClick=${() => addTag(tag)}
-            >
-              ${tag}
-            </div>
-          `)}
-        </div>
-      `}
-      ${tags.length === 0 && html`
-        <div className="tags-helper">
-          Add at least 1 tag
-        </div>
-      `}
-    </div>
-  `;
-}
-
-// ============================================
 // PREVIEW MODAL
 // ============================================
 
 function PreviewModal({
-  title, category, body, tags, onBack, onPost,
+  title, categoryPath, body, tags, onBack, onPost,
 }) {
   const bodyRef = useRef(null);
 
-  // Add line numbers to code blocks after the body HTML is rendered
   useEffect(() => {
     if (!bodyRef.current) return;
     bodyRef.current.querySelectorAll('pre').forEach((pre) => {
@@ -1417,9 +1039,9 @@ function PreviewModal({
             <h1 className="preview-title">${title}</h1>
             <div className="preview-meta">
               <span className="preview-author">You</span>
-              ${category && html`
+              ${categoryPath && html`
                 <span className="preview-meta-sep">\u00B7</span>
-                <span className="preview-category">${category}</span>
+                <span className="preview-category" title=${categoryPath}>${categoryPath}</span>
               `}
             </div>
             <div
@@ -1448,11 +1070,14 @@ function PreviewModal({
 
 function CreatePost() {
   const [title, setTitle] = useState('');
+  // category = the leaf folder name (for API)
+  // categoryPath = full path e.g. "React > Hooks > useState" (for display)
   const [category, setCategory] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
+  const [categoryPath, setCategoryPath] = useState('');
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
+  const [sidebarPath, setSidebarPath] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -1463,9 +1088,43 @@ function CreatePost() {
     }
   };
 
-  // Single mutable ref that always holds the latest post JSON
+  // Read category selection from localStorage after returning from /folder page
+  useEffect(() => {
+    const readPendingSelection = () => {
+      try {
+        const raw = localStorage.getItem('folder:pending-selection');
+        if (!raw) return;
+        const { name, path, ts } = JSON.parse(raw);
+        // Only accept selections made in the last 30 seconds
+        if (Date.now() - ts > 30000) {
+          localStorage.removeItem('folder:pending-selection');
+          return;
+        }
+        if (name) {
+          setCategory(name);
+          setCategoryPath(path || name);
+          localStorage.removeItem('folder:pending-selection');
+        }
+      } catch (err) {
+        localStorage.removeItem('folder:pending-selection');
+      }
+    };
+
+    // Fires when user navigates back (history.back())
+    window.addEventListener('popstate', readPendingSelection);
+    // Fires when page is restored from bfcache
+    window.addEventListener('pageshow', readPendingSelection);
+    // Also check immediately on mount in case we just returned
+    readPendingSelection();
+
+    return () => {
+      window.removeEventListener('popstate', readPendingSelection);
+      window.removeEventListener('pageshow', readPendingSelection);
+    };
+  }, []);
+
   const postDataRef = useRef({
-    title: '', category: '', body: null, tags: [],
+    title: '', category: '', categoryPath: '', body: null, tags: [],
   });
 
   const handleBodyChange = (htmlContent, jsonContent) => {
@@ -1473,19 +1132,15 @@ function CreatePost() {
     setBodyJson(jsonContent);
   };
 
-  // Update the single ref in-place whenever any field changes
   useEffect(() => {
     postDataRef.current = {
       title,
       category,
+      categoryPath,
       body: bodyJson,
       tags,
     };
-    // eslint-disable-next-line no-console
-    console.clear();
-    // eslint-disable-next-line no-console
-    console.log('Live post JSON:', postDataRef.current);
-  }, [title, category, bodyJson, tags]);
+  }, [title, category, categoryPath, bodyJson, tags]);
 
   const missingFields = [];
   if (title.length < 15) missingFields.push('Title (min 15 characters)');
@@ -1501,48 +1156,58 @@ function CreatePost() {
   };
 
   const handlePost = async () => {
-    // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
     const postData = {
       title,
       category,
+      categoryPath,
       body,
       tags: tagsWithHash,
     };
 
-    // eslint-disable-next-line no-console
-    console.log('Sending post data:', postData);
-
     try {
       const response = await fetch('http://localhost:5000/api/posts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(postData),
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        // eslint-disable-next-line no-console
-        console.log('Post created successfully:', result);
+        try {
+          const sidebarResponse = await fetch('http://localhost:5000/api/sidebar-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title,
+              category,
+              categoryPath,
+              postId: result.post._id, // eslint-disable-line no-underscore-dangle
+              path: sidebarPath || categoryPath || title,
+              autoNestES6: true,
+            }),
+          });
+
+          if (sidebarResponse.ok) {
+            window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+          }
+        } catch {
+          // sidebar update failed silently
+        }
+
         showToast('Your question has been posted successfully!', 'success');
-        // Reset form
         setTitle('');
         setCategory('');
+        setCategoryPath('');
         setBody('');
         setBodyJson(null);
         setTags([]);
       } else {
-        // eslint-disable-next-line no-console
-        console.error('Error creating post:', result.error);
         showToast(result.error || 'Failed to create post', 'error');
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Network error:', error);
+    } catch {
       showToast('Network error: Unable to connect to the server.', 'error');
     }
 
@@ -1555,6 +1220,103 @@ function CreatePost() {
     });
   };
 
+  // TagsInput component (unchanged, inlined here)
+  const TagsInput = ({ tags: tgs, onTagsChange, maxTags = 5 }) => {
+    const [inputValue, setInputValue] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [isOpen, setIsOpen] = useState(false);
+    const inputRef = useRef(null);
+    const wrapperRef = useRef(null);
+
+    const TAG_SUGGESTIONS = [
+      'sql-server', 'objective-c', 'ajax', 'javascript', 'python',
+      'java', 'react', 'node.js', 'css', 'html', 'angular',
+      'vue', 'typescript', 'mongodb', 'postgresql',
+    ];
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleInputChange = (e) => {
+      const { value } = e.target;
+      setInputValue(value);
+      if (value.trim()) {
+        const filtered = TAG_SUGGESTIONS.filter(
+          (tag) => tag.toLowerCase().includes(value.toLowerCase()) && !tgs.includes(tag),
+        );
+        setSuggestions(filtered);
+        setIsOpen(true);
+      } else {
+        setSuggestions([]);
+        setIsOpen(false);
+      }
+    };
+
+    const addTag = (tag) => {
+      if (tgs.length < maxTags && !tgs.includes(tag)) {
+        onTagsChange([...tgs, tag]);
+        setInputValue('');
+        setIsOpen(false);
+        inputRef.current?.focus();
+      }
+    };
+
+    const removeTag = (tagToRemove) => {
+      onTagsChange(tgs.filter((tag) => tag !== tagToRemove));
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' && inputValue.trim()) {
+        e.preventDefault();
+        addTag(inputValue.trim());
+      } else if (e.key === 'Backspace' && !inputValue && tgs.length > 0) {
+        removeTag(tgs[tgs.length - 1]);
+      }
+    };
+
+    const handleBlur = () => {
+      if (inputValue.trim()) addTag(inputValue.trim());
+    };
+
+    return html`
+      <div className="tags-wrapper" ref=${wrapperRef}>
+        <div className="tags-input-container">
+          ${tgs.map((tag) => html`
+            <span key=${tag} className="tag-chip">
+              ${tag}
+              <button type="button" className="tag-remove"
+                onClick=${() => removeTag(tag)} aria-label=${`Remove ${tag}`}>×</button>
+            </span>
+          `)}
+          <input ref=${inputRef} type="text" className="tags-input"
+            value=${inputValue}
+            onInput=${handleInputChange}
+            onKeyDown=${handleKeyDown}
+            onBlur=${handleBlur}
+            onFocus=${() => inputValue.trim() && setIsOpen(true)}
+            placeholder=${tgs.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
+            disabled=${tgs.length >= maxTags}
+          />
+        </div>
+        ${isOpen && suggestions.length > 0 && html`
+          <div className="tags-dropdown">
+            ${suggestions.map((tag) => html`
+              <div key=${tag} className="tag-option" onClick=${() => addTag(tag)}>${tag}</div>
+            `)}
+          </div>
+        `}
+        ${tgs.length === 0 && html`<div className="tags-helper">Add at least 1 tag</div>`}
+      </div>
+    `;
+  };
+
   return html`
     <div className="create-post">
       <h1>
@@ -1564,9 +1326,7 @@ function CreatePost() {
 
       <form onSubmit=${handleSubmit}>
         <div className="form-group">
-          <label>
-            Title<span className="required">*</span>
-          </label>
+          <label>Title<span className="required">*</span></label>
           <p className="helper-text">
             Be specific and imagine you're asking a question to another person. Min 15 characters.
           </p>
@@ -1584,37 +1344,43 @@ function CreatePost() {
         </div>
 
         <div className="form-group">
-          <label>
-            Category<span className="required">*</span>
-          </label>
+          <label>Category<span className="required">*</span></label>
           <p className="helper-text">
-            Search for an existing category or create a new one.
+            Select an existing category or create a new one.
           </p>
-          ${category ? html`
-            <div className="category-chip">
-              <span>${category}</span>
-              <button
-                type="button"
-                className="category-remove"
-                onClick=${() => setCategory('')}
-                aria-label="Remove category"
-              >
-                ×
-              </button>
-            </div>
-          ` : html`
-            <${CategorySearch}
-              value=${categorySearch}
-              onChange=${setCategorySearch}
-              onSelect=${setCategory}
-            />
-          `}
+          <div className="category-field">
+            ${category ? html`
+              <div className="category-breadcrumb-chip">
+                <span className="category-breadcrumb-icon">
+                  <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:15px;display:inline-block;vertical-align:middle;flex-shrink:0">
+                    <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
+                    <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
+                    <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
+                  </svg>
+                </span>
+                <span className="category-breadcrumb-segments">
+                  ${categoryPath.split(' > ').map((seg, i, arr) => html`
+                    <span key=${i} className="category-breadcrumb-segment">${seg}</span>
+                    ${i < arr.length - 1 ? html`<span className="category-breadcrumb-sep">›</span>` : null}
+                  `)}
+                </span>
+                <button
+                  type="button"
+                  className="category-breadcrumb-remove"
+                  onClick=${() => { setCategory(''); setCategoryPath(''); }}
+                  aria-label="Remove category"
+                >×</button>
+              </div>
+            ` : html`
+              <a href="/folder" className="add-category-trigger">
+                <span className="add-category-trigger-icon">+</span>
+              </a>
+            `}
+          </div>
         </div>
 
         <div className="form-group">
-          <label>
-            Body<span className="required">*</span>
-          </label>
+          <label>Body<span className="required">*</span></label>
           <p className="helper-text">
             Include all the information someone would need to answer your question. Min 20 characters.
           </p>
@@ -1625,9 +1391,7 @@ function CreatePost() {
         </div>
 
         <div className="form-group">
-          <label>
-            Tags<span className="required">*</span>
-          </label>
+          <label>Tags<span className="required">*</span></label>
           <p className="helper-text">
             Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
           </p>
@@ -1635,6 +1399,20 @@ function CreatePost() {
             tags=${tags}
             onTagsChange=${setTags}
             maxTags=${5}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Sidebar Path</label>
+          <p className="helper-text">
+            Optional: Organize in nested folders. Use ">" to create hierarchy.
+            Example: "React > Hooks > Custom Hooks". ES6-related content auto-nests.
+          </p>
+          <input
+            type="text"
+            value=${sidebarPath}
+            onInput=${(e) => setSidebarPath(e.target.value)}
+            placeholder="e.g., React > Hooks > useState"
           />
         </div>
 
@@ -1661,10 +1439,11 @@ function CreatePost() {
           </div>
         </div>
       </form>
+
       ${showPreview && html`
         <${PreviewModal}
           title=${title}
-          category=${category}
+          categoryPath=${categoryPath}
           body=${body}
           tags=${tags}
           onBack=${() => setShowPreview(false)}
@@ -1676,12 +1455,14 @@ function CreatePost() {
           <span className="cp-toast-msg">${toast.message}</span>
           ${toast.onConfirm ? html`
             <div className="cp-toast-actions">
-              <button type="button" className="cp-toast-confirm" onClick=${() => { setToast(null); toast.onConfirm(); }}>Yes</button>
-              <button type="button" className="cp-toast-dismiss" onClick=${() => setToast(null)}>No</button>
+              <button type="button" className="cp-toast-confirm"
+                onClick=${() => { setToast(null); toast.onConfirm(); }}>Yes</button>
+              <button type="button" className="cp-toast-dismiss"
+                onClick=${() => setToast(null)}>No</button>
             </div>
           ` : html`
-            <button type="button" className="cp-toast-close" onClick=${() => setToast(null)}
-              aria-label="Dismiss">\u00D7</button>
+            <button type="button" className="cp-toast-close"
+              onClick=${() => setToast(null)} aria-label="Dismiss">\u00D7</button>
           `}
         </div>
       `}
