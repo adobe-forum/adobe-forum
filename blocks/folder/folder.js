@@ -52,8 +52,6 @@ const insertInto = (tree, parentId, node) => {
   });
 };
 
-// Move node: removes it from its current position, drops it into targetParentId.
-// Guards against dropping a folder into itself or its own descendants.
 const isAncestor = (tree, ancestorId, nodeId) => {
   const node = findNode(tree, ancestorId);
   if (!node || !node.children) return false;
@@ -65,13 +63,22 @@ const isAncestor = (tree, ancestorId, nodeId) => {
 };
 
 const moveNode = (tree, nodeId, targetParentId) => {
-  // Don't move into self or own descendant
   if (nodeId === targetParentId) return tree;
   if (isAncestor(tree, nodeId, targetParentId)) return tree;
   const node = findNode(tree, nodeId);
   if (!node) return tree;
   const withoutNode = deleteById(tree, nodeId);
   return insertInto(withoutNode, targetParentId, node);
+};
+
+// ── Build full path string for a node ────────────────────────────────────────
+const buildPath = (tree, stack, nodeName) => {
+  const parts = stack
+    .map((id) => findNode(tree, id))
+    .filter(Boolean)
+    .map((n) => n.name);
+  if (nodeName) parts.push(nodeName);
+  return parts.join(' > ');
 };
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -85,15 +92,6 @@ const IcoFolder = () => html`
     <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
     <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
     <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
-  </svg>`;
-
-const IcoFile = () => html`
-  <svg viewBox="0 0 72 88" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-    <rect x="6" y="4" width="52" height="68" rx="4" fill="#E8EAF6"/>
-    <path d="M42 4L58 20H42V4Z" fill="#B0BEC5"/>
-    <rect x="14" y="34" width="34" height="4" rx="2" fill="#9FA8DA"/>
-    <rect x="14" y="44" width="26" height="4" rx="2" fill="#9FA8DA"/>
-    <rect x="14" y="54" width="30" height="4" rx="2" fill="#9FA8DA"/>
   </svg>`;
 
 const IcoEmptyBox = () => html`
@@ -178,19 +176,16 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
   onSelect, onOpen, onCtx, onCommitRename, onCancelRename,
   onCommitAdd, onCancelAdd, onMove, onDelete }) {
 
-  const sortedNodes = sortNodes(nodes);
-  const empty = nodes.length === 0 && !adding;
+  // Only show folders
+  const folderNodes = nodes.filter((n) => n.type === 'folder');
+  const sortedNodes = sortNodes(folderNodes);
+  const empty = folderNodes.length === 0 && !adding;
 
-  // ── Drag state (local to this panel) ─────────────────────────────────────
-  const [dragId,   setDragId]   = useState(null); // id of node being dragged
-  const [overId,   setOverId]   = useState(null); // id of folder being hovered
-  const [overRoot, setOverRoot] = useState(false); // hovering the empty panel bg
+  const [dragId,   setDragId]   = useState(null);
+  const [overId,   setOverId]   = useState(null);
+  const [overRoot, setOverRoot] = useState(false);
 
-  // ── Keyboard navigation ───────────────────────────────────────────────────
-  // We keep a ref to the grid so we can query its children.
   const gridRef = useRef(null);
-
-  // Build the focusable id list in sorted order (mirrors what we render)
   const focusableIds = sortedNodes.map((n) => n.id);
 
   const handleGridKeyDown = (e) => {
@@ -199,58 +194,28 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
     if (idx === -1) return;
 
     switch (e.key) {
-      case 'ArrowRight': {
-        e.preventDefault();
-        const next = focusableIds[idx + 1];
-        if (next) onSelect(next);
-        break;
-      }
-      case 'ArrowLeft': {
-        e.preventDefault();
-        const prev = focusableIds[idx - 1];
-        if (prev) onSelect(prev);
-        break;
-      }
+      case 'ArrowRight': { e.preventDefault(); const next = focusableIds[idx + 1]; if (next) onSelect(next); break; }
+      case 'ArrowLeft':  { e.preventDefault(); const prev = focusableIds[idx - 1]; if (prev) onSelect(prev); break; }
       case 'ArrowDown': {
         e.preventDefault();
-        // Estimate columns from grid width / item width (≈110px min + 8px gap)
-        const cols = gridRef.current
-          ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118))
-          : 1;
-        const next = focusableIds[idx + cols];
-        if (next) onSelect(next);
-        break;
+        const cols = gridRef.current ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118)) : 1;
+        const next = focusableIds[idx + cols]; if (next) onSelect(next); break;
       }
       case 'ArrowUp': {
         e.preventDefault();
-        const cols = gridRef.current
-          ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118))
-          : 1;
-        const prev = focusableIds[idx - cols];
-        if (prev) onSelect(prev);
-        break;
+        const cols = gridRef.current ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118)) : 1;
+        const prev = focusableIds[idx - cols]; if (prev) onSelect(prev); break;
       }
-      case 'Enter': {
-        e.preventDefault();
-        const node = nodes.find((n) => n.id === selected);
-        if (node?.type === 'folder') onOpen(node);
-        break;
-      }
+      case 'Enter': { e.preventDefault(); const node = folderNodes.find((n) => n.id === selected); if (node) onOpen(node); break; }
       case 'Delete':
-      case 'Backspace': {
-        e.preventDefault();
-        onDelete(selected);
-        break;
-      }
+      case 'Backspace': { e.preventDefault(); onDelete(selected); break; }
       default: break;
     }
   };
 
-  // ── Drag handlers ─────────────────────────────────────────────────────────
   const onDragStart = (e, node) => {
     setDragId(node.id);
     e.dataTransfer.effectAllowed = 'move';
-    // Use a ghost clone so the original stays visible
     e.dataTransfer.setDragImage(e.currentTarget, 40, 40);
   };
 
@@ -273,7 +238,6 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
     setDragId(null); setOverId(null);
   };
 
-  // Drop on the panel background → move to current folder (parentId handled upstream)
   const onDragOverPanel = (e) => {
     if (!dragId) return;
     e.preventDefault();
@@ -284,7 +248,7 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
 
   const onDropPanel = (e) => {
     e.preventDefault();
-    if (dragId) onMove(dragId, null); // null = "current level" sentinel
+    if (dragId) onMove(dragId, null);
     setDragId(null); setOverId(null); setOverRoot(false);
   };
 
@@ -304,23 +268,22 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
           <p>${isRoot ? 'No folders yet' : 'This folder is empty'}</p>
           <span>${isRoot
             ? 'Click "+ New Folder" to create your first category folder'
-            : 'Use the buttons above to add folders or files'}</span>
+            : 'Use "+ New Folder" above to add a subfolder'}</span>
         </div>`}
 
       <div class="fm-grid" ref=${gridRef}>
         ${sortedNodes.map((node) => {
-          const sel  = selected    === node.id;
-          const ren  = renamingId  === node.id;
-          const dir  = node.type   === 'folder';
-          const drag = dragId      === node.id;
-          const over = overId      === node.id;
+          const sel  = selected   === node.id;
+          const ren  = renamingId === node.id;
+          const drag = dragId     === node.id;
+          const over = overId     === node.id;
 
           return html`
             <div key=${node.id}
               class=${[
                 'fm-item',
+                'fm-item--dir',
                 sel  ? 'fm-item--sel'  : '',
-                dir  ? 'fm-item--dir'  : 'fm-item--file',
                 drag ? 'fm-item--drag' : '',
                 over ? 'fm-item--over' : '',
               ].filter(Boolean).join(' ')}
@@ -332,18 +295,18 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
               onDragLeave=${() => { if (overId === node.id) setOverId(null); }}
               onDrop=${(e) => onDropFolder(e, node)}
               onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
-              onDblClick=${(e) => { e.stopPropagation(); if (dir) onOpen(node); }}
+              onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
               onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
 
               <div class="fm-item-ico">
-                ${dir ? html`<${IcoFolder}/>` : html`<${IcoFile}/>`}
+                <${IcoFolder}/>
               </div>
 
               ${ren
                 ? html`<${NameInput}
                     initial=${node.name}
-                    placeholder=${dir ? 'Folder name' : 'File name'}
-                    siblings=${nodes}
+                    placeholder="Folder name"
+                    siblings=${folderNodes}
                     excludeId=${node.id}
                     onCommit=${(v) => onCommitRename(node.id, v)}
                     onCancel=${onCancelRename}/>`
@@ -352,13 +315,13 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
         })}
 
         ${adding && html`
-          <div class="fm-item fm-item--new">
+          <div class="fm-item fm-item--dir fm-item--new">
             <div class="fm-item-ico">
-              ${adding.type === 'folder' ? html`<${IcoFolder}/>` : html`<${IcoFile}/>`}
+              <${IcoFolder}/>
             </div>
             <${NameInput}
-              placeholder=${adding.type === 'folder' ? 'Folder name' : 'File name'}
-              siblings=${nodes}
+              placeholder="Folder name"
+              siblings=${folderNodes}
               onCommit=${onCommitAdd}
               onCancel=${onCancelAdd}/>
           </div>`}
@@ -378,7 +341,6 @@ function FolderModal({ onClose, onSelect }) {
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
   useEffect(() => {
-    // Esc only closes if no inline edit is active (NameInput handles its own Esc)
     const esc = (e) => { if (e.key === 'Escape' && !renamingId && !adding) doClose(); };
     document.addEventListener('keydown', esc);
     return () => document.removeEventListener('keydown', esc);
@@ -386,13 +348,26 @@ function FolderModal({ onClose, onSelect }) {
 
   const persist  = (t) => { setTree(t); saveTree(t); };
   const doClose  = () => { setVisible(false); setTimeout(onClose, 200); };
-  const doOk     = () => {
+
+  const doOk = () => {
     const node = selected ? findNode(tree, selected) : null;
-    if (onSelect) onSelect(node?.name || null);
+    if (node) {
+      // Build the full navigation path including all ancestor folders
+      const path = buildPath(tree, stack, node.name);
+      if (onSelect) onSelect(node.name, path);
+    } else {
+      // If we're inside a folder but nothing selected, use the current folder
+      if (stack.length > 0) {
+        const currentNode = findNode(tree, stack[stack.length - 1]);
+        const path = buildPath(tree, stack, null);
+        if (onSelect && currentNode) onSelect(currentNode.name, path);
+      } else {
+        if (onSelect) onSelect(null, null);
+      }
+    }
     doClose();
   };
 
-  // navigation
   const isRoot     = stack.length === 0;
   const parentId   = stack.length ? stack[stack.length - 1] : null;
   const parentNode = parentId ? findNode(tree, parentId) : null;
@@ -405,19 +380,17 @@ function FolderModal({ onClose, onSelect }) {
   const goBack  = () => { setStack(stack.slice(0, -1)); reset(); };
   const goInto  = (node) => { setStack([...stack, node.id]); reset(); };
 
-  // add
-  const startAdd  = (type) => { setAdding({ type }); setRenamingId(null); setSelected(null); };
+  // add — folders only
+  const startAdd  = () => { setAdding({ type: 'folder' }); setRenamingId(null); setSelected(null); };
   const commitAdd = (name) => {
-    const newNode = { id: uid(), name, type: adding.type, children: adding.type === 'folder' ? [] : undefined };
+    const newNode = { id: uid(), name, type: 'folder', children: [] };
     persist(insertInto(tree, parentId, newNode));
     setAdding(null);
   };
 
-  // rename
   const startRename  = (node) => { setRenamingId(node.id); setAdding(null); setCtx(null); };
   const commitRename = (id, name) => { persist(renameById(tree, id, name)); setRenamingId(null); };
 
-  // delete
   const doDelete = (id) => {
     if (selected === id) setSelected(null);
     if (stack.includes(id)) setStack(stack.slice(0, stack.indexOf(id)));
@@ -425,22 +398,13 @@ function FolderModal({ onClose, onSelect }) {
     setCtx(null);
   };
 
-  // ── Move (drag-and-drop) ──────────────────────────────────────────────────
-  // targetId: the folder to move INTO, or null meaning "current level"
   const doMove = (nodeId, targetId) => {
-    // null sentinel → move to current view's parent
     const realTarget = targetId === null ? parentId : targetId;
-
-    // Guard: would this create a duplicate name at the destination?
     const node = findNode(tree, nodeId);
     if (!node) return;
     const destParentNode = realTarget ? findNode(tree, realTarget) : null;
     const destSiblings   = destParentNode ? (destParentNode.children || []) : tree;
-    if (hasDuplicate(destSiblings, node.name, nodeId)) {
-      // Silently skip — item with same name already exists at destination
-      return;
-    }
-
+    if (hasDuplicate(destSiblings, node.name, nodeId)) return;
     const newTree = moveNode(tree, nodeId, realTarget);
     if (newTree !== tree) persist(newTree);
   };
@@ -469,13 +433,9 @@ function FolderModal({ onClose, onSelect }) {
           </div>
 
           <div class="fm-actions">
-            <button type="button" class="fm-btn" onClick=${() => startAdd('folder')}>
+            <button type="button" class="fm-btn" onClick=${startAdd}>
               + New Folder
             </button>
-            ${!isRoot && html`
-              <button type="button" class="fm-btn" onClick=${() => startAdd('file')}>
-                + New File
-              </button>`}
           </div>
 
           <button type="button" class="fm-close" onClick=${doClose}><${IcoClose}/></button>
@@ -517,11 +477,20 @@ function FolderModal({ onClose, onSelect }) {
 function FolderApp() {
   const [open, setOpen] = useState(true);
   const doClose  = () => { setOpen(false); window.history.back(); };
-  const doSelect = (name) => {
-    if (name) document.dispatchEvent(new CustomEvent('folder:selected', { detail: { name } }));
+
+  // Save selection to localStorage so createpost.js can read it after history.back()
+  const doSelect = (name, path) => {
+    if (name) {
+      localStorage.setItem('folder:pending-selection', JSON.stringify({
+        name,
+        path: path || name,
+        ts: Date.now(),
+      }));
+    }
     setOpen(false);
     window.history.back();
   };
+
   if (!open) return null;
   return html`<${FolderModal} onClose=${doClose} onSelect=${doSelect}/>`;
 }
