@@ -110,6 +110,123 @@
 
 /* stylelint-disable no-descending-specificity */
 
+/* ========== CATEGORY FIELD ========== */
+.category-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* "+ Category" trigger — rendered as an <a> link */
+.add-category-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: var(--cp-bg-surface);
+  color: var(--link-color, #1473e6);
+  border: 1.5px dashed var(--link-color, #1473e6);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: var(--cp-bg-accent);
+    border-style: solid;
+    text-decoration: none;
+  }
+
+  &:active {
+    background: var(--cp-bg-pressed);
+  }
+}
+
+.add-category-trigger-icon {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+/* ── Category breadcrumb chip ── */
+.category-breadcrumb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cp-bg-surface);
+  border: 1.5px solid var(--cp-border-light);
+  border-radius: 6px;
+  /* Match .add-category-trigger padding so heights are identical */
+  padding: 6px 10px 6px 8px;
+  font-size: 14px;
+  color: var(--cp-text-primary);
+  max-width: 100%;
+  box-shadow: none;
+}
+
+.category-breadcrumb-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.category-breadcrumb-icon svg {
+  width: 16px;
+  height: 13px;
+}
+
+.category-breadcrumb-segments {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.category-breadcrumb-segment {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cp-text-primary);
+  white-space: nowrap;
+}
+
+.category-breadcrumb-segment:last-child {
+  font-weight: 600;
+  color: var(--cp-text-primary);
+}
+
+.category-breadcrumb-sep {
+  color: #bbb;
+  font-size: 13px;
+  font-weight: 400;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.category-breadcrumb-remove {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--cp-text-muted);
+  margin-left: 2px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* No color change on hover — just subtle opacity */
+.category-breadcrumb-remove:hover {
+  color: var(--cp-text-muted);
+  opacity: 0.7;
+}
+
 /* Custom editor wrapper */
 .ce-editor-wrapper {
   border: 1px solid var(--cp-border);
@@ -441,7 +558,7 @@
   }
 }
 
-/* Selected category chip */
+/* Selected category chip (legacy, kept for safety) */
 .category-chip {
   display: inline-flex;
   align-items: center;
@@ -882,6 +999,7 @@
     background: var(--cp-bg-hover-light);
   }
 }
+
 /* stylelint-enable no-descending-specificity */
 
 .preview-modal-footer {
@@ -1050,5 +1168,78 @@
   to {
     opacity: 0;
     transform: translateX(-50%) translateY(16px);
+  }
+}
+/* ── Category breadcrumb chip ── */
+.category-breadcrumb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cp-bg-surface);
+  border: 1.5px solid var(--cp-border-light);
+  border-radius: 6px;
+  padding: 6px 10px 6px 8px;
+  font-size: 14px;
+  color: var(--cp-text-primary);
+  max-width: 100%;
+}
+
+.category-breadcrumb-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.category-breadcrumb-icon svg {
+  width: 16px;
+  height: 13px;
+}
+
+.category-breadcrumb-segments {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.category-breadcrumb-segment {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cp-text-primary);
+  white-space: nowrap;
+}
+
+.category-breadcrumb-segment:last-child {
+  font-weight: 600;
+}
+
+.category-breadcrumb-sep {
+  color: #bbb;
+  font-size: 13px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+
+.category-breadcrumb-remove{
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--cp-text-secondary);
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+
+  &:hover {
+    color: var(--cp-text-primary);
+    background: var(--cp-bg-chip-active);
   }
 }
