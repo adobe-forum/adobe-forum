@@ -32,9 +32,9 @@
   }
   
   /*
-    Input row — width matches forum-post block
-    styles.css: main > .section > div { max-width: 1200px; padding: 0 24px / 0 32px }
-    Both sections use the same container so width auto-matches
+     Input row — width matches forum-post block
+     styles.css: main > .section > div { max-width: 1200px; padding: 0 24px / 0 32px }
+     Both sections use the same container so width auto-matches
   */
   .search-form-inner {
     display: flex;
@@ -46,13 +46,13 @@
     border: var(--spectrum-border-width-100) solid var(--spectrum-gray-300);
     border-radius: var(--spectrum-border-radius-200);
     box-sizing: border-box;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   
   .search-form-inner:focus-within {
     border-color: var(--spectrum-accent-color-900);
-    box-shadow: 0 0 0 2px rgba(218, 31, 38, 0.1);
+    box-shadow: 0 0 0 2px rgb(218 31 38 / 10%);
   }
   
   /* Search icon */
@@ -85,7 +85,9 @@
   .search-input::placeholder { color: var(--spectrum-gray-400); }
   
   .search-input::-webkit-search-cancel-button,
-  .search-input::-webkit-search-decoration { -webkit-appearance: none; }
+  .search-input::-webkit-search-decoration { 
+    appearance: none; 
+  }
   
   /* Clear button */
   .search-clear {
@@ -102,11 +104,23 @@
     transition: background 0.15s ease, color 0.15s ease;
   }
   
-  .search-clear svg        { width: 14px; height: 14px; fill: currentColor; display: block; }
+  .search-clear svg {
+    width: 14px;
+    height: 14px;
+    fill: currentcolor;
+    display: block;
+  }
+  
   .search-clear.is-visible { display: flex; }
-  .search-clear:hover      { background: var(--spectrum-gray-100); color: var(--spectrum-gray-800); }
+  
+  .search-clear:hover {
+    background: var(--spectrum-gray-100);
+    color: var(--spectrum-gray-800);
+  }
   
   /* Mobile */
-  @media (max-width: 768px) {
-    .search-bar { padding: var(--spectrum-spacing-100) 0; }  /* 4px — even tighter on mobile */
+  @media (width <= 768px) {
+    .search-bar { 
+      padding: var(--spectrum-spacing-100) 0; /* 4px — even tighter on mobile */
+    } 
   }

@@ -140,8 +140,7 @@ main {
   background-color: var(--background-color);
   padding: 20px;
   position: relative;
-  overflow-x: hidden;        /* FIX: was "auto hidden" which allowed scroll */
-  overflow-y: auto;          /* keep vertical scroll working */
+  overflow: hidden auto;     /* FIX: was "auto hidden" which allowed scroll */
   max-width: 100%;
   min-width: 0;              /* prevent grid blowout */
 
