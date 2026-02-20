@@ -985,6 +985,11 @@
   color: #d7373f;
 }
 
+.cp-toast-confirm:hover {
+  background: #fff;
+  color: #d7373f;
+}
+
 .cp-toast-dismiss {
   background: transparent;
   color: #fff;
