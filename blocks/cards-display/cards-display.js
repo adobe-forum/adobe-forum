@@ -1,5 +1,5 @@
 const API_BASE_URL = 'http://localhost:5000/api';
-const PAGE_SIZE    = 12;
+const PAGE_SIZE = 12;
 
 // ── Extract first image from post body HTML ───────────────────────────
 function extractImage(body) {
@@ -12,7 +12,7 @@ function extractImage(body) {
 // ── Extract plain text excerpt ────────────────────────────────────────
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
-  const doc  = new DOMParser().parseFromString(body, 'text/html');
+  const doc = new DOMParser().parseFromString(body, 'text/html');
   const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
@@ -49,17 +49,17 @@ function buildCard(post) {
     }).join('');
 
   const imgSrc = post.image || extractImage(post.body);
-  const image  = imgSrc
+  const image = imgSrc
     ? `<img src="${imgSrc}" alt="${post.title}" class="card-img-box" loading="lazy" />`
-    : `<div class="card-img-box card-img--placeholder"></div>`;
+    : '<div class="card-img-box card-img--placeholder"></div>';
 
-  const author   = post.author?.name || post.author?.username || post.author
+  const author = post.author?.name || post.author?.username || post.author
     || post.createdBy?.name || post.createdBy?.username || post.createdBy
-    || post.userId?.name   || post.userId?.username || 'Anonymous';
+    || post.userId?.name || post.userId?.username || 'Anonymous';
 
   const initials = avatarInitials(author);
-  const avColor  = avatarColor(author);
-  const excerpt  = extractExcerpt(post.body || post.description || post.content || '');
+  const avColor = avatarColor(author);
+  const excerpt = extractExcerpt(post.body || post.description || post.content || '');
 
   return `
     <article class="card" data-post-id="${id}">
@@ -100,11 +100,11 @@ function buildPagination(currentPage, totalPages) {
 
   const delta = 2;
   const start = Math.max(1, currentPage - delta);
-  const end   = Math.min(totalPages, currentPage + delta);
+  const end = Math.min(totalPages, currentPage + delta);
 
   if (start > 1) {
-    pages += `<button class="page-btn" data-page="1">1</button>`;
-    if (start > 2) pages += `<span class="page-ellipsis">…</span>`;
+    pages += '<button class="page-btn" data-page="1">1</button>';
+    if (start > 2) pages += '<span class="page-ellipsis">…</span>';
   }
 
   for (let i = start; i <= end; i += 1) {
@@ -112,7 +112,7 @@ function buildPagination(currentPage, totalPages) {
   }
 
   if (end < totalPages) {
-    if (end < totalPages - 1) pages += `<span class="page-ellipsis">…</span>`;
+    if (end < totalPages - 1) pages += '<span class="page-ellipsis">…</span>';
     pages += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
   }
 
@@ -124,8 +124,8 @@ function buildPagination(currentPage, totalPages) {
 }
 
 export default async function decorate(block) {
-  const rows     = [...block.children];
-  const title    = rows[0]?.children[0]?.textContent.trim() || '';
+  const rows = [...block.children];
+  const title = rows[0]?.children[0]?.textContent.trim() || '';
   const subtitle = rows[0]?.children[1]?.textContent.trim() || '';
 
   block.innerHTML = `
@@ -144,8 +144,8 @@ export default async function decorate(block) {
     <div class="cards-pagination-wrapper"></div>
   `;
 
-  const grid       = block.querySelector('.cards-grid');
-  const noResults  = block.querySelector('.cards-no-results');
+  const grid = block.querySelector('.cards-grid');
+  const noResults = block.querySelector('.cards-no-results');
   const pagWrapper = block.querySelector('.cards-pagination-wrapper');
 
   grid.innerHTML = Array(6).fill(`
@@ -159,8 +159,8 @@ export default async function decorate(block) {
     </div>
   `).join('');
 
-  const getCardsWrapper  = () => document.querySelector('.cards-display-wrapper');
-  const getForumWrapper  = () => document.querySelector('.forum-post-wrapper');
+  const getCardsWrapper = () => document.querySelector('.cards-display-wrapper');
+  const getForumWrapper = () => document.querySelector('.forum-post-wrapper');
   const getSearchWrapper = () => document.querySelector('.search-bar-wrapper');
 
   const showCards = () => {
@@ -192,23 +192,23 @@ export default async function decorate(block) {
   });
 
   try {
-    const res      = await fetch(`${API_BASE_URL}/posts`);
-    const data     = await res.json();
+    const res = await fetch(`${API_BASE_URL}/posts`);
+    const data = await res.json();
     const allPosts = data.posts || data || [];
 
     if (!allPosts.length) {
-      grid.innerHTML = `<p class="cards-empty">No posts found.</p>`;
+      grid.innerHTML = '<p class="cards-empty">No posts found.</p>';
       return;
     }
 
-    let currentPage   = 1;
+    let currentPage = 1;
     let filteredPosts = [...allPosts];
 
     const renderPage = (page) => {
       currentPage = page;
       const totalPages = Math.ceil(filteredPosts.length / PAGE_SIZE);
-      const start      = (page - 1) * PAGE_SIZE;
-      const pagePosts  = filteredPosts.slice(start, start + PAGE_SIZE);
+      const start = (page - 1) * PAGE_SIZE;
+      const pagePosts = filteredPosts.slice(start, start + PAGE_SIZE);
 
       grid.innerHTML = pagePosts.map(buildCard).join('');
 
@@ -233,8 +233,8 @@ export default async function decorate(block) {
 
       if (!query) {
         filteredPosts = [...allPosts];
-        noResults.style.display  = 'none';
-        grid.style.display       = '';
+        noResults.style.display = 'none';
+        grid.style.display = '';
         pagWrapper.style.display = '';
         renderPage(1);
         return;
@@ -257,20 +257,19 @@ export default async function decorate(block) {
       });
 
       if (!filteredPosts.length) {
-        grid.style.display       = 'none';
+        grid.style.display = 'none';
         pagWrapper.style.display = 'none';
-        noResults.style.display  = 'flex';
+        noResults.style.display = 'flex';
       } else {
-        grid.style.display       = '';
+        grid.style.display = '';
         pagWrapper.style.display = '';
-        noResults.style.display  = 'none';
+        noResults.style.display = 'none';
         renderPage(1);
       }
     });
-
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('cards-display: failed to fetch posts', err);
-    grid.innerHTML = `<p class="cards-error">Failed to load posts. Please try again.</p>`;
+    grid.innerHTML = '<p class="cards-error">Failed to load posts. Please try again.</p>';
   }
 }

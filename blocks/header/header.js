@@ -2,13 +2,6 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 // ============================================
-// CONSTANTS
-// ============================================
-
-const API_BASE_URL = 'http://localhost:5000/api';
-const toId = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-// ============================================
 // ICON COMPONENTS
 // ============================================
 
@@ -48,7 +41,9 @@ const API_BASE = 'http://localhost:5000/api';
 // TREE ITEM COMPONENT
 // ============================================
 
-function TreeItem({ item, activeItem, onItemClick, level = 0 }) {
+function TreeItem({
+  item, activeItem, onItemClick, level = 0,
+}) {
   const [isExpanded, setIsExpanded] = useState(level === 0);
   const hasChildren = item.children && item.children.length > 0;
   const isFolder = item.isFolder || hasChildren;
@@ -423,10 +418,10 @@ function HeaderComponent() {
             src="/icons/logo.svg"
             alt="Adobe Logo"
             onError=${(e) => {
-              if (e.target.src.endsWith('.svg')) {
-                e.target.src = '/icons/logo.png';
-              }
-            }}
+    if (e.target.src.endsWith('.svg')) {
+      e.target.src = '/icons/logo.png';
+    }
+  }}
           />
         </a>
 
@@ -454,9 +449,9 @@ function HeaderComponent() {
             <a href="/profile" class="profile-link">
               <div class="profile-avatar">
                 ${!profileImageError
-                  ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
-                  : html`<${UserIcon} />`
-                }
+    ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
+    : html`<${UserIcon} />`
+}
               </div>
             </a>
           </li>
