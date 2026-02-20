@@ -1,10 +1,13 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useRef, useEffect, useCallback } from '../../vendor/preact-hooks.js';
+import {
+  useState, useRef, useEffect,
+} from '../../vendor/preact-hooks.js';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'eds-folder-tree';
-let _seed = Date.now();
-const uid = () => `n${(_seed += 1)}`;
+let seedCounter = Date.now();
+// eslint-disable-next-line no-plusplus
+const uid = () => `n${++seedCounter}`;
 
 const loadTree = () => {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
@@ -14,34 +17,35 @@ const saveTree = (t) => {
 };
 
 // ── Sort helper ───────────────────────────────────────────────────────────────
-const sortNodes = (nodes) =>
-  [...nodes].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+const sortNodes = (nodes) => [...nodes].sort(
+  (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+);
 
 // ── Duplicate check ───────────────────────────────────────────────────────────
-const hasDuplicate = (siblings, name, excludeId = null) =>
-  siblings.some(
-    (n) => n.id !== excludeId && n.name.toLowerCase() === name.trim().toLowerCase()
-  );
+const hasDuplicate = (siblings, name, excludeId = null) => siblings.some(
+  (n) => n.id !== excludeId && n.name.toLowerCase() === name.trim().toLowerCase(),
+);
 
 // ── Immutable tree helpers ────────────────────────────────────────────────────
 const findNode = (tree, id) => {
-  for (const n of tree) {
-    if (n.id === id) return n;
-    if (n.children) { const f = findNode(n.children, id); if (f) return f; }
-  }
-  return null;
+  let result = null;
+  tree.some((n) => {
+    if (n.id === id) { result = n; return true; }
+    if (n.children) { result = findNode(n.children, id); return result !== null; }
+    return false;
+  });
+  return result;
 };
 
-const deleteById = (tree, id) =>
-  tree.filter((n) => n.id !== id)
-    .map((n) => (n.children ? { ...n, children: deleteById(n.children, id) } : n));
+const deleteById = (tree, id) => tree
+  .filter((n) => n.id !== id)
+  .map((n) => (n.children ? { ...n, children: deleteById(n.children, id) } : n));
 
-const renameById = (tree, id, name) =>
-  tree.map((n) => {
-    if (n.id === id) return { ...n, name };
-    if (n.children) return { ...n, children: renameById(n.children, id, name) };
-    return n;
-  });
+const renameById = (tree, id, name) => tree.map((n) => {
+  if (n.id === id) return { ...n, name };
+  if (n.children) return { ...n, children: renameById(n.children, id, name) };
+  return n;
+});
 
 const insertInto = (tree, parentId, node) => {
   if (!parentId) return [...tree, node];
@@ -55,11 +59,9 @@ const insertInto = (tree, parentId, node) => {
 const isAncestor = (tree, ancestorId, nodeId) => {
   const node = findNode(tree, ancestorId);
   if (!node || !node.children) return false;
-  for (const c of node.children) {
-    if (c.id === nodeId) return true;
-    if (isAncestor(tree, c.id, nodeId)) return true;
-  }
-  return false;
+  return node.children.some(
+    (c) => c.id === nodeId || isAncestor(tree, c.id, nodeId),
+  );
 };
 
 const moveNode = (tree, nodeId, targetParentId) => {
@@ -83,8 +85,8 @@ const buildPath = (tree, stack, nodeName) => {
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcoClose = () => html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-const IcoBack  = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
-const IcoEdit  = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const IcoEdit = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const IcoTrash = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
 
 const IcoFolder = () => html`
@@ -103,7 +105,9 @@ const IcoEmptyBox = () => html`
   </svg>`;
 
 // ── Inline name input ─────────────────────────────────────────────────────────
-function NameInput({ initial = '', placeholder, siblings = [], excludeId = null, onCommit, onCancel }) {
+function NameInput({
+  initial = '', placeholder, siblings = [], excludeId = null, onCommit, onCancel,
+}) {
   const ref = useRef(null);
   const [error, setError] = useState('');
 
@@ -124,7 +128,7 @@ function NameInput({ initial = '', placeholder, siblings = [], excludeId = null,
   };
 
   const onKD = (e) => {
-    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
     if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
   };
 
@@ -145,7 +149,9 @@ function NameInput({ initial = '', placeholder, siblings = [], excludeId = null,
 }
 
 // ── Right-click context menu ──────────────────────────────────────────────────
-function CtxMenu({ x, y, node, onRename, onDelete, onClose }) {
+function CtxMenu({
+  x, y, node, onRename, onDelete, onClose,
+}) {
   const ref = useRef(null);
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
@@ -153,9 +159,10 @@ function CtxMenu({ x, y, node, onRename, onDelete, onClose }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const menuW = 150; const menuH = 80;
-  const left = x + menuW > window.innerWidth  ? x - menuW : x;
-  const top  = y + menuH > window.innerHeight ? y - menuH : y;
+  const menuW = 150;
+  const menuH = 80;
+  const left = x + menuW > window.innerWidth ? x - menuW : x;
+  const top = y + menuH > window.innerHeight ? y - menuH : y;
 
   return html`
     <div class="fm-ctx" ref=${ref} style=${{ left: `${left}px`, top: `${top}px` }}
@@ -172,17 +179,17 @@ function CtxMenu({ x, y, node, onRename, onDelete, onClose }) {
 }
 
 // ── Grid panel ────────────────────────────────────────────────────────────────
-function GridPanel({ nodes, isRoot, selected, renamingId, adding,
+function GridPanel({
+  nodes, isRoot, selected, renamingId, adding,
   onSelect, onOpen, onCtx, onCommitRename, onCancelRename,
-  onCommitAdd, onCancelAdd, onMove, onDelete }) {
-
-  // Only show folders
+  onCommitAdd, onCancelAdd, onMove, onDelete,
+}) {
   const folderNodes = nodes.filter((n) => n.type === 'folder');
   const sortedNodes = sortNodes(folderNodes);
   const empty = folderNodes.length === 0 && !adding;
 
-  const [dragId,   setDragId]   = useState(null);
-  const [overId,   setOverId]   = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
   const [overRoot, setOverRoot] = useState(false);
 
   const gridRef = useRef(null);
@@ -193,22 +200,47 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
     const idx = focusableIds.indexOf(selected);
     if (idx === -1) return;
 
+    const cols = gridRef.current
+      ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118))
+      : 1;
+
     switch (e.key) {
-      case 'ArrowRight': { e.preventDefault(); const next = focusableIds[idx + 1]; if (next) onSelect(next); break; }
-      case 'ArrowLeft':  { e.preventDefault(); const prev = focusableIds[idx - 1]; if (prev) onSelect(prev); break; }
+      case 'ArrowRight': {
+        e.preventDefault();
+        const next = focusableIds[idx + 1];
+        if (next) onSelect(next);
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const prev = focusableIds[idx - 1];
+        if (prev) onSelect(prev);
+        break;
+      }
       case 'ArrowDown': {
         e.preventDefault();
-        const cols = gridRef.current ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118)) : 1;
-        const next = focusableIds[idx + cols]; if (next) onSelect(next); break;
+        const next = focusableIds[idx + cols];
+        if (next) onSelect(next);
+        break;
       }
       case 'ArrowUp': {
         e.preventDefault();
-        const cols = gridRef.current ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118)) : 1;
-        const prev = focusableIds[idx - cols]; if (prev) onSelect(prev); break;
+        const prev = focusableIds[idx - cols];
+        if (prev) onSelect(prev);
+        break;
       }
-      case 'Enter': { e.preventDefault(); const node = folderNodes.find((n) => n.id === selected); if (node) onOpen(node); break; }
+      case 'Enter': {
+        e.preventDefault();
+        const node = folderNodes.find((n) => n.id === selected);
+        if (node) onOpen(node);
+        break;
+      }
       case 'Delete':
-      case 'Backspace': { e.preventDefault(); onDelete(selected); break; }
+      case 'Backspace': {
+        e.preventDefault();
+        onDelete(selected);
+        break;
+      }
       default: break;
     }
   };
@@ -235,7 +267,8 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
     if (dragId && dragId !== node.id && node.type === 'folder') {
       onMove(dragId, node.id);
     }
-    setDragId(null); setOverId(null);
+    setDragId(null);
+    setOverId(null);
   };
 
   const onDragOverPanel = (e) => {
@@ -249,7 +282,9 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
   const onDropPanel = (e) => {
     e.preventDefault();
     if (dragId) onMove(dragId, null);
-    setDragId(null); setOverId(null); setOverRoot(false);
+    setDragId(null);
+    setOverId(null);
+    setOverRoot(false);
   };
 
   return html`
@@ -267,26 +302,26 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
           <${IcoEmptyBox}/>
           <p>${isRoot ? 'No folders yet' : 'This folder is empty'}</p>
           <span>${isRoot
-            ? 'Click "+ New Folder" to create your first category folder'
-            : 'Use "+ New Folder" above to add a subfolder'}</span>
+    ? 'Click "+ New Folder" to create your first category folder'
+    : 'Use "+ New Folder" above to add a subfolder'}</span>
         </div>`}
 
       <div class="fm-grid" ref=${gridRef}>
         ${sortedNodes.map((node) => {
-          const sel  = selected   === node.id;
-          const ren  = renamingId === node.id;
-          const drag = dragId     === node.id;
-          const over = overId     === node.id;
+    const sel = selected === node.id;
+    const ren = renamingId === node.id;
+    const drag = dragId === node.id;
+    const over = overId === node.id;
 
-          return html`
+    return html`
             <div key=${node.id}
               class=${[
-                'fm-item',
-                'fm-item--dir',
-                sel  ? 'fm-item--sel'  : '',
-                drag ? 'fm-item--drag' : '',
-                over ? 'fm-item--over' : '',
-              ].filter(Boolean).join(' ')}
+    'fm-item',
+    'fm-item--dir',
+    sel ? 'fm-item--sel' : '',
+    drag ? 'fm-item--drag' : '',
+    over ? 'fm-item--over' : '',
+  ].filter(Boolean).join(' ')}
               tabIndex=${sel ? '0' : '-1'}
               draggable="true"
               onDragStart=${(e) => onDragStart(e, node)}
@@ -296,23 +331,27 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
               onDrop=${(e) => onDropFolder(e, node)}
               onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
               onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
-              onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
+              onContextMenu=${(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onCtx(e, node);
+  }}>
 
               <div class="fm-item-ico">
                 <${IcoFolder}/>
               </div>
 
               ${ren
-                ? html`<${NameInput}
+    ? html`<${NameInput}
                     initial=${node.name}
                     placeholder="Folder name"
                     siblings=${folderNodes}
                     excludeId=${node.id}
                     onCommit=${(v) => onCommitRename(node.id, v)}
                     onCancel=${onCancelRename}/>`
-                : html`<span class="fm-item-lbl" title=${node.name}>${node.name}</span>`}
+    : html`<span class="fm-item-lbl" title=${node.name}>${node.name}</span>`}
             </div>`;
-        })}
+  })}
 
         ${adding && html`
           <div class="fm-item fm-item--dir fm-item--new">
@@ -331,64 +370,63 @@ function GridPanel({ nodes, isRoot, selected, renamingId, adding,
 
 // ── Folder modal ──────────────────────────────────────────────────────────────
 function FolderModal({ onClose, onSelect }) {
-  const [tree,      setTree]      = useState(loadTree);
-  const [stack,     setStack]     = useState([]);
-  const [selected,  setSelected]  = useState(null);
-  const [renamingId,setRenamingId]= useState(null);
-  const [adding,    setAdding]    = useState(null);
-  const [ctx,       setCtx]       = useState(null);
-  const [visible,   setVisible]   = useState(false);
+  const [tree, setTree] = useState(loadTree);
+  const [stack, setStack] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [adding, setAdding] = useState(null);
+  const [ctx, setCtx] = useState(null);
+  const [visible, setVisible] = useState(false);
+
+  const persist = (t) => { setTree(t); saveTree(t); };
+
+  const doClose = () => { setVisible(false); setTimeout(onClose, 200); };
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
+
   useEffect(() => {
     const esc = (e) => { if (e.key === 'Escape' && !renamingId && !adding) doClose(); };
     document.addEventListener('keydown', esc);
     return () => document.removeEventListener('keydown', esc);
   }, [renamingId, adding]);
 
-  const persist  = (t) => { setTree(t); saveTree(t); };
-  const doClose  = () => { setVisible(false); setTimeout(onClose, 200); };
-
   const doOk = () => {
     const node = selected ? findNode(tree, selected) : null;
     if (node) {
-      // Build the full navigation path including all ancestor folders
       const path = buildPath(tree, stack, node.name);
       if (onSelect) onSelect(node.name, path);
-    } else {
-      // If we're inside a folder but nothing selected, use the current folder
-      if (stack.length > 0) {
-        const currentNode = findNode(tree, stack[stack.length - 1]);
-        const path = buildPath(tree, stack, null);
-        if (onSelect && currentNode) onSelect(currentNode.name, path);
-      } else {
-        if (onSelect) onSelect(null, null);
-      }
+    } else if (stack.length > 0) {
+      const currentNode = findNode(tree, stack[stack.length - 1]);
+      const path = buildPath(tree, stack, null);
+      if (onSelect && currentNode) onSelect(currentNode.name, path);
+    } else if (onSelect) {
+      onSelect(null, null);
     }
     doClose();
   };
 
-  const isRoot     = stack.length === 0;
-  const parentId   = stack.length ? stack[stack.length - 1] : null;
+  const isRoot = stack.length === 0;
+  const parentId = stack.length ? stack[stack.length - 1] : null;
   const parentNode = parentId ? findNode(tree, parentId) : null;
-  const nodes      = parentNode ? (parentNode.children || []) : tree;
-  const crumbs     = stack.map((id) => findNode(tree, id)).filter(Boolean);
+  const nodes = parentNode ? (parentNode.children || []) : tree;
+  const crumbs = stack.map((id) => findNode(tree, id)).filter(Boolean);
 
-  const reset   = () => { setSelected(null); setAdding(null); setRenamingId(null); };
-  const goRoot  = () => { setStack([]); reset(); };
+  const reset = () => { setSelected(null); setAdding(null); setRenamingId(null); };
+  const goRoot = () => { setStack([]); reset(); };
   const goCrumb = (i) => { setStack(stack.slice(0, i + 1)); reset(); };
-  const goBack  = () => { setStack(stack.slice(0, -1)); reset(); };
-  const goInto  = (node) => { setStack([...stack, node.id]); reset(); };
+  const goBack = () => { setStack(stack.slice(0, -1)); reset(); };
+  const goInto = (node) => { setStack([...stack, node.id]); reset(); };
 
-  // add — folders only
-  const startAdd  = () => { setAdding({ type: 'folder' }); setRenamingId(null); setSelected(null); };
+  const startAdd = () => { setAdding({ type: 'folder' }); setRenamingId(null); setSelected(null); };
   const commitAdd = (name) => {
-    const newNode = { id: uid(), name, type: 'folder', children: [] };
+    const newNode = {
+      id: uid(), name, type: 'folder', children: [],
+    };
     persist(insertInto(tree, parentId, newNode));
     setAdding(null);
   };
 
-  const startRename  = (node) => { setRenamingId(node.id); setAdding(null); setCtx(null); };
+  const startRename = (node) => { setRenamingId(node.id); setAdding(null); setCtx(null); };
   const commitRename = (id, name) => { persist(renameById(tree, id, name)); setRenamingId(null); };
 
   const doDelete = (id) => {
@@ -403,7 +441,7 @@ function FolderModal({ onClose, onSelect }) {
     const node = findNode(tree, nodeId);
     if (!node) return;
     const destParentNode = realTarget ? findNode(tree, realTarget) : null;
-    const destSiblings   = destParentNode ? (destParentNode.children || []) : tree;
+    const destSiblings = destParentNode ? (destParentNode.children || []) : tree;
     if (hasDuplicate(destSiblings, node.name, nodeId)) return;
     const newTree = moveNode(tree, nodeId, realTarget);
     if (newTree !== tree) persist(newTree);
@@ -425,9 +463,9 @@ function FolderModal({ onClose, onSelect }) {
                 class=${`fm-crumb ${isRoot ? 'fm-crumb--cur' : ''}`}
                 onClick=${goRoot}>Categories</button>
               ${crumbs.map((c, i) => html`
-                <span key=${'s'+c.id} class="fm-sep">›</span>
+                <span key=${`s${c.id}`} class="fm-sep">›</span>
                 <button key=${c.id} type="button"
-                  class=${`fm-crumb ${i === crumbs.length-1 ? 'fm-crumb--cur' : ''}`}
+                  class=${`fm-crumb ${i === crumbs.length - 1 ? 'fm-crumb--cur' : ''}`}
                   onClick=${() => goCrumb(i)}>${c.name}</button>`)}
             </div>
           </div>
@@ -446,7 +484,7 @@ function FolderModal({ onClose, onSelect }) {
           <${GridPanel}
             nodes=${nodes} isRoot=${isRoot}
             selected=${selected} renamingId=${renamingId} adding=${adding}
-            onSelect=${(id) => setSelected((p) => p === id ? null : id)}
+            onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
             onOpen=${goInto}
             onCtx=${(e, node) => setCtx({ x: e.clientX, y: e.clientY, node })}
             onCommitRename=${commitRename}
@@ -476,9 +514,8 @@ function FolderModal({ onClose, onSelect }) {
 // ── App + EDS entry ───────────────────────────────────────────────────────────
 function FolderApp() {
   const [open, setOpen] = useState(true);
-  const doClose  = () => { setOpen(false); window.history.back(); };
+  const doClose = () => { setOpen(false); window.history.back(); };
 
-  // Save selection to localStorage so createpost.js can read it after history.back()
   const doSelect = (name, path) => {
     if (name) {
       localStorage.setItem('folder:pending-selection', JSON.stringify({
