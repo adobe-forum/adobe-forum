@@ -337,13 +337,51 @@ app.post('/api/sidebar-items', async (req, res) => {
       }
     }
 
-    const savedItem = await createNestedStructure(
-      path || '',
-      postId || null,
-      category,
-      title,
-      icon || '📄',
-    );
+    // ── Duplicate check: prevent creating the same folder twice ──────────
+    if (isFolder) {
+      const { parentId = null } = req.body;
+      const existing = await SidebarItem.findOne({
+        title: { $regex: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        category,
+        parentId: parentId || null,
+        isFolder: true,
+      });
+      if (existing) {
+        const populatedExisting = await SidebarItem.findById(existing._id).populate('postId', '_id title body');
+        return res.status(200).json({
+          success: true,
+          message: 'Folder already exists',
+          item: populatedExisting,
+        });
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────
+
+    const { parentId = null } = req.body;
+
+    let savedItem;
+    if (isFolder) {
+      // Create folder directly with parentId — bypass createNestedStructure
+      // which doesn't support parentId
+      const newFolder = new SidebarItem({
+        title,
+        category,
+        icon: '📁',
+        postId: null,
+        isFolder: true,
+        parentId: parentId || null,
+        path: path || '',
+      });
+      savedItem = await newFolder.save();
+    } else {
+      savedItem = await createNestedStructure(
+        path || '',
+        postId || null,
+        category,
+        title,
+        icon || '📄',
+      );
+    }
 
     const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId', '_id title body');
 
@@ -646,6 +684,45 @@ app.get('/api/sidebar-items/:id/post', async (req, res) => {
   }
 });
 
+// ============================================
+// DELETE: Remove an entire category and all its items
+// ============================================
+app.delete('/api/sidebar/categories/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    // categoryId is the slug (e.g. "api-test"), find matching items by category name
+    // We need to find all items where category slug matches
+    const allItems = await SidebarItem.find();
+    const matchingItems = allItems.filter((item) => {
+      const slug = item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      return slug === categoryId;
+    });
+
+    if (matchingItems.length === 0) {
+      return res.status(404).json({ success: false, error: 'Category not found' });
+    }
+
+    // Recursively delete all items in this category
+    for (const item of matchingItems) {
+      // eslint-disable-next-line no-await-in-loop
+      await SidebarItem.findByIdAndDelete(item._id);
+    }
+
+    return res.json({
+      success: true,
+      message: `Category deleted with ${matchingItems.length} items`,
+    });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// ============================================
+// DELETE: Remove an entire category and all its items
+// ============================================
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

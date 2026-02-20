@@ -1,5 +1,5 @@
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
+import { useState, useEffect } from '../../vendor/preact-hooks.js';
 
 // ============================================
 // ICON COMPONENTS
@@ -32,377 +32,29 @@ const UserIcon = () => html`
 `;
 
 // ============================================
-// SIDEBAR COMPONENTS
-// ============================================
-
-const API_BASE = 'http://localhost:5000/api';
-
-// Recursive TreeItem component for nested structure
-function TreeItem({
-  item, activeItem, onItemClick, level = 0,
-}) {
-  const [isExpanded, setIsExpanded] = useState(level === 0);
-  const hasChildren = item.children && item.children.length > 0;
-  const isFolder = item.isFolder || hasChildren;
-
-  const handleClick = () => {
-    if (isFolder) {
-      setIsExpanded(!isExpanded);
-    }
-    // Extract postId - handle both string IDs and populated objects
-    if (item.postId) {
-      // eslint-disable-next-line no-underscore-dangle
-      const postId = typeof item.postId === 'string' ? item.postId : (item.postId._id || item.postId.id);
-      if (postId) {
-        // eslint-disable-next-line no-underscore-dangle
-        onItemClick(item._id, postId);
-      }
-    }
-  };
-
-  return html`
-    <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}" style="--indent-level: ${level}">
-      <div
-        class="tree-item-content ${/* eslint-disable-line no-underscore-dangle */ activeItem === item._id ? 'active' : ''}"
-        onClick=${handleClick}
-      >
-        ${isFolder && html`
-          <span class="tree-toggle ${isExpanded ? 'expanded' : ''}">▶</span>
-        `}
-        <span class="tree-icon">${isFolder ? '📁' : (item.icon || '📄')}</span>
-        <span class="tree-label">${item.title}</span>
-      </div>
-      ${isFolder && isExpanded && hasChildren && html`
-        <ul class="tree-children">
-          ${item.children.map((child) => html`
-            <${TreeItem}
-              key=${/* eslint-disable-line no-underscore-dangle */ child._id}
-              item=${child}
-              activeItem=${activeItem}
-              onItemClick=${onItemClick}
-              level=${level + 1}
-            />
-          `)}
-        </ul>
-      `}
-    </li>
-  `;
-}
-
-function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
-
-  const hasItems = category.items && category.items.length > 0;
-
-  return html`
-    <li class="category-item ${isCollapsed ? 'collapsed' : ''}">
-      <div class="category-header" onClick=${toggleCollapse}>
-        <span class="category-toggle">▼</span>
-        <span class="category-icon">${category.icon || '📁'}</span>
-        <span class="category-name">${category.name}</span>
-      </div>
-      ${!isCollapsed && html`
-        <ul class="tree-list">
-          ${hasItems
-    ? category.items.map((item) => html`
-              <${TreeItem}
-                key=${/* eslint-disable-line no-underscore-dangle */ item._id}
-                item=${item}
-                activeItem=${activeSubcategory}
-                onItemClick=${(itemId, postId) => onSubcategoryClick(category.id, itemId, postId)}
-                level=${0}
-              />
-            `)
-    : html`<div class="no-items">No files yet</div>`
-}
-        </ul>
-      `}
-    </li>
-  `;
-}
-
-function Sidebar() {
-  // --- State (No localStorage, backend is single source of truth) ---
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubcategory, setActiveSubcategory] = useState(null);
-
-  // New Category Creation State
-  const [isCreating, setIsCreating] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [creationError, setCreationError] = useState('');
-
-  const inputRef = useRef(null);
-
-  // --- Effects ---
-  // Fetch categories from API (backend is single source of truth)
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`${API_BASE}/sidebar/categories`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success && data.categories) {
-        // Validate that postIds are present in items
-        data.categories.forEach((cat) => {
-          const flattenItems = (items) => {
-            items.forEach((item) => {
-              if (!item.isFolder && !item.postId) {
-                // eslint-disable-next-line no-console
-                console.warn(`Item "${item.title}" in category "${cat.name}" has no postId`);
-              }
-              if (item.postId) {
-                // eslint-disable-next-line no-console
-                console.log(`✓ Item "${item.title}" has postId:`, item.postId);
-              }
-              if (item.children) flattenItems(item.children);
-            });
-          };
-          flattenItems(cat.items || []);
-        });
-        setCategories(data.categories);
-      } else {
-        throw new Error(data.error || 'Failed to fetch categories');
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to fetch categories:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-
-    // Listen for refresh-sidebar events
-    const handleRefresh = () => fetchCategories();
-    window.addEventListener('refresh-sidebar', handleRefresh);
-
-    return () => {
-      window.removeEventListener('refresh-sidebar', handleRefresh);
-    };
-  }, []);
-
-  // Focus input when creation mode starts
-  useEffect(() => {
-    if (isCreating && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isCreating]);
-
-  // --- Handlers ---
-  const handleSearch = (e) => setSearchTerm(e.target.value.toLowerCase());
-
-  const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
-    // eslint-disable-next-line no-console
-    console.log('Sidebar item clicked:', { categoryId, subcategoryId, postId });
-
-    setActiveSubcategory(subcategoryId);
-
-    // Validate postId exists
-    if (!postId) {
-      // eslint-disable-next-line no-console
-      console.warn('No postId available for this item. Item may be a folder without an associated post.');
-      return;
-    }
-
-    // Trigger custom event to load post in forum-post block
-    const event = new CustomEvent('load-forum-post', {
-      detail: { postId, sidebarItemId: subcategoryId },
-    });
-    // eslint-disable-next-line no-console
-    console.log('Dispatching load-forum-post event with postId:', postId);
-    window.dispatchEvent(event);
-  };
-
-  const startCreating = () => {
-    setIsCreating(true);
-    setNewCatName('');
-    setCreationError('');
-  };
-
-  const cancelCreating = () => {
-    setIsCreating(false);
-    setNewCatName('');
-    setCreationError('');
-  };
-
-  const handleCreateKeyDown = async (e) => {
-    if (e.key === 'Escape') {
-      cancelCreating();
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const trimmedName = newCatName.trim();
-      if (!trimmedName) {
-        setCreationError('Name cannot be empty');
-        return;
-      }
-
-      // Check if category already exists (case-insensitive)
-      const exists = categories.some(
-        (c) => c.name.toLowerCase() === trimmedName.toLowerCase(),
-      );
-
-      if (exists) {
-        setCreationError('Category already exists');
-        return;
-      }
-
-      // Create a placeholder item in the category via smart-add
-      // This ensures the category appears in the sidebar
-      try {
-        const response = await fetch(`${API_BASE}/sidebar-items/smart-add`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: 'Getting Started',
-            category: trimmedName,
-            postId: null,
-          }),
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          // Refresh categories from backend
-          await fetchCategories();
-          cancelCreating();
-        } else {
-          setCreationError(data.error || 'Failed to create category');
-        }
-      } catch (err) {
-        setCreationError('Network error');
-      }
-    }
-  };
-
-  const handleCreateInput = (e) => {
-    setNewCatName(e.target.value);
-    if (creationError) setCreationError(''); // Clear error while typing
-  };
-
-  // --- Filtering Logic (recursive for tree items) ---
-  const filterItems = (items, term) => items.reduce((acc, item) => {
-    const matches = item.title.toLowerCase().includes(term);
-    const filteredChildren = item.children ? filterItems(item.children, term) : [];
-
-    if (matches || filteredChildren.length > 0) {
-      acc.push({
-        ...item,
-        children: filteredChildren.length > 0 ? filteredChildren : item.children,
-      });
-    }
-    return acc;
-  }, []);
-
-  const filteredCategories = searchTerm
-    ? categories.map((category) => {
-      const categoryMatches = category.name.toLowerCase().includes(searchTerm);
-      const filteredItems = filterItems(category.items || [], searchTerm);
-
-      if (categoryMatches || filteredItems.length > 0) {
-        return {
-          ...category,
-          items: filteredItems.length > 0 ? filteredItems : category.items,
-        };
-      }
-      return null;
-    }).filter(Boolean)
-    : categories;
-
-  return html`
-    <div class="sidebar">
-      <div class="search-container">
-        <input type="text" placeholder="Search..." value=${searchTerm} onInput=${handleSearch} />
-      </div>
-
-      <div class="explorer-header">
-        <h3>EXPLORER</h3>
-        <button class="add-category" title="Add Category" onClick=${startCreating}>
-          <${PlusIcon} />
-        </button>
-      </div>
-
-      ${isCreating && html`
-        <div class="new-category-form">
-          <input 
-            ref=${inputRef}
-            type="text" 
-            class="new-category-input ${creationError ? 'error' : ''}"
-            placeholder="Add category"
-            value=${newCatName}
-            onKeyDown=${handleCreateKeyDown}
-            onInput=${handleCreateInput}
-            onBlur=${cancelCreating} 
-          />
-          ${creationError && html`<div class="error-msg">${creationError}</div>`}
-        </div>
-      `}
-
-      ${loading && html`<div class="loading">Loading...</div>`}
-
-      ${error && html`
-        <div class="error-state">
-          <p>Failed to load: ${error}</p>
-          <button onClick=${fetchCategories}>Retry</button>
-        </div>
-      `}
-
-      ${!loading && !error && html`
-        <ul class="category-list">
-          ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
-                <${CategoryItem}
-                  key=${category.id}
-                  category=${category}
-                  activeSubcategory=${activeSubcategory}
-                  onSubcategoryClick=${handleSubcategoryClick}
-                />
-              `)
-    : html`<div class="no-results">No categories found</div>`
-}
-        </ul>
-      `}
-    </div>
-  `;
-}
-
-// ============================================
-// HEADER COMPONENT (Same as before)
+// HEADER COMPONENT
 // ============================================
 
 function HeaderComponent() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
 
-  const toggleMenu = () => {
-    const newState = !isMobileMenuOpen;
-    setIsMobileMenuOpen(newState);
-    // Toggle sidebar visibility on mobile
-    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-    if (sidebarWrapper) {
-      sidebarWrapper.classList.toggle('mobile-open', newState);
-    }
-  };
+  useEffect(() => {
+    const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
+    window.addEventListener('sidebar-state-changed', onSidebarStateChange);
+    return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
+  }, []);
 
-  const handleProfileImageError = () => {
-    setProfileImageError(true);
+  const toggleSidebar = () => {
+    const next = !sidebarOpen;
+    setSidebarOpen(next);
+    window.dispatchEvent(new CustomEvent('toggle-sidebar', { detail: { isOpen: next } }));
   };
 
   return html`
     <nav class="spectrum-nav">
-      <div class="nav-hamburger ${isMobileMenuOpen ? 'is-open' : ''}">
-        <button type="button" onClick=${toggleMenu} aria-label="Toggle Sidebar">
+      <div class="nav-hamburger ${sidebarOpen ? 'is-open' : ''}">
+        <button type="button" onClick=${toggleSidebar} aria-label="Toggle Sidebar" aria-expanded=${sidebarOpen}>
           <span class="nav-hamburger-icon"></span>
         </button>
       </div>
@@ -413,13 +65,10 @@ function HeaderComponent() {
             src="/icons/logo.svg"
             alt="Adobe Logo"
             onError=${(e) => {
-    if (e.target.src.endsWith('.svg')) {
-      e.target.src = '/icons/logo.png';
-    }
+    if (e.target.src.endsWith('.svg')) e.target.src = '/icons/logo.png';
   }}
           />
         </a>
-
         <a href="/create-post" class="nav-button spectrum-button">
           <${PlusIcon} />
           <span>Add Post</span>
@@ -433,18 +82,16 @@ function HeaderComponent() {
               <${BellIcon} />
             </a>
           </li>
-          
           <li>
             <a href="/settings" class="spectrum-action-button" aria-label="Settings">
               <${SettingsIcon} />
             </a>
           </li>
-          
           <li class="profile-item">
             <a href="/profile" class="profile-link">
               <div class="profile-avatar">
                 ${!profileImageError
-    ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
+    ? html`<img src="/icons/profile.png" alt="Profile" onError=${() => setProfileImageError(true)} />`
     : html`<${UserIcon} />`}
               </div>
             </a>
@@ -456,33 +103,59 @@ function HeaderComponent() {
 }
 
 // ============================================
+// HELPERS
+// ============================================
+
+// Manually inject a CSS file if it hasn't been loaded yet
+function loadCSS(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.append(link);
+}
+
+// ============================================
 // AEM BLOCK DECORATOR
 // ============================================
 
 export default async function decorate(block) {
-  // Clear any authored content - sidebar is now fully dynamic from backend
   block.textContent = '';
 
+  // ── Header ──────────────────────────────────────────────────────────────
   const headerWrapper = document.createElement('div');
   headerWrapper.className = 'header-wrapper';
-  const sidebarWrapper = document.createElement('div');
-  sidebarWrapper.className = 'sidebar-wrapper';
-
   block.append(headerWrapper);
-  block.append(sidebarWrapper);
 
   try {
     render(html`<${HeaderComponent} />`, headerWrapper);
-    render(html`<${Sidebar} />`, sidebarWrapper);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('Render error:', err);
+    console.error('Header render error:', err);
   }
 
+  // ── Sidebar — always mounted globally on every page ──────────────────────
+  // Manually load sidebar CSS since AEM won't auto-load it
+  // (the sidebar block isn't in the page document, we're importing it directly)
   try {
-    const resp = await fetch('/footer.plain.html');
-    if (resp.ok) {
-      const footerHtml = await resp.text();
+    loadCSS('/blocks/sidebar/sidebar.css');
+
+    const sidebarMount = document.createElement('div');
+    sidebarMount.className = 'sidebar-mount';
+    document.body.append(sidebarMount);
+
+    const { default: decorateSidebar } = await import('../sidebar/sidebar.js');
+    decorateSidebar(sidebarMount);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load sidebar', e);
+  }
+
+  // ── Footer ───────────────────────────────────────────────────────────────
+  try {
+    const footerResp = await fetch('/footer.plain.html');
+    if (footerResp.ok) {
+      const footerHtml = await footerResp.text();
       let footer = document.querySelector('footer');
       if (!footer) {
         footer = document.createElement('footer');
