@@ -6,7 +6,6 @@ import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 // ============================================
 
 const API_BASE = 'http://localhost:5000/api';
-const SIDEBAR_WIDTH = 280;
 
 // ============================================
 // ICONS
@@ -305,10 +304,13 @@ function Sidebar() {
   const inputRef = useRef(null);
 
   const applyBodyOffset = (open) => {
-    const main = document.querySelector('main') || document.querySelector('.content-wrapper');
-    if (main) {
-      main.style.transition = 'margin-left 0.25s ease';
-      main.style.marginLeft = open ? `${SIDEBAR_WIDTH}px` : '0';
+    // Rely on CSS Grid classes instead of manual JS margins
+    if (open) {
+      document.body.classList.add('sidebar-is-open');
+      document.body.classList.remove('sidebar-is-closed');
+    } else {
+      document.body.classList.add('sidebar-is-closed');
+      document.body.classList.remove('sidebar-is-open');
     }
     window.dispatchEvent(new CustomEvent('sidebar-state-changed', { detail: { isOpen: open } }));
   };
@@ -326,7 +328,10 @@ function Sidebar() {
   useEffect(() => {
     applyBodyOffset(isOpen);
     const onResize = () => {
-      if (window.innerWidth >= 768 && !isOpen) { setIsOpen(true); applyBodyOffset(true); }
+      if (window.innerWidth >= 768 && !isOpen) {
+        setIsOpen(true);
+        applyBodyOffset(true);
+      }
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
