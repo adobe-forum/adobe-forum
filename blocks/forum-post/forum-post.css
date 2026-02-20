@@ -78,24 +78,14 @@
   margin: 0 0 16px;
 }
 
-/* Rich text formatting from Quill editor */
 .block-text strong,
-.block-text b {
-  font-weight: 700;
-}
+.block-text b { font-weight: 700; }
 
 .block-text em,
-.block-text i {
-  font-style: italic;
-}
+.block-text i { font-style: italic; }
 
-.block-text u {
-  text-decoration: underline;
-}
-
-.block-text s {
-  text-decoration: line-through;
-}
+.block-text u { text-decoration: underline; }
+.block-text s { text-decoration: line-through; }
 
 .block-text code {
   background: var(--spectrum-gray-100, #f5f5f5);
@@ -112,9 +102,7 @@
   padding-left: 2em;
 }
 
-.block-text li {
-  margin: 8px 0;
-}
+.block-text li { margin: 8px 0; }
 
 .block-text blockquote {
   border-left: 4px solid var(--spectrum-blue-500, #1473e6);
@@ -129,9 +117,7 @@
   text-decoration: underline;
 }
 
-.block-text a:hover {
-  text-decoration: none;
-}
+.block-text a:hover { text-decoration: none; }
 
 .block-text h1,
 .block-text h2,
@@ -156,18 +142,9 @@
   font-size: 1.25em;
 }
 
-/* Quill-specific classes */
-.block-text .ql-align-center {
-  text-align: center;
-}
-
-.block-text .ql-align-right {
-  text-align: right;
-}
-
-.block-text .ql-align-justify {
-  text-align: justify;
-}
+.block-text .ql-align-center  { text-align: center; }
+.block-text .ql-align-right   { text-align: right; }
+.block-text .ql-align-justify { text-align: justify; }
 
 .block-text .ql-indent-1 {
   padding-left: 3em;
@@ -181,7 +158,6 @@
   padding-left: 9em;
 }
 
-/* Table support from Quill */
 .block-text table {
   border-collapse: collapse;
   width: 100%;
@@ -296,18 +272,18 @@
   width: 8px;
 }
 
-.comments-list::-webkit-scrollbar-track {
-  background: var(--spectrum-gray-100);
-  border-radius: var(--spectrum-border-radius-100);
+.comments-list::-webkit-scrollbar-track { 
+  background: var(--spectrum-gray-100); 
+  border-radius: var(--spectrum-border-radius-100); 
 }
 
-.comments-list::-webkit-scrollbar-thumb {
-  background: var(--spectrum-gray-300);
-  border-radius: var(--spectrum-border-radius-100);
+.comments-list::-webkit-scrollbar-thumb { 
+  background: var(--spectrum-gray-300); 
+  border-radius: var(--spectrum-border-radius-100); 
 }
 
-.comments-list::-webkit-scrollbar-thumb:hover {
-  background: var(--spectrum-gray-400);
+.comments-list::-webkit-scrollbar-thumb:hover { 
+  background: var(--spectrum-gray-400); 
 }
 
 .comment-row {
@@ -405,4 +381,17 @@
 
 .send-btn:hover {
   background-color: var(--link-hover-color);
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(255 255 255 / 80%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--body-font-size-s);
+  color: var(--spectrum-gray-700);
+  z-index: 999;
 }

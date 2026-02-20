@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 // ============================================
 
 const PlusIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
     <line x1="12" y1="5" x2="12" y2="19"/>
     <line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
@@ -32,12 +32,15 @@ const UserIcon = () => html`
 `;
 
 // ============================================
-// SIDEBAR COMPONENTS
+// API FUNCTIONS
 // ============================================
 
 const API_BASE = 'http://localhost:5000/api';
 
-// Recursive TreeItem component for nested structure
+// ============================================
+// TREE ITEM COMPONENT
+// ============================================
+
 function TreeItem({
   item, activeItem, onItemClick, level = 0,
 }) {
@@ -89,6 +92,10 @@ function TreeItem({
   `;
 }
 
+// ============================================
+// CATEGORY ITEM COMPONENT
+// ============================================
+
 function CategoryItem({ category, activeSubcategory, onSubcategoryClick }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
@@ -130,8 +137,6 @@ function Sidebar() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
-
-  // New Category Creation State
   const [isCreating, setIsCreating] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [creationError, setCreationError] = useState('');
@@ -194,7 +199,7 @@ function Sidebar() {
     };
   }, []);
 
-  // Focus input when creation mode starts
+  // Auto-focus input when creating
   useEffect(() => {
     if (isCreating && inputRef.current) {
       inputRef.current.focus();
@@ -244,6 +249,7 @@ function Sidebar() {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const trimmedName = newCatName.trim();
+
       if (!trimmedName) {
         setCreationError('Name cannot be empty');
         return;
@@ -288,7 +294,7 @@ function Sidebar() {
 
   const handleCreateInput = (e) => {
     setNewCatName(e.target.value);
-    if (creationError) setCreationError(''); // Clear error while typing
+    if (creationError) setCreationError('');
   };
 
   // --- Filtering Logic (recursive for tree items) ---
@@ -339,7 +345,7 @@ function Sidebar() {
             ref=${inputRef}
             type="text" 
             class="new-category-input ${creationError ? 'error' : ''}"
-            placeholder="Add category"
+            placeholder="Category name..."
             value=${newCatName}
             onKeyDown=${handleCreateKeyDown}
             onInput=${handleCreateInput}
@@ -378,7 +384,7 @@ function Sidebar() {
 }
 
 // ============================================
-// HEADER COMPONENT (Same as before)
+// HEADER COMPONENT
 // ============================================
 
 function HeaderComponent() {
@@ -388,7 +394,6 @@ function HeaderComponent() {
   const toggleMenu = () => {
     const newState = !isMobileMenuOpen;
     setIsMobileMenuOpen(newState);
-    // Toggle sidebar visibility on mobile
     const sidebarWrapper = document.querySelector('.sidebar-wrapper');
     if (sidebarWrapper) {
       sidebarWrapper.classList.toggle('mobile-open', newState);
@@ -445,7 +450,8 @@ function HeaderComponent() {
               <div class="profile-avatar">
                 ${!profileImageError
     ? html`<img src="/icons/profile.png" alt="Profile" onError=${handleProfileImageError} />`
-    : html`<${UserIcon} />`}
+    : html`<${UserIcon} />`
+}
               </div>
             </a>
           </li>
