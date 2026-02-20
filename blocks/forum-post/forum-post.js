@@ -70,53 +70,6 @@ function parseHtmlToContentBlocks(htmlString) {
   return contentBlocks;
 }
 
-/**
- * 1. SYNCHRONOUS DUMMY DATA
- * No promises, no timeouts. This data is instantly available to pass PSI checks.
- */
-const DUMMY_POST_DATA = {
-  id: '123',
-  title: 'Frontend Resources',
-  topic: 'JavaScript',
-  author: 'Sarah',
-  tags: ['#react', '#frontend', '#hooks'],
-  content: [
-    {
-      type: 'text',
-      value: '<p>React hooks have changed how we write components. Before we dive in, let’s look at the lifecycle.</p>',
-    },
-    {
-      type: 'image',
-      src: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      type: 'text',
-      value: '<p>As you can see above, the ecosystem is vast. Here is a basic example of using <code>useState</code>:</p>',
-    },
-    {
-      type: 'code',
-      lang: 'javascript',
-      value: `const [count, setCount] = useState(0);
-
-// Update state
-<button onClick={() => setCount(count + 1)}>
-  Count is {count}
-</button>`,
-    },
-    {
-      type: 'text',
-      value: '<p>Keep practicing and you will master it in no time.</p>',
-    },
-  ],
-  comments: [
-    { user: 'Guest', text: 'The code snippet is very helpful!' },
-    { user: 'DevMike', text: 'Thanks for sharing this.' },
-  ],
-};
-
-/**
- * Helper: Content Renderer
- */
 const ContentBlock = ({ block }) => {
   switch (block.type) {
     case 'text':
@@ -124,13 +77,15 @@ const ContentBlock = ({ block }) => {
     case 'image':
       return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
     case 'code': {
-      // Calculate line numbers for the gutter
-      const lineCount = block.value.split('\n').length;
-      const nums = Array.from({ length: lineCount }, (_, i) => i + 1).join('\\a ');
+      const lines = block.value.split('\n');
+      const lineNumbers = lines.map((_, i) => html`<span>${i + 1}</span>`);
 
       return html`
         <div class="block-code">
-          <pre style="--line-nums: '${nums}'">${block.value}</pre>
+          <div class="code-inner">
+            <div class="code-line-nums">${lineNumbers}</div>
+            <pre class="code-content">${block.value}</pre>
+          </div>
         </div>
       `;
     }
@@ -140,17 +95,13 @@ const ContentBlock = ({ block }) => {
 };
 
 const ArrowIcon = () => html`
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"></line>
-    <polyline points="12 5 19 12 12 19"></polyline>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 18 18">
+    <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
   </svg>
 `;
 
-/**
- * 2. MAIN COMPONENT
- */
 const ForumPost = () => {
-  const [post, setPost] = useState(DUMMY_POST_DATA);
+  const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
@@ -160,7 +111,7 @@ const ForumPost = () => {
     if (commentsListRef.current) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
-  }, [post.comments]);
+  }, [post ? post.comments : null]);
 
   // Listen for sidebar click events
   useEffect(() => {
@@ -235,6 +186,16 @@ const ForumPost = () => {
     };
     // No dependency array means setup only once
   }, []);
+
+  if (!post) {
+    return html`
+      <div class="forum-post-wrapper">
+        <div class="loading-state">
+          ${loading ? 'Loading post...' : 'Select a post from the sidebar to view it.'}
+        </div>
+      </div>
+    `;
+  }
 
   const addComment = () => {
     if (!inputValue.trim()) return;
