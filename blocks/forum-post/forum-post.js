@@ -94,6 +94,13 @@ const ArrowIcon = () => html`
   </svg>
 `;
 
+const BackIcon = () => html`
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+`;
+
 const ForumPost = () => {
   const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
@@ -205,7 +212,6 @@ const ForumPost = () => {
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
 
-      <!-- Back button — fires show-cards event so cards-display shows again -->
       <button class="forum-back-btn" onClick=${handleBack}>
         <${BackIcon} />
         Back to Posts
