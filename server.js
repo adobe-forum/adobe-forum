@@ -1,14 +1,24 @@
+/**
+ * server.js
+ *
+ * Before running, install dependencies:
+ *   npm install express mongodb cors dotenv
+ *
+ * Add MONGODB_URI to your .env file.
+ */
+
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const cors = require('cors');
+
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
+const { MONGODB_URI } = process.env;
+const client = new MongoClient(MONGODB_URI);
 
 async function run() {
   try {
@@ -35,9 +45,12 @@ async function run() {
     });
 
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => console.log(`Backend running on http://localhost:${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Backend running on http://localhost:${PORT}`);
+    });
   } catch (err) {
     console.error('MongoDB Connection Error:', err);
+    process.exit(1);
   }
 }
 

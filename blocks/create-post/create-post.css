@@ -159,6 +159,7 @@
   background: var(--cp-bg-surface);
   border: 1.5px solid var(--cp-border-light);
   border-radius: 6px;
+
   /* Match .add-category-trigger padding so heights are identical */
   padding: 6px 10px 6px 8px;
   font-size: 14px;
@@ -171,11 +172,11 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-}
 
-.category-breadcrumb-icon svg {
-  width: 16px;
-  height: 13px;
+  & svg {
+    width: 16px;
+    height: 13px;
+  }
 }
 
 .category-breadcrumb-segments {
@@ -191,11 +192,11 @@
   font-weight: 500;
   color: var(--cp-text-primary);
   white-space: nowrap;
-}
 
-.category-breadcrumb-segment:last-child {
-  font-weight: 600;
-  color: var(--cp-text-primary);
+  &:last-child {
+    font-weight: 600;
+    color: var(--cp-text-primary);
+  }
 }
 
 .category-breadcrumb-sep {
@@ -219,12 +220,12 @@
   margin-left: 2px;
   flex-shrink: 0;
   line-height: 1;
-}
 
-/* No color change on hover — just subtle opacity */
-.category-breadcrumb-remove:hover {
-  color: var(--cp-text-muted);
-  opacity: 0.7;
+  /* No color change on hover — just subtle opacity */
+  &:hover {
+    color: var(--cp-text-muted);
+    opacity: 0.7;
+  }
 }
 
 /* Custom editor wrapper */
@@ -1168,78 +1169,5 @@
   to {
     opacity: 0;
     transform: translateX(-50%) translateY(16px);
-  }
-}
-/* ── Category breadcrumb chip ── */
-.category-breadcrumb-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--cp-bg-surface);
-  border: 1.5px solid var(--cp-border-light);
-  border-radius: 6px;
-  padding: 6px 10px 6px 8px;
-  font-size: 14px;
-  color: var(--cp-text-primary);
-  max-width: 100%;
-}
-
-.category-breadcrumb-icon {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.category-breadcrumb-icon svg {
-  width: 16px;
-  height: 13px;
-}
-
-.category-breadcrumb-segments {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.category-breadcrumb-segment {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--cp-text-primary);
-  white-space: nowrap;
-}
-
-.category-breadcrumb-segment:last-child {
-  font-weight: 600;
-}
-
-.category-breadcrumb-sep {
-  color: #bbb;
-  font-size: 13px;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-
-.category-breadcrumb-remove{
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--cp-text-secondary);
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  border-radius: 50%;
-
-  &:hover {
-    color: var(--cp-text-primary);
-    background: var(--cp-bg-chip-active);
   }
 }

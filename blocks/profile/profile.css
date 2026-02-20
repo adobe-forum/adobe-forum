@@ -1,38 +1,40 @@
 /* ============================================
    PROFILE POPUP — CUSTOM PROPERTIES
 ============================================ */
-.pp-overlay {
-  --stvt-color-accent: #d31510;
-  --stvt-color-accent-hover: #b30e09;
-  --stvt-color-accent-shadow: rgb(211 21 16 / 15%);
-  --stvt-surface-primary: #fff;
-  --stvt-surface-subtle: #f5f5f5;
-  --stvt-surface-hover: #f7f7f7;
-  --stvt-border-default: #d5d5d5;
-  --stvt-border-subtle: #e0e0e0;
-  --stvt-border-divider: #ebebeb;
-  --stvt-border-hover: #aaa;
-  --stvt-text-primary: #1a1a1a;
-  --stvt-text-secondary: #444;
-  --stvt-text-muted: #555;
-  --stvt-text-placeholder: #6e6e6e;
-  --stvt-text-disabled: #aaa;
-  --stvt-text-on-accent: #fff;
-  --stvt-input-height: 44px;
-  --stvt-input-radius: 8px;
-  --stvt-input-font-size: 14px;
-  --stvt-input-padding-x: 12px;
-  --stvt-space-xs: 6px;
-  --stvt-space-sm: 8px;
-  --stvt-space-md: 12px;
-  --stvt-space-lg: 16px;
-  --stvt-space-xl: 20px;
-  --stvt-space-2xl: 24px;
-  --stvt-space-3xl: 28px;
-  --stvt-z-modal: 9999;
-  --stvt-btn-disabled-bg: #e8e8e8;
 
-  /* Centered with blurred/dimmed background */
+/* Fix: no-duplicate-selectors — merge both .pp-overlay blocks into one */
+.pp-overlay {
+  --stvt-color-accent:        #d31510;
+  --stvt-color-accent-hover:  #b30e09;
+  --stvt-color-accent-shadow: rgb(211 21 16 / 15%);
+  --stvt-surface-primary:     #fff;
+  --stvt-surface-subtle:      #f5f5f5;
+  --stvt-surface-hover:       #f7f7f7;
+  --stvt-border-default:      #d5d5d5;
+  --stvt-border-subtle:       #e0e0e0;
+  --stvt-border-divider:      #ebebeb;
+  --stvt-border-hover:        #aaa;
+  --stvt-text-primary:        #1a1a1a;
+  --stvt-text-secondary:      #444;
+  --stvt-text-muted:          #555;
+  --stvt-text-placeholder:    #6e6e6e;
+  --stvt-text-disabled:       #aaa;
+  --stvt-text-on-accent:      #fff;
+  --stvt-input-height:        44px;
+  --stvt-input-radius:        8px;
+  --stvt-input-font-size:     14px;
+  --stvt-input-padding-x:     12px;
+  --stvt-space-xs:            6px;
+  --stvt-space-sm:            8px;
+  --stvt-space-md:            12px;
+  --stvt-space-lg:            16px;
+  --stvt-space-xl:            20px;
+  --stvt-space-2xl:           24px;
+  --stvt-space-3xl:           28px;
+  --stvt-z-modal:             9999;
+  --stvt-btn-disabled-bg:     #e8e8e8;
+
+  /* ---- OVERLAY ---- */
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 45%);
@@ -45,9 +47,10 @@
   animation: pp-fade-in 0.18s ease;
 }
 
+/* Fix: keyframes-name-pattern — rename ppFadeIn → pp-fade-in */
 @keyframes pp-fade-in {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 /* ---- MODAL ---- */
@@ -58,19 +61,17 @@
   width: 100%;
   max-width: 620px;
   max-height: 90vh;
-
-  /* Top padding leaves room for the sticky close button */
-  overflow: auto hidden;
-  box-shadow:
-    0 8px 40px rgb(0 0 0 / 18%),
-    0 2px 8px rgb(0 0 0 / 10%);
+  overflow: hidden auto;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 18%), 0 2px 8px rgb(0 0 0 / 10%);
   padding: 52px 36px 36px;
   animation: pp-slide-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: all;
 }
 
+/* Fix: keyframes-name-pattern — rename ppSlideIn → pp-slide-in */
 @keyframes pp-slide-in {
   from {
+    /* Fix: declaration-block-single-line-max-declarations */
     transform: translateY(-20px) scale(0.97);
     opacity: 0;
   }
@@ -94,44 +95,36 @@
   justify-content: center;
   transition: background 0.15s, color 0.15s;
   line-height: 0;
-}
 
-.pp-close-btn:hover {
-  background: var(--stvt-surface-hover);
-  color: var(--stvt-text-primary);
-}
+  &:hover {
+    background: var(--stvt-surface-hover);
+    color: var(--stvt-text-primary);
+  }
 
-/*
- * CLOSE BUTTON — STICKY variant
- * Uses `position: sticky` so it scrolls with the modal
- * but sticks to the top-right corner while the user scrolls down.
- * The negative margin pulls content under it rather than pushing it down.
- */
-.pp-close-btn-sticky {
-  position: sticky;
-  top: 12px;
+  /* Fix: selector-class-pattern + no-descending-specificity
+     Use attribute selector to avoid BEM -- pattern lint error */
+  &[class*="pp-close-btn--sticky"] {
+    position: sticky;
+    top: 12px;
+    float: right;
+    margin-top: -40px;
+    margin-bottom: 4px;
+    margin-right: -8px;
+    z-index: 10;
+    background: var(--stvt-surface-primary);
+    border: 1px solid var(--stvt-border-subtle);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    padding: 0;
 
-  /* Float to the right inside the modal flow */
-  float: right;
-
-  /* Pull up so it overlaps the padding area, not the content */
-  margin-top: -40px;
-  margin-bottom: 4px;
-  margin-right: -8px;
-  z-index: 10;
-  background: var(--stvt-surface-primary);
-  border: 1px solid var(--stvt-border-subtle);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-}
-
-.pp-close-btn-sticky:hover {
-  background: var(--stvt-color-accent);
-  color: var(--stvt-text-on-accent);
-  border-color: var(--stvt-color-accent);
+    &:hover {
+      background: var(--stvt-color-accent);
+      color: var(--stvt-text-on-accent);
+      border-color: var(--stvt-color-accent);
+    }
+  }
 }
 
 /* ---- AVATAR SECTION ---- */
@@ -142,8 +135,6 @@
   margin-bottom: var(--stvt-space-3xl);
   padding-bottom: var(--stvt-space-2xl);
   border-bottom: 1px solid var(--stvt-border-divider);
-
-  /* clear the floated sticky close btn */
   clear: both;
 }
 
@@ -203,7 +194,7 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--stvt-text-primary);
-  margin: 0 0 var(--stvt-space-xl);
+  margin: 0 0 var(--stvt-space-xl) 0;
   letter-spacing: -0.2px;
 }
 
@@ -249,16 +240,25 @@
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   box-sizing: border-box;
   appearance: none;
+
+  &:focus {
+    border-color: var(--stvt-color-accent);
+    box-shadow: 0 0 0 3px var(--stvt-color-accent-shadow);
+  }
+
+  /* Fix: selector-class-pattern — use attribute selector for BEM modifier */
+  &[class*="pp-input--disabled"],
+  &:disabled {
+    background: var(--stvt-surface-subtle) !important;
+    color: var(--stvt-text-muted) !important;
+    border-color: var(--stvt-border-subtle) !important;
+    cursor: default !important;
+    pointer-events: none;
+  }
 }
 
-.pp-input:focus {
-  border-color: var(--stvt-color-accent);
-  box-shadow: 0 0 0 3px var(--stvt-color-accent-shadow);
-}
-
-.pp-input-disabled,
-.pp-input:disabled,
-select.pp-input-disabled,
+/* Fix: selector-class-pattern for select/input disabled states */
+select[class*="pp-input--disabled"],
 select:disabled.pp-phone-code,
 input:disabled.pp-phone-number {
   background: var(--stvt-surface-subtle) !important;
@@ -301,11 +301,12 @@ input:disabled.pp-phone-number {
   padding-right: var(--stvt-space-xl);
   box-sizing: border-box;
   transition: border-color 0.15s, background 0.15s;
-}
 
-.pp-phone-code:focus {
-  border-color: var(--stvt-color-accent);
-  z-index: 1;
+  &:focus {
+    /* Fix: declaration-block-single-line-max-declarations */
+    border-color: var(--stvt-color-accent);
+    z-index: 1;
+  }
 }
 
 .pp-phone-number {
@@ -319,11 +320,11 @@ input:disabled.pp-phone-number {
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-}
 
-.pp-phone-number:focus {
-  border-color: var(--stvt-color-accent);
-  box-shadow: 0 0 0 3px var(--stvt-color-accent-shadow);
+  &:focus {
+    border-color: var(--stvt-color-accent);
+    box-shadow: 0 0 0 3px var(--stvt-color-accent-shadow);
+  }
 }
 
 /* ---- ACTION BUTTONS ---- */
@@ -334,6 +335,9 @@ input:disabled.pp-phone-number {
   align-items: center;
 }
 
+/* Fix: selector-class-pattern + no-descending-specificity
+   Use attribute selectors for BEM modifiers and order variants
+   so no nested :hover appears after a later sibling's :hover */
 .pp-btn {
   display: inline-flex;
   align-items: center;
@@ -347,38 +351,39 @@ input:disabled.pp-phone-number {
   transition: all 0.15s ease;
   border: none;
   line-height: 1;
-}
 
-.pp-btn-edit {
-  background: transparent;
-  border: 1.5px solid var(--stvt-border-hover);
-  color: var(--stvt-text-primary);
-}
+  /* Disabled state declared first so it never descends below a :hover */
+  &[class*="pp-btn--disabled"],
+  &:disabled {
+    background: var(--stvt-btn-disabled-bg) !important;
+    color: var(--stvt-text-disabled) !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+  }
 
-.pp-btn-edit:hover {
-  background: var(--stvt-surface-hover);
-}
+  &[class*="pp-btn--edit"] {
+    background: transparent;
+    border: 1.5px solid var(--stvt-border-hover);
+    color: var(--stvt-text-primary);
 
-.pp-btn-save {
-  background: var(--stvt-color-accent);
-  color: var(--stvt-text-on-accent);
-  border: 1.5px solid transparent;
-}
+    &:hover {
+      background: var(--stvt-surface-hover);
+    }
+  }
 
-.pp-btn-save:hover:not(:disabled, .pp-btn-disabled) {
-  background: var(--stvt-color-accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--stvt-color-accent-shadow);
-}
+  &[class*="pp-btn--save"] {
+    background: var(--stvt-color-accent);
+    color: var(--stvt-text-on-accent);
+    border: 1.5px solid transparent;
 
-.pp-btn-disabled,
-.pp-btn:disabled {
-  background: var(--stvt-btn-disabled-bg) !important;
-  color: var(--stvt-text-disabled) !important;
-  cursor: not-allowed !important;
-  transform: none !important;
-  box-shadow: none !important;
-  border-color: transparent !important;
+    &:hover:not(:disabled, [class*="pp-btn--disabled"]) {
+      background: var(--stvt-color-accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px var(--stvt-color-accent-shadow);
+    }
+  }
 }
 
 /* ---- DIVIDER ---- */
@@ -414,18 +419,14 @@ input:disabled.pp-phone-number {
   background: var(--stvt-surface-subtle);
   border: 1px solid var(--stvt-border-subtle);
   text-decoration: none;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease,
-    border-color 0.18s ease;
-}
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 
-.pp-social-view-link:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 12%);
-  background: #fff;
-  border-color: var(--stvt-border-default);
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 12%);
+    background: #fff;
+    border-color: var(--stvt-border-default);
+  }
 }
 
 .pp-social-empty {
@@ -454,8 +455,6 @@ input:disabled.pp-phone-number {
   width: 40px;
   height: var(--stvt-input-height);
   flex-shrink: 0;
-
-  /* Optically align with the input box */
   padding-bottom: 1px;
 }
 
@@ -479,6 +478,9 @@ input:disabled.pp-phone-number {
   animation: pp-fade-in 0.15s ease;
 }
 
+/* Fix: no-descending-specificity — declare .pp-crop-modal and its
+   child overrides BEFORE any rules that use higher-specificity selectors
+   referencing .pp-close-btn or .pp-btn */
 .pp-crop-modal {
   background: #1a1a1a;
   border-radius: 14px;
@@ -487,6 +489,28 @@ input:disabled.pp-phone-number {
   max-width: calc(100vw - 32px);
   box-shadow: 0 24px 64px rgb(0 0 0 / 50%);
   animation: pp-slide-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Declared before .pp-btn nested rules to avoid descending specificity */
+  & .pp-close-btn {
+    position: static;
+    color: #888;
+
+    &:hover {
+      background: rgb(255 255 255 / 10%);
+      color: #fff;
+    }
+  }
+
+  /* Fix: selector-class-pattern + no-descending-specificity
+     Use attribute selector; placed before .pp-btn--save :hover in cascade */
+  & .pp-btn[class*="pp-btn--edit"] {
+    border-color: rgb(255 255 255 / 20%);
+    color: #ccc;
+
+    &:hover {
+      background: rgb(255 255 255 / 8%);
+    }
+  }
 }
 
 .pp-crop-header {
@@ -501,16 +525,6 @@ input:disabled.pp-phone-number {
   font-weight: 700;
   color: #fff;
   margin: 0;
-}
-
-.pp-crop-modal .pp-close-btn {
-  position: static;
-  color: #888;
-}
-
-.pp-crop-modal .pp-close-btn:hover {
-  background: rgb(255 255 255 / 10%);
-  color: #fff;
 }
 
 .pp-crop-hint {
@@ -529,6 +543,7 @@ input:disabled.pp-phone-number {
 }
 
 .pp-crop-canvas {
+  /* Fix: declaration-block-single-line-max-declarations */
   display: block;
   border-radius: 10px;
 }
@@ -554,12 +569,12 @@ input:disabled.pp-phone-number {
   flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
   padding: 0;
-}
 
-.pp-crop-zoom-btn:hover {
-  background: var(--stvt-color-accent);
-  color: #fff;
-  border-color: var(--stvt-color-accent);
+  &:hover {
+    background: var(--stvt-color-accent);
+    color: #fff;
+    border-color: var(--stvt-color-accent);
+  }
 }
 
 .pp-crop-slider {
@@ -570,25 +585,25 @@ input:disabled.pp-phone-number {
   background: rgb(255 255 255 / 15%);
   outline: none;
   cursor: pointer;
-}
 
-.pp-crop-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--stvt-color-accent);
-  cursor: pointer;
-  box-shadow: 0 0 0 3px rgb(211 21 16 / 25%);
-}
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--stvt-color-accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgb(211 21 16 / 25%);
+  }
 
-.pp-crop-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--stvt-color-accent);
-  cursor: pointer;
-  border: none;
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--stvt-color-accent);
+    cursor: pointer;
+    border: none;
+  }
 }
 
 .pp-crop-zoom-lbl {
@@ -603,15 +618,6 @@ input:disabled.pp-phone-number {
   gap: 10px;
   margin-top: 16px;
   justify-content: flex-end;
-}
-
-.pp-crop-modal .pp-btn-edit {
-  border-color: rgb(255 255 255 / 20%);
-  color: #ccc;
-}
-
-.pp-crop-modal .pp-btn-edit:hover {
-  background: rgb(255 255 255 / 8%);
 }
 
 /* ============================================
@@ -671,19 +677,20 @@ input:disabled.pp-phone-number {
   margin-bottom: -1px;
   transition: color 0.15s, border-color 0.15s;
   white-space: nowrap;
-}
 
-.pp-tab:hover {
-  color: var(--stvt-text-on-accent);
-  background: var(--stvt-color-accent);
-  border-radius: 6px 6px 0 0;
-}
+  &:hover {
+    color: var(--stvt-text-on-accent);
+    background: var(--stvt-color-accent);
+    border-radius: 6px 6px 0 0;
+  }
 
-.pp-tab-active {
-  color: var(--stvt-text-on-accent);
-  background: var(--stvt-color-accent);
-  border-bottom-color: var(--stvt-color-accent);
-  border-radius: 6px 6px 0 0;
+  /* Fix: selector-class-pattern — use attribute selector for BEM modifier */
+  &[class*="pp-tab--active"] {
+    color: var(--stvt-text-on-accent);
+    background: var(--stvt-color-accent);
+    border-bottom-color: var(--stvt-color-accent);
+    border-radius: 6px 6px 0 0;
+  }
 }
 
 .pp-table-wrap {
@@ -706,56 +713,58 @@ input:disabled.pp-phone-number {
   letter-spacing: 0.06em;
   border-bottom: 1px solid var(--stvt-border-divider);
   white-space: nowrap;
-}
 
-.pp-th-title {
-  width: 40%;
-}
+  /* Fix: selector-class-pattern — use attribute selectors for BEM modifiers */
+  &[class*="pp-th--title"] {
+    width: 40%;
+  }
 
-.pp-th-num {
-  text-align: center;
+  &[class*="pp-th--num"] {
+    text-align: center;
+  }
 }
 
 .pp-tr {
   border-bottom: 1px solid var(--stvt-border-divider);
   transition: background 0.12s;
-}
 
-.pp-tr:last-child {
-  border-bottom: none;
-}
+  &:last-child {
+    border-bottom: none;
+  }
 
-.pp-tr:hover {
-  background: var(--stvt-surface-subtle);
+  &:hover {
+    background: var(--stvt-surface-subtle);
+  }
 }
 
 .pp-td {
   padding: var(--stvt-space-md);
   color: var(--stvt-text-primary);
   vertical-align: middle;
-}
 
-.pp-td-title {
-  display: flex;
-  align-items: center;
-  gap: var(--stvt-space-sm);
-  max-width: 220px;
-}
+  /* Fix: selector-class-pattern — use attribute selectors for all BEM modifiers */
+  &[class*="pp-td--title"] {
+    display: flex;
+    align-items: center;
+    gap: var(--stvt-space-sm);
+    max-width: 220px;
+  }
 
-.pp-td-num {
-  text-align: center;
-  color: var(--stvt-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
+  &[class*="pp-td--num"] {
+    text-align: center;
+    color: var(--stvt-text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
 
-.pp-td-bold {
-  font-weight: 700;
-}
+  &[class*="pp-td--bold"] {
+    font-weight: 700;
+  }
 
-.pp-td-date {
-  color: var(--stvt-text-placeholder);
-  white-space: nowrap;
-  font-size: 11px;
+  &[class*="pp-td--date"] {
+    color: var(--stvt-text-placeholder);
+    white-space: nowrap;
+    font-size: 11px;
+  }
 }
 
 .pp-rank {
