@@ -83,12 +83,27 @@ const buildPath = (tree, stack, nodeName) => {
   return parts.join(' > ');
 };
 
+// ── Flatten tree for search ───────────────────────────────────────────────────
+const flattenTree = (nodes, ancestors = []) => {
+  let results = [];
+  nodes.forEach((n) => {
+    if (n.type === 'folder') {
+      results.push({ node: n, ancestors });
+      if (n.children) {
+        results = results.concat(flattenTree(n.children, [...ancestors, n]));
+      }
+    }
+  });
+  return results;
+};
+
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcoClose = () => html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const IcoEdit = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const IcoTrash = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
-
+const IcoSearch = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+const IcoInfo = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
 const IcoFolder = () => html`
   <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
     <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
@@ -175,6 +190,48 @@ function CtxMenu({
         onClick=${() => { onDelete(node.id); onClose(); }}>
         <${IcoTrash}/> Delete
       </button>
+    </div>`;
+}
+
+// ── Direct-select hint banner ─────────────────────────────────────────────────
+function DirectSelectHint({ folderName, onDismiss }) {
+  return html`
+    <div class="fm-hint">
+      <${IcoInfo}/>
+      <span>
+        <strong>${folderName}</strong> has subfolders. You can open it to pick a subfolder, or click <strong>Select</strong> to use it directly.
+      </span>
+      <button type="button" class="fm-hint-close" onClick=${onDismiss}><${IcoClose}/></button>
+    </div>`;
+}
+
+// ── Search results panel ──────────────────────────────────────────────────────
+function SearchResults({ results, onNavigate }) {
+  if (results.length === 0) {
+    return html`
+      <div class="fm-search-empty">
+        <${IcoSearch}/>
+        <p>No folders found</p>
+      </div>`;
+  }
+
+  return html`
+    <div class="fm-search-results">
+      ${results.map(({ node, ancestors }) => {
+    const pathParts = [...ancestors.map((a) => a.name), node.name];
+    return html`
+        <button key=${node.id} type="button" class="fm-search-row"
+          onClick=${() => onNavigate(node, ancestors)}>
+          <div class="fm-search-row-ico"><${IcoFolder}/></div>
+          <div class="fm-search-row-info">
+            <span class="fm-search-row-name">${node.name}</span>
+            ${ancestors.length > 0 && html`
+              <span class="fm-search-row-path">
+                ${pathParts.slice(0, -1).join(' › ')}
+              </span>`}
+          </div>
+        </button>`;
+  })}
     </div>`;
 }
 
@@ -377,6 +434,8 @@ function FolderModal({ onClose, onSelect }) {
   const [adding, setAdding] = useState(null);
   const [ctx, setCtx] = useState(null);
   const [visible, setVisible] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [hintDismissed, setHintDismissed] = useState(false);
 
   const persist = (t) => { setTree(t); saveTree(t); };
 
@@ -389,6 +448,9 @@ function FolderModal({ onClose, onSelect }) {
     document.addEventListener('keydown', esc);
     return () => document.removeEventListener('keydown', esc);
   }, [renamingId, adding]);
+
+  // Reset hint when selection changes
+  useEffect(() => { setHintDismissed(false); }, [selected]);
 
   const doOk = () => {
     const node = selected ? findNode(tree, selected) : null;
@@ -412,10 +474,10 @@ function FolderModal({ onClose, onSelect }) {
   const crumbs = stack.map((id) => findNode(tree, id)).filter(Boolean);
 
   const reset = () => { setSelected(null); setAdding(null); setRenamingId(null); };
-  const goRoot = () => { setStack([]); reset(); };
-  const goCrumb = (i) => { setStack(stack.slice(0, i + 1)); reset(); };
-  const goBack = () => { setStack(stack.slice(0, -1)); reset(); };
-  const goInto = (node) => { setStack([...stack, node.id]); reset(); };
+  const goRoot = () => { setStack([]); reset(); setSearchQ(''); };
+  const goCrumb = (i) => { setStack(stack.slice(0, i + 1)); reset(); setSearchQ(''); };
+  const goBack = () => { setStack(stack.slice(0, -1)); reset(); setSearchQ(''); };
+  const goInto = (node) => { setStack([...stack, node.id]); reset(); setSearchQ(''); };
 
   const startAdd = () => { setAdding({ type: 'folder' }); setRenamingId(null); setSelected(null); };
   const commitAdd = (name) => {
@@ -447,6 +509,30 @@ function FolderModal({ onClose, onSelect }) {
     if (newTree !== tree) persist(newTree);
   };
 
+  // ── Search logic ────────────────────────────────────────────────────────────
+  const isSearching = searchQ.trim().length > 0;
+  const allFolders = flattenTree(tree);
+  const searchQ2 = searchQ.trim().toLowerCase();
+  const searchResults = isSearching
+    ? allFolders.filter(({ node }) => node.name.toLowerCase().includes(searchQ2))
+    : [];
+
+  // Navigate to a search result: set stack to its ancestors then select it
+  const navigateToResult = (node, ancestors) => {
+    setStack(ancestors.map((a) => a.id));
+    setSelected(node.id);
+    setSearchQ('');
+    setAdding(null);
+    setRenamingId(null);
+  };
+
+  // ── Direct-select hint logic ────────────────────────────────────────────────
+  const selectedNode = selected ? findNode(tree, selected) : null;
+  const selectedHasChildren = selectedNode
+    && selectedNode.children
+    && selectedNode.children.filter((c) => c.type === 'folder').length > 0;
+  const showHint = selectedHasChildren && !hintDismissed;
+
   return html`
     <div class=${`fm-overlay ${visible ? 'fm-overlay--in' : ''}`}
       onClick=${(e) => { if (e.target === e.currentTarget) doClose(); }}>
@@ -456,17 +542,20 @@ function FolderModal({ onClose, onSelect }) {
         <!-- HEADER -->
         <div class="fm-header">
           <div class="fm-nav">
-            ${!isRoot && html`
+            ${!isRoot && !isSearching && html`
               <button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
             <div class="fm-breadcrumb">
               <button type="button"
-                class=${`fm-crumb ${isRoot ? 'fm-crumb--cur' : ''}`}
+                class=${`fm-crumb ${isRoot && !isSearching ? 'fm-crumb--cur' : ''}`}
                 onClick=${goRoot}>Categories</button>
-              ${crumbs.map((c, i) => html`
+              ${!isSearching && crumbs.map((c, i) => html`
                 <span key=${`s${c.id}`} class="fm-sep">›</span>
                 <button key=${c.id} type="button"
                   class=${`fm-crumb ${i === crumbs.length - 1 ? 'fm-crumb--cur' : ''}`}
                   onClick=${() => goCrumb(i)}>${c.name}</button>`)}
+              ${isSearching && html`
+                <span class="fm-sep">›</span>
+                <span class="fm-crumb fm-crumb--cur fm-crumb--search">Search results</span>`}
             </div>
           </div>
 
@@ -479,20 +568,46 @@ function FolderModal({ onClose, onSelect }) {
           <button type="button" class="fm-close" onClick=${doClose}><${IcoClose}/></button>
         </div>
 
+        <!-- SEARCH BAR -->
+        <div class="fm-search-bar">
+          <span class="fm-search-ico"><${IcoSearch}/></span>
+          <input
+            type="text"
+            class="fm-search-input"
+            placeholder="Search folders…"
+            value=${searchQ}
+            onInput=${(e) => setSearchQ(e.target.value)}
+            onClick=${(e) => e.stopPropagation()}/>
+          ${isSearching && html`
+            <button type="button" class="fm-search-clear" onClick=${() => setSearchQ('')}>
+              <${IcoClose}/>
+            </button>`}
+        </div>
+
+        <!-- HINT BANNER -->
+        ${showHint && html`
+          <div class="fm-hint-wrap" onClick=${(e) => e.stopPropagation()}>
+            <${DirectSelectHint}
+              folderName=${selectedNode.name}
+              onDismiss=${() => setHintDismissed(true)}/>
+          </div>`}
+
         <!-- BODY -->
         <div class="fm-body" onClick=${(e) => e.stopPropagation()}>
-          <${GridPanel}
-            nodes=${nodes} isRoot=${isRoot}
-            selected=${selected} renamingId=${renamingId} adding=${adding}
-            onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
-            onOpen=${goInto}
-            onCtx=${(e, node) => setCtx({ x: e.clientX, y: e.clientY, node })}
-            onCommitRename=${commitRename}
-            onCancelRename=${() => setRenamingId(null)}
-            onCommitAdd=${commitAdd}
-            onCancelAdd=${() => setAdding(null)}
-            onMove=${doMove}
-            onDelete=${doDelete}/>
+          ${isSearching
+    ? html`<${SearchResults} results=${searchResults} onNavigate=${navigateToResult}/>`
+    : html`<${GridPanel}
+              nodes=${nodes} isRoot=${isRoot}
+              selected=${selected} renamingId=${renamingId} adding=${adding}
+              onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
+              onOpen=${goInto}
+              onCtx=${(e, node) => setCtx({ x: e.clientX, y: e.clientY, node })}
+              onCommitRename=${commitRename}
+              onCancelRename=${() => setRenamingId(null)}
+              onCommitAdd=${commitAdd}
+              onCancelAdd=${() => setAdding(null)}
+              onMove=${doMove}
+              onDelete=${doDelete}/>`}
         </div>
 
         <!-- FOOTER -->

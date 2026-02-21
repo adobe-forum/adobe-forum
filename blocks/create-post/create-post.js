@@ -1204,6 +1204,7 @@ function CreatePost() {
         setBody('');
         setBodyJson(null);
         setTags([]);
+        setSidebarPath('');
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }
@@ -1361,7 +1362,7 @@ function CreatePost() {
                 <span className="category-breadcrumb-segments">
                   ${categoryPath.split(' > ').map((seg, i, arr) => html`
                     <span key=${i} className="category-breadcrumb-segment">${seg}</span>
-                    ${i < arr.length - 1 ? html`<span className="category-breadcrumb-sep">›</span>` : null}
+                    ${i < arr.length - 1 ? html`<span className="category-breadcrumb-sep">/</span>` : null}
                   `)}
                 </span>
                 <button
