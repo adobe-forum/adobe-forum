@@ -1,10 +1,25 @@
 import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
+import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 
 const html = htm.bind(h);
 
-// ============================================
+// Lazy-load category-explorer block via AEM infrastructure (once)
+let explorerReady = false;
+
+async function ensureCategoryExplorer() {
+  if (explorerReady) return;
+  const wrapper = document.createElement('div');
+  const block = document.createElement('div');
+  block.classList.add('category-explorer');
+  wrapper.appendChild(block);
+  document.body.appendChild(wrapper);
+  decorateBlock(block);
+  await loadBlock(block);
+  explorerReady = true;
+}
+
 // DOM TO JSON CONVERTER
 
 function domToJson(element) {
@@ -394,15 +409,38 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       if (!first) return;
       const tag = first.tagName;
       const needsLeading = tag === 'TABLE'
-        || /^H[1-6]$/.test(tag)
         || tag === 'PRE'
         || tag === 'BLOCKQUOTE';
-      if (needsLeading) {
-        const p = document.createElement('p');
-        p.innerHTML = '<br>';
-        editor.insertBefore(p, first);
-      }
+      if (!needsLeading) return;
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      editor.insertBefore(p, first);
     });
+  };
+
+  // Remove phantom extra-empty blocks that browsers silently inject into
+  // contenteditable divs. Only fires when there is no real user content.
+  const normalizeEmptyEditor = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const hasRealContent = editor.textContent.replace(/\u200B/g, '').trim().length > 0
+      || editor.querySelector('table, img, iframe, pre, blockquote');
+    if (hasRealContent) return;
+    // Already a single clean node — nothing to do
+    if (editor.children.length <= 1 && editor.childNodes.length <= 1) return;
+    editor.innerHTML = '<p><br></p>';
+    // Restore cursor inside the normalised paragraph
+    const p = editor.firstElementChild;
+    if (p) {
+      const r = document.createRange();
+      r.setStart(p, 0);
+      r.collapse(true);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    }
   };
 
   const updatePlaceholder = () => {
@@ -570,7 +608,71 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
 
   const handleBlockFormat = (tag) => {
     if (!BLOCK_FORMATS[tag]) return;
-    document.execCommand('formatBlock', false, tag);
+    const sel = window.getSelection();
+    const editor = editorRef.current;
+    if (!sel || !sel.rangeCount || !editor) return;
+
+    const range = sel.getRangeAt(0);
+
+    // Find the direct-child block of the editor
+    let block = sel.anchorNode;
+    while (block && block.parentNode !== editor) {
+      block = block.parentNode;
+    }
+
+    // Check if selection is partial (some text selected, but not the full block)
+    const isPartial = !range.collapsed && block
+      && range.toString().trim() !== block.textContent.trim();
+
+    if (!isPartial) {
+      // Full block or collapsed cursor: use native formatBlock
+      // First unwrap any inline heading spans in this block
+      if (block) {
+        block.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
+          span.replaceWith(...span.childNodes);
+        });
+      }
+      document.execCommand('formatBlock', false, tag);
+      return;
+    }
+
+    // --- Partial selection: inline heading span approach ---
+
+    // "Paragraph" selected → unwrap any inline heading span around cursor
+    if (tag === 'p') {
+      let nd = sel.anchorNode;
+      while (nd && nd !== editor) {
+        if (nd.nodeType === 1 && /^ce-inline-h[1-6]$/.test(nd.className)) {
+          nd.replaceWith(...nd.childNodes);
+          break;
+        }
+        nd = nd.parentNode;
+      }
+      return;
+    }
+
+    // If already inside an inline heading span, just change its class
+    let existing = sel.anchorNode;
+    while (existing && existing !== editor) {
+      if (existing.nodeType === 1 && /^ce-inline-h[1-6]$/.test(existing.className)) {
+        existing.className = `ce-inline-${tag}`;
+        return;
+      }
+      existing = existing.parentNode;
+    }
+
+    // Wrap the selected text in a new inline heading span
+    const span = document.createElement('span');
+    span.className = `ce-inline-${tag}`;
+    const contents = range.extractContents();
+    span.appendChild(contents);
+    range.insertNode(span);
+
+    // Restore selection around the new span
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
   };
 
   const handleImageFile = (e) => {
@@ -623,15 +725,30 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       node = node.parentNode;
     }
 
-    // Detect current block format (p, h1-h6)
-    let block = sel.anchorNode;
-    while (block && block.parentNode !== editor) {
-      block = block.parentNode;
+    // Detect inline heading spans (ce-inline-h1 etc.)
+    let inlineNode = sel.anchorNode;
+    while (inlineNode && inlineNode !== editor) {
+      if (inlineNode.nodeType === 1 && inlineNode.className) {
+        const hMatch = inlineNode.className.match(/^ce-inline-(h[1-6])$/);
+        if (hMatch) {
+          [, fmt.blockFormat] = hMatch;
+          break;
+        }
+      }
+      inlineNode = inlineNode.parentNode;
     }
-    if (block) {
-      const bn = block.nodeName.toLowerCase();
-      if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
-      else fmt.blockFormat = 'p';
+
+    // Detect current block format (p, h1-h6) — only if no inline heading was found
+    if (!fmt.blockFormat) {
+      let block = sel.anchorNode;
+      while (block && block.parentNode !== editor) {
+        block = block.parentNode;
+      }
+      if (block) {
+        const bn = block.nodeName.toLowerCase();
+        if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
+        else fmt.blockFormat = 'p';
+      }
     }
 
     setActiveFormats(fmt);
@@ -688,6 +805,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       case 'clean':
         document.execCommand('removeFormat', false, null);
         document.execCommand('unlink', false, null);
+        // Also strip inline heading spans
+        editor.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
+          span.replaceWith(...span.childNodes);
+        });
         break;
       default:
         break;
@@ -709,6 +830,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     } else if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
     }
+    normalizeEmptyEditor();
     updatePlaceholder();
 
     // Input handler
@@ -750,6 +872,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
           code.remove();
         }
       });
+      normalizeEmptyEditor();
       updatePlaceholder();
       clearImageResize();
       emitChange();
@@ -759,6 +882,9 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       updateActiveFormats();
     };
     editor.addEventListener('input', onInput);
+
+    const onFocus = () => { normalizeEmptyEditor(); };
+    editor.addEventListener('focus', onFocus);
 
     // Selection change
     const onSelectionChange = () => {
@@ -1024,6 +1150,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
 
     return () => {
       editor.removeEventListener('input', onInput);
+      editor.removeEventListener('focus', onFocus);
       editor.removeEventListener('click', onEditorClick);
       editor.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('selectionchange', onSelectionChange);
@@ -1147,111 +1274,6 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   `;
 }
 
-// CATEGORY SEARCH
-function CategorySearch({ value, onChange, onSelect }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [filteredCategories, setFilteredCategories] = useState([]);
-  const [existingCategories, setExistingCategories] = useState([]);
-  const inputRef = useRef(null);
-  const wrapperRef = useRef(null);
-
-  // Fetch existing categories from backend
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/sidebar/categories');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.categories) {
-            // Extract category names
-            const categoryNames = data.categories.map((cat) => cat.name);
-            setExistingCategories(categoryNames);
-          }
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch categories:', err);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleInputChange = (e) => {
-    const searchValue = e.target.value;
-    onChange(searchValue);
-
-    if (searchValue.trim()) {
-      const filtered = existingCategories.filter(
-        (cat) => cat.toLowerCase().includes(
-          searchValue.toLowerCase(),
-        ),
-      );
-      setFilteredCategories(filtered);
-      setIsOpen(true);
-    } else {
-      setFilteredCategories([]);
-      setIsOpen(false);
-    }
-  };
-
-  const handleSelectCategory = (category) => {
-    onSelect(category);
-    onChange('');
-    setIsOpen(false);
-  };
-
-  const handleAddNewCategory = () => {
-    onSelect(value);
-    onChange('');
-    setIsOpen(false);
-  };
-
-  const showAddButton = value.trim()
-    && !existingCategories.some((cat) => cat.toLowerCase() === value.toLowerCase());
-
-  return html`
-    <div className="category-search-wrapper" ref=${wrapperRef}>
-      <input
-        ref=${inputRef}
-        type="text"
-        value=${value}
-        onInput=${handleInputChange}
-        onFocus=${() => value.trim() && setIsOpen(true)}
-        placeholder="Search for a category..."
-      />
-      ${isOpen && (filteredCategories.length > 0 || showAddButton) && html`
-        <div className="category-dropdown">
-          ${filteredCategories.map((category) => html`
-            <div
-              key=${category}
-              className="category-option"
-              onClick=${() => handleSelectCategory(category)}
-            >
-              ${category}
-            </div>
-          `)}
-          ${showAddButton && html`
-            <div className="add-category-btn" onClick=${handleAddNewCategory}>
-              Create "${value}"
-            </div>
-          `}
-        </div>
-      `}
-    </div>
-  `;
-}
-
 // TAGS INPUT
 function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const [inputValue, setInputValue] = useState('');
@@ -1310,9 +1332,11 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
+    if ((e.key === 'Enter' || e.key === ' ') && inputValue.trim()) {
       e.preventDefault();
-      addTag(inputValue.trim());
+      addTag(inputValue.trim().replace(/\s+/g, '-'));
+    } else if (e.key === ' ' && !inputValue.trim()) {
+      e.preventDefault();
     } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
       removeTag(tags[tags.length - 1]);
     }
@@ -1320,7 +1344,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
   const handleBlur = () => {
     if (inputValue.trim()) {
-      addTag(inputValue.trim());
+      addTag(inputValue.trim().replace(/\s+/g, '-'));
     }
   };
 
@@ -1438,7 +1462,6 @@ function InlinePreview({
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1476,8 +1499,23 @@ function CreatePost() {
     /* eslint-enable no-console */
   }, [title, category, bodyJson, tags]);
 
+  // Listen for category-explorer custom events
+  useEffect(() => {
+    const handleSelect = (e) => {
+      setCategory(e.detail.path);
+    };
+    document.addEventListener('category-explorer:select', handleSelect);
+    return () => {
+      document.removeEventListener('category-explorer:select', handleSelect);
+    };
+  }, []);
+
+  const openCategoryExplorer = () => ensureCategoryExplorer().then(() => {
+    document.dispatchEvent(new CustomEvent('category-explorer:open'));
+  });
+
   const missingFields = [];
-  if (title.length < 15) missingFields.push('Title (min 15 characters)');
+  if (title.trim().length < 15) missingFields.push('Title (min 15 characters)');
   if (!category) missingFields.push('Category');
   if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
   if (tags.length === 0) missingFields.push('Tags (at least 1)');
@@ -1494,7 +1532,7 @@ function CreatePost() {
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
     const postData = {
-      title,
+      title: title.trim(),
       category,
       body,
       tags: tagsWithHash,
@@ -1512,23 +1550,13 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('Post created successfully:', result);
-
-        showToast('Your question has been posted successfully!', 'success');
-        // Reset form
-        setTitle('');
-        setCategory('');
-        setBody('');
-        setBodyJson(null);
-        setTags([]);
+        window.location.href = '/';
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
       showToast('Network error: Unable to connect to the server.', 'error');
     }
-
-    setShowPreview(false);
   };
 
   const handleCancel = () => {
@@ -1568,9 +1596,9 @@ function CreatePost() {
               onInput=${(e) => setTitle(e.target.value)}
               placeholder=""
             />
-            ${title.length < 15 && html`
-              <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
-                ${title.length} / 15 characters minimum
+            ${title.trim().length < 15 && html`
+              <div className=${`char-counter ${title.trim().length > 0 ? 'warning' : ''}`}>
+                ${title.trim().length} / 15 characters minimum
               </div>
             `}
           </div>
@@ -1580,27 +1608,28 @@ function CreatePost() {
               Category<span className="required">*</span>
             </label>
             <p className="helper-text">
-              Search for an existing category or create a new one.
+              Browse the category tree or create a new one.
             </p>
-            ${category ? html`
-              <div className="category-chip">
-                <span>${category}</span>
+            <div
+              className="category-selector"
+              onClick=${openCategoryExplorer}
+            >
+              ${category ? html`
+                <span className="category-selector-text">${category}</span>
                 <button
                   type="button"
                   className="category-remove"
-                  onClick=${() => setCategory('')}
+                  onClick=${(e) => { e.stopPropagation(); setCategory(''); }}
                   aria-label="Remove category"
                 >
-                  ×
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
                 </button>
-              </div>
-            ` : html`
-              <${CategorySearch}
-                value=${categorySearch}
-                onChange=${setCategorySearch}
-                onSelect=${setCategory}
-              />
-            `}
+              ` : html`
+                <span className="category-selector-placeholder">Click to select a category...</span>
+              `}
+            </div>
           </div>
 
           <div className="form-group">

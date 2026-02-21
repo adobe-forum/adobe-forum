@@ -504,12 +504,12 @@ nav.spectrum-nav {
   font-size: 13px;
 
   &.error {
-    border-color: #d7373f;
+    border-color: #da1f26;
   }
 }
 
 .error-msg {
-  color: #d7373f;
+  color: #da1f26;
   font-size: 11px;
   margin-top: 4px;
 }
