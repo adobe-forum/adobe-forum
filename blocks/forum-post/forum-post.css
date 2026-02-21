@@ -6,9 +6,21 @@
   color: var(--text-color);
   padding: 20px 20px 60px;
   line-height: 1.6;
+
+  /* Local variables for code blocks */
+  --post-code-bg: #1e1e1e;
+  --post-code-text: #d4d4d4;
+  --post-line-nums: rgb(212 212 212 / 30%);
+  --post-line-nums-border: rgb(212 212 212 / 15%);
 }
 
-/* --- 2. Header Section --- */
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2rem;
+  color: var(--spectrum-gray-600);
+}
+
 .tags-row {
   display: flex;
   flex-wrap: wrap;
@@ -52,7 +64,6 @@
   color: var(--spectrum-gray-300);
 }
 
-/* --- 3. Content Area --- */
 .post-content-area {
   font-size: 1.125rem;
   color: var(--text-color);
@@ -67,24 +78,14 @@
   margin: 0 0 16px;
 }
 
-/* Rich text formatting from Quill editor */
 .block-text strong,
-.block-text b {
-  font-weight: 700;
-}
+.block-text b { font-weight: 700; }
 
 .block-text em,
-.block-text i {
-  font-style: italic;
-}
+.block-text i { font-style: italic; }
 
-.block-text u {
-  text-decoration: underline;
-}
-
-.block-text s {
-  text-decoration: line-through;
-}
+.block-text u { text-decoration: underline; }
+.block-text s { text-decoration: line-through; }
 
 .block-text code {
   background: var(--spectrum-gray-100, #f5f5f5);
@@ -101,9 +102,7 @@
   padding-left: 2em;
 }
 
-.block-text li {
-  margin: 8px 0;
-}
+.block-text li { margin: 8px 0; }
 
 .block-text blockquote {
   border-left: 4px solid var(--spectrum-blue-500, #1473e6);
@@ -118,9 +117,7 @@
   text-decoration: underline;
 }
 
-.block-text a:hover {
-  text-decoration: none;
-}
+.block-text a:hover { text-decoration: none; }
 
 .block-text h1,
 .block-text h2,
@@ -133,28 +130,34 @@
   line-height: 1.3;
 }
 
-.block-text h1 { font-size: 2em; }
-.block-text h2 { font-size: 1.5em; }
-.block-text h3 { font-size: 1.25em; }
-
-/* Quill-specific classes */
-.block-text .ql-align-center {
-  text-align: center;
+.block-text h1 {
+  font-size: 2em;
 }
 
-.block-text .ql-align-right {
-  text-align: right;
+.block-text h2 {
+  font-size: 1.5em;
 }
 
-.block-text .ql-align-justify {
-  text-align: justify;
+.block-text h3 {
+  font-size: 1.25em;
 }
 
-.block-text .ql-indent-1 { padding-left: 3em; }
-.block-text .ql-indent-2 { padding-left: 6em; }
-.block-text .ql-indent-3 { padding-left: 9em; }
+.block-text .ql-align-center  { text-align: center; }
+.block-text .ql-align-right   { text-align: right; }
+.block-text .ql-align-justify { text-align: justify; }
 
-/* Table support from Quill */
+.block-text .ql-indent-1 {
+  padding-left: 3em;
+}
+
+.block-text .ql-indent-2 {
+  padding-left: 6em;
+}
+
+.block-text .ql-indent-3 {
+  padding-left: 9em;
+}
+
 .block-text table {
   border-collapse: collapse;
   width: 100%;
@@ -189,50 +192,47 @@
   border: 1px solid var(--spectrum-gray-200);
 }
 
-/* --- Code Block Styling (Matches create-post) --- */
 .block-code {
   margin: 24px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--post-code-bg);
 
-  pre {
-    position: relative;
-    background: #1e1e1e;
-
-    /* matches --cp-code-bg */
-    color: #d4d4d4;
-
-    /* matches --cp-code-text */
-    border-radius: 6px;
-    margin: 0;
-    padding: 16px 16px 16px 3.5em;
-
-    /* Space for line numbers */
+  .code-inner {
+    display: flex;
     overflow-x: auto;
-    font-family: monospace;
+  }
 
-    /* Match create-post preview-body-content defaults */
+  .code-line-nums {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 8px;
+    text-align: right;
+    color: var(--post-line-nums);
+    border-right: 1px solid var(--post-line-nums-border);
+    user-select: none;
+    font-family: monospace;
     font-size: 14px;
     line-height: 1.6;
+    min-width: 2.5em;
+    flex-shrink: 0;
 
-    /* create-post is ~15px base, usually code is slightly smaller or monospace */
-
-    &::before {
-      content: var(--line-nums, "");
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2.5em;
-      padding: 16px 8px 16px 0;
-      text-align: right;
-      color: rgb(212 212 212 / 30%);
-      border-right: 1px solid rgb(212 212 212 / 15%);
-      white-space: pre;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
-      pointer-events: none;
-      user-select: none;
+    span {
+      display: block;
     }
+  }
+
+  .code-content {
+    flex: 1;
+    margin: 0;
+    padding: 16px;
+    color: var(--post-code-text);
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: transparent;
+    overflow-x: visible;
+    white-space: pre;
   }
 
   code {
@@ -241,23 +241,15 @@
   }
 }
 
-/* --- 4. Discussion Section --- */
 .post-divider {
   border: none;
   border-top: 1px solid var(--spectrum-gray-200);
   margin: 0;
-
-  /* Margin reset to remove whitespace */
   display: none;
-
-  /* Hidden because discussions are disabled */
 }
 
 .discussion-section {
   padding-top: 10px;
-  display: none;
-
-  /* Section hidden as discussions are currently disabled */
 }
 
 .discussion-header {
@@ -267,38 +259,33 @@
   color: var(--text-color);
 }
 
-/* The Comment Container (Scrollable) */
 .comments-list {
   display: flex;
   flex-direction: column;
   gap: 24px;
   max-height: 250px;
-
-  /* Reduced from 400px so it scrolls much sooner */
   overflow-y: auto;
   padding-right: 12px;
 }
 
-/* Custom Scrollbar Styling */
 .comments-list::-webkit-scrollbar {
   width: 8px;
 }
 
-.comments-list::-webkit-scrollbar-track {
-  background: var(--spectrum-gray-100);
-  border-radius: var(--spectrum-border-radius-100);
+.comments-list::-webkit-scrollbar-track { 
+  background: var(--spectrum-gray-100); 
+  border-radius: var(--spectrum-border-radius-100); 
 }
 
-.comments-list::-webkit-scrollbar-thumb {
-  background: var(--spectrum-gray-300);
-  border-radius: var(--spectrum-border-radius-100);
+.comments-list::-webkit-scrollbar-thumb { 
+  background: var(--spectrum-gray-300); 
+  border-radius: var(--spectrum-border-radius-100); 
 }
 
-.comments-list::-webkit-scrollbar-thumb:hover {
-  background: var(--spectrum-gray-400);
+.comments-list::-webkit-scrollbar-thumb:hover { 
+  background: var(--spectrum-gray-400); 
 }
 
-/* INDIVIDUAL COMMENT ROW */
 .comment-row {
   display: flex;
   gap: 16px;
@@ -306,7 +293,6 @@
   width: 100%;
 }
 
-/* Avatar Styling */
 .comment-avatar {
   width: 40px;
   height: 40px;
@@ -323,7 +309,6 @@
   margin-top: 2px;
 }
 
-/* Comment Body */
 .comment-body {
   display: flex;
   flex-direction: column;
@@ -345,14 +330,12 @@
   line-height: 1.5;
 }
 
-/* --- Input Area Styling (Inline Button) --- */
 .comment-form-container {
   margin-top: 40px;
   padding-top: 24px;
   border-top: 1px solid var(--spectrum-gray-200);
 }
 
-/* This wrapper acts as the visual "input box" */
 .comment-input-wrapper {
   display: flex;
   align-items: center;
@@ -363,13 +346,11 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Highlight the whole wrapper when typing */
 .comment-input-wrapper:focus-within {
   border-color: var(--link-color);
   box-shadow: 0 0 0 1px var(--link-color);
 }
 
-/* The actual text field is now invisible */
 .comment-input {
   flex: 1;
   border: none;
@@ -379,8 +360,6 @@
   color: var(--text-color);
   font-family: var(--body-font-family);
   padding: 8px 0 8px 8px;
-
-  /* Added left padding */
 }
 
 .send-btn {
@@ -388,8 +367,6 @@
   color: var(--spectrum-gray-50);
   border: none;
   border-radius: 50%;
-
-  /* Circle shape since it's just an icon */
   width: 32px;
   height: 32px;
   padding: 0;
@@ -400,10 +377,21 @@
   font-family: var(--body-font-family);
   margin-left: 4px;
   margin-right: 4px;
-
-  /* Added right margin */
 }
 
 .send-btn:hover {
   background-color: var(--link-hover-color);
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(255 255 255 / 80%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--body-font-size-s);
+  color: var(--spectrum-gray-700);
+  z-index: 999;
 }

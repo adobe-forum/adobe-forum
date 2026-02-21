@@ -2,23 +2,24 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
 
 /* eslint-disable no-console */
-
-// Load environment variables
-dotenv.config();
+// Load .env from parent directory (project root)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors({
   origin: ['http://localhost:3000', 'null'],
   credentials: true,
 }));
-// Also allow file:// origins (shows as 'null' string)
 app.use((req, res, next) => {
   const { origin } = req.headers;
   if (origin === 'null' || !origin) {
@@ -28,7 +29,6 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
-// MongoDB Connection
 const { MONGODB_URI } = process.env;
 
 if (!MONGODB_URI) {
@@ -45,9 +45,6 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
-// API Routes
-
-// Create a new post
 app.post('/api/posts', async (req, res) => {
   res.type('application/json');
   try {
@@ -55,7 +52,6 @@ app.post('/api/posts', async (req, res) => {
       title, category, body, tags,
     } = req.body;
 
-    // Validation
     if (!title || title.length < 15) {
       return res.status(400).json({
         error: 'Title must be at least 15 characters',
@@ -68,7 +64,6 @@ app.post('/api/posts', async (req, res) => {
       });
     }
 
-    // Normalize body: if client sent a VDOM-like object, serialize to HTML
     const nodeToHtml = (node) => {
       if (node == null) return '';
       if (typeof node === 'string') return node;
@@ -79,12 +74,9 @@ app.post('/api/posts', async (req, res) => {
           if (v == null) return '';
           let val = v;
           if (typeof v === 'object') val = v.uri || v.src || JSON.stringify(v);
-          // Special handling for <img src>
           if (tag === 'img' && k === 'src') {
-            // Accept data URIs and http(s) URLs, warn for others
             if (typeof val === 'string' && !val.startsWith('data:') && !/^https?:\/\//.test(val)) {
               console.warn('Image src is not a data URI or http(s) URL:', val);
-              // Optionally, you could reject or sanitize here
             }
           }
           return `${k}="${String(val).replace(/"/g, '&quot;')}"`;
@@ -103,7 +95,6 @@ app.post('/api/posts', async (req, res) => {
     else if (typeof body === 'string') bodyHtml = body;
     else bodyHtml = nodeToHtml(body);
 
-    // If tags were accidentally embedded in body, strip them from the HTML text
     if (tags && Array.isArray(tags) && tags.length > 0) {
       tags.forEach((t) => {
         if (!t) return;
@@ -113,7 +104,6 @@ app.post('/api/posts', async (req, res) => {
       });
     }
 
-    // Remove HTML tags and trim whitespace to check actual content length
     const bodyText = String(bodyHtml).replace(/<[^>]*>/g, '').trim();
     if (!bodyHtml || bodyText.length < 20) {
       return res.status(400).json({
@@ -127,7 +117,6 @@ app.post('/api/posts', async (req, res) => {
       });
     }
 
-    // Create new post
     const newPost = new Post({
       title,
       category,
@@ -135,7 +124,6 @@ app.post('/api/posts', async (req, res) => {
       tags,
     });
 
-    // Save to database
     const savedPost = await newPost.save();
 
     return res.status(201).json({
@@ -154,7 +142,6 @@ app.post('/api/posts', async (req, res) => {
   }
 });
 
-// Get all posts (optional - for testing)
 app.get('/api/posts', async (req, res) => {
   try {
     const posts = await Post.find().sort({ createdAt: -1 });
@@ -165,7 +152,6 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// Get a single post by ID
 app.get('/api/posts/:id', async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -179,45 +165,12 @@ app.get('/api/posts/:id', async (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
-// ============================================
-// SIDEBAR ITEMS API ENDPOINTS
-// ============================================
-
-// ES6 features for auto-nesting detection
-const ES6_FEATURES = [
-  'arrow functions', 'arrow function',
-  'let', 'const',
-  'template literals', 'template strings',
-  'destructuring',
-  'spread operator', 'rest operator',
-  'default parameters',
-  'promises', 'promise',
-  'async/await', 'async', 'await',
-  'classes', 'class',
-  'modules', 'import', 'export',
-  'map', 'set', 'weakmap', 'weakset',
-  'symbol', 'symbols',
-  'iterators', 'generators',
-  'for...of', 'for of',
-  'object.assign', 'object.entries', 'object.values',
-  'array.from', 'array.find', 'array.includes',
-];
-
-// Helper to detect if content is related to ES6
-const detectES6Related = (title, body, tags) => {
-  const combined = `${title} ${body || ''} ${(tags || []).join(' ')}`.toLowerCase();
-  return ES6_FEATURES.some((feature) => combined.includes(feature.toLowerCase()));
-};
-
-// Helper to create nested folder structure from path
 const createNestedStructure = async (pathString, postId, category, title, icon) => {
   if (!pathString || !pathString.trim()) {
-    // No path provided, create flat item
     const newItem = new SidebarItem({
       title,
       category,
@@ -247,14 +200,12 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
   let parentId = null;
   let currentPath = '';
 
-  // Create/find folder items for each part except the last
   for (let i = 0; i < parts.length; i += 1) {
     const part = parts[i];
     const isLastPart = i === parts.length - 1;
     currentPath = currentPath ? `${currentPath} > ${part}` : part;
 
     if (isLastPart) {
-      // Last part is the actual content item
       const contentItem = new SidebarItem({
         title: part,
         category,
@@ -267,7 +218,6 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
       return contentItem.save();
     }
 
-    // Check if folder already exists
     let folder = await SidebarItem.findOne({
       category,
       title: part,
@@ -276,7 +226,6 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
     });
 
     if (!folder) {
-      // Create new folder
       folder = new SidebarItem({
         title: part,
         category,
@@ -295,19 +244,16 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
   return null;
 };
 
-// Build tree structure from flat items with auto-clustering by similar names
 const buildTree = (items) => {
   const itemMap = new Map();
   const rootItems = [];
 
-  // First pass: create map of all items
   items.forEach((item) => {
     const itemObj = item.toObject ? item.toObject() : item;
     itemObj.children = [];
     itemMap.set(itemObj._id.toString(), itemObj);
   });
 
-  // Second pass: build tree for items with explicit parentId
   items.forEach((item) => {
     const itemObj = itemMap.get(item._id.toString());
     if (item.parentId) {
@@ -325,123 +271,18 @@ const buildTree = (items) => {
   return rootItems;
 };
 
-// Extract significant keywords from title for clustering
-const extractKeywords = (title) => {
-  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'it', 'as', 'be', 'are', 'was', 'were', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'from', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also', 'now', 'getting', 'started', 'introduction', 'basics', 'guide', 'tutorial', 'essentials', 'masterclass', '101', 'advanced', 'beginner'];
-  
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter((word) => word.length > 2 && !stopWords.includes(word));
-};
-
-// Find common prefix/keyword among items for clustering
-const findClusterKeyword = (items) => {
-  if (items.length < 2) return null;
-  
-  const keywordCounts = {};
-  
-  items.forEach((item) => {
-    const keywords = extractKeywords(item.title);
-    keywords.forEach((keyword) => {
-      keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
-    });
-  });
-  
-  // Find keywords that appear in multiple items (threshold: 2+)
-  const commonKeywords = Object.entries(keywordCounts)
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1]);
-  
-  return commonKeywords.length > 0 ? commonKeywords[0][0] : null;
-};
-
-// Build auto-clustered tree structure
-const buildAutoClusteredTree = (items) => {
-  // Group items by category first
-  const categoryGroups = {};
-  
-  items.forEach((item) => {
-    const itemObj = item.toObject ? item.toObject() : item;
-    itemObj.children = [];
-    
-    // Skip folders, only process content items
-    if (itemObj.isFolder) return;
-    
-    const cat = itemObj.category;
-    if (!categoryGroups[cat]) {
-      categoryGroups[cat] = [];
-    }
-    categoryGroups[cat].push(itemObj);
-  });
-  
-  const result = [];
-  
-  // For each category, cluster items with similar names
-  Object.entries(categoryGroups).forEach(([, categoryItems]) => {
-    // Group by first significant keyword in title
-    const clusters = {};
-    const standalone = [];
-    
-    categoryItems.forEach((item) => {
-      const keywords = extractKeywords(item.title);
-      const primaryKeyword = keywords[0]; // First keyword
-      
-      if (primaryKeyword) {
-        if (!clusters[primaryKeyword]) {
-          clusters[primaryKeyword] = [];
-        }
-        clusters[primaryKeyword].push(item);
-      } else {
-        standalone.push(item);
-      }
-    });
-    
-    // Process clusters
-    Object.entries(clusters).forEach(([keyword, clusterItems]) => {
-      if (clusterItems.length >= 2) {
-        // Create a virtual folder for this cluster
-        const folder = {
-          _id: `cluster-${keyword}-${Date.now()}`,
-          title: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-          category: clusterItems[0].category,
-          icon: '📁',
-          isFolder: true,
-          isVirtualFolder: true, // Mark as auto-generated
-          children: clusterItems,
-          postId: null,
-        };
-        result.push(folder);
-      } else {
-        // Single item, add as standalone
-        standalone.push(...clusterItems);
-      }
-    });
-    
-    // Add standalone items
-    result.push(...standalone);
-  });
-  
-  return result;
-};
-
-// Get all sidebar items (returns auto-clustered tree structure)
 app.get('/api/sidebar-items', async (req, res) => {
   try {
     const items = await SidebarItem.find()
-      .populate('postId')
+      .populate('postId', '_id title body')
       .sort({ category: 1, order: 1, createdAt: 1 });
-    
-    // Use auto-clustering for better UI
-    const clusteredTree = buildAutoClusteredTree(items);
-    const regularTree = buildTree(items);
-    
-    res.json({ 
-      success: true, 
-      items: clusteredTree, 
+
+    const tree = buildTree(items);
+
+    res.json({
+      success: true,
+      items: tree,
       flatItems: items,
-      regularTree, // Also provide non-clustered tree
     });
   } catch (error) {
     console.error('Error fetching sidebar items:', error);
@@ -449,12 +290,11 @@ app.get('/api/sidebar-items', async (req, res) => {
   }
 });
 
-// Get sidebar items by category
 app.get('/api/sidebar-items/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
     const items = await SidebarItem.find({ category })
-      .populate('postId')
+      .populate('postId', '_id title body')
       .sort({ order: 1 });
     res.json({ success: true, items });
   } catch (error) {
@@ -463,7 +303,6 @@ app.get('/api/sidebar-items/category/:category', async (req, res) => {
   }
 });
 
-// Get a single sidebar item by ID
 app.get('/api/sidebar-items/:id', async (req, res) => {
   try {
     const item = await SidebarItem.findById(req.params.id).populate('postId');
@@ -477,50 +316,36 @@ app.get('/api/sidebar-items/:id', async (req, res) => {
   }
 });
 
-// Create a new sidebar item with nested structure support
 app.post('/api/sidebar-items', async (req, res) => {
   try {
     const {
-      title, category, icon, postId, order, path, autoNestES6,
+      title, category, icon, postId, order, path, isFolder,
     } = req.body;
 
-    // Validation
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
     if (!category) {
       return res.status(400).json({ error: 'Category is required' });
     }
-    if (!postId) {
-      return res.status(400).json({ error: 'Post ID is required' });
-    }
 
-    // Check if post exists
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
-
-    // Check if this is ES6 related content and should be auto-nested
-    let finalPath = path || '';
-    if (autoNestES6 !== false) {
-      const isES6Related = detectES6Related(title, post.body, post.tags);
-      if (isES6Related && !finalPath.toLowerCase().includes('es6')) {
-        // Auto-nest under ES6 category
-        finalPath = finalPath ? `ES6 Features > ${finalPath}` : `ES6 Features > ${title}`;
+    // postId is only required if it's not a folder
+    if (!isFolder && postId) {
+      const post = await Post.findById(postId);
+      if (!post) {
+        return res.status(404).json({ error: 'Post not found' });
       }
     }
 
-    // Use nested structure creation
     const savedItem = await createNestedStructure(
-      finalPath,
-      postId,
+      path || '',
+      postId || null,
       category,
       title,
       icon || '📄',
     );
 
-    const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId');
+    const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId', '_id title body');
 
     return res.status(201).json({
       success: true,
@@ -536,7 +361,198 @@ app.post('/api/sidebar-items', async (req, res) => {
   }
 });
 
-// Update a sidebar item
+// ============================================
+// SMART-ADD: Handles duplicates & tree transformation
+// ============================================
+app.post('/api/sidebar-items/smart-add', async (req, res) => {
+  try {
+    const {
+      title, category, postId, parentId = null,
+    } = req.body;
+
+    if (!title || !category) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title and category are required',
+      });
+    }
+
+    const normalizedCategory = category.trim();
+    const normalizedTitle = title.trim();
+
+    // Convert postId string to ObjectId if provided
+    let postIdObjectId = null;
+    if (postId) {
+      try {
+        postIdObjectId = new mongoose.Types.ObjectId(postId);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid postId format: ${postId}`,
+        });
+      }
+    }
+
+    // Find existing item with same title in same category and parent
+    const existingItem = await SidebarItem.findOne({
+      title: { $regex: new RegExp(`^${normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      parentId: parentId || null,
+    });
+
+    if (existingItem) {
+      if (existingItem.isFolder) {
+        // Already a folder, just add new item as child
+        const childCount = await SidebarItem.countDocuments({ parentId: existingItem._id });
+        const newItem = new SidebarItem({
+          title: normalizedTitle,
+          category: existingItem.category,
+          parentId: existingItem._id,
+          postId: postIdObjectId,
+          icon: '📄',
+          isFolder: false,
+          order: childCount,
+        });
+
+        await newItem.save();
+        await newItem.populate('postId', '_id title body');
+
+        return res.status(201).json({
+          success: true,
+          action: 'added_to_existing_folder',
+          item: newItem.toObject(),
+          parent: existingItem.toObject(),
+        });
+      }
+
+      // Transform existing file into a folder
+      const originalPostId = existingItem.postId;
+
+      // Update existing item to be a folder
+      existingItem.isFolder = true;
+      existingItem.icon = '📁';
+      existingItem.postId = null;
+      await existingItem.save();
+
+      // Create child for the original file
+      const originalChild = new SidebarItem({
+        title: `${normalizedTitle} (1)`,
+        category: existingItem.category,
+        parentId: existingItem._id,
+        postId: originalPostId,
+        icon: '📄',
+        isFolder: false,
+        order: 0,
+      });
+      await originalChild.save();
+
+      // Create child for the new file
+      const newChild = new SidebarItem({
+        title: `${normalizedTitle} (2)`,
+        category: existingItem.category,
+        parentId: existingItem._id,
+        postId: postIdObjectId,
+        icon: '📄',
+        isFolder: false,
+        order: 1,
+      });
+      await newChild.save();
+      await newChild.populate('postId', '_id title body');
+
+      // Fetch updated parent with children
+      const children = await SidebarItem.find({ parentId: existingItem._id })
+        .populate('postId', '_id title body')
+        .sort({ order: 1 });
+
+      return res.status(200).json({
+        success: true,
+        action: 'transformed_to_folder',
+        parent: { ...existingItem.toObject(), children },
+        newItem: newChild,
+      });
+    }
+
+    // CASE: No duplicate - Create new item
+    const itemCount = await SidebarItem.countDocuments({
+      category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      parentId: parentId || null,
+    });
+
+    const newItem = new SidebarItem({
+      title: normalizedTitle,
+      category: normalizedCategory,
+      parentId: parentId || null,
+      postId: postIdObjectId,
+      icon: '📄',
+      isFolder: false,
+      order: itemCount,
+    });
+
+    await newItem.save();
+    await newItem.populate('postId', '_id title body');
+
+    return res.status(201).json({
+      success: true,
+      action: 'created_new',
+      item: newItem.toObject(),
+    });
+  } catch (error) {
+    console.error('Error in smart-add:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// GET: Fetch sidebar as categorized tree structure
+// ============================================
+app.get('/api/sidebar/categories', async (req, res) => {
+  try {
+    // Fetch all sidebar items and populate post details (including _id)
+    const items = await SidebarItem.find()
+      .populate('postId', '_id title body category tags')
+      .sort({ category: 1, order: 1, createdAt: 1 });
+
+    // Group by category
+    const categoryMap = new Map();
+
+    items.forEach((item) => {
+      const catName = item.category;
+      if (!categoryMap.has(catName)) {
+        categoryMap.set(catName, []);
+      }
+      if (!item.postId && !item.isFolder) {
+        console.warn(`Warning: Item "${item.title}" has no postId`);
+      }
+      categoryMap.get(catName).push(item);
+    });
+
+    // Build tree for each category
+    const categories = [];
+    categoryMap.forEach((categoryItems, categoryName) => {
+      const tree = buildTree(categoryItems);
+      
+      categories.push({
+        id: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: categoryName,
+        icon: '📁',
+        items: tree,
+      });
+    });
+
+    // Sort categories alphabetically
+    categories.sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ 
+      success: true, 
+      categories,
+      totalItems: items.length,
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.put('/api/sidebar-items/:id', async (req, res) => {
   try {
     const {
@@ -554,7 +570,7 @@ app.put('/api/sidebar-items/:id', async (req, res) => {
       req.params.id,
       updateData,
       { new: true, runValidators: true },
-    ).populate('postId');
+    ).populate('postId', '_id title body');
 
     if (!updatedItem) {
       return res.status(404).json({ error: 'Sidebar item not found' });
@@ -574,16 +590,36 @@ app.put('/api/sidebar-items/:id', async (req, res) => {
   }
 });
 
-// Delete a sidebar item
+// Helper function to recursively delete sidebar items and their children
+const recursivelyDeleteSidebarItem = async (itemId) => {
+  const item = await SidebarItem.findById(itemId);
+  if (!item) return;
+
+  // If it's a folder, delete all children first
+  if (item.isFolder) {
+    const children = await SidebarItem.find({ parentId: itemId });
+    for (const child of children) {
+      await recursivelyDeleteSidebarItem(child._id);
+    }
+  }
+
+  // Delete the item itself
+  await SidebarItem.findByIdAndDelete(itemId);
+};
+
 app.delete('/api/sidebar-items/:id', async (req, res) => {
   try {
-    const deletedItem = await SidebarItem.findByIdAndDelete(req.params.id);
-    if (!deletedItem) {
+    const itemToDelete = await SidebarItem.findById(req.params.id);
+    if (!itemToDelete) {
       return res.status(404).json({ error: 'Sidebar item not found' });
     }
+
+    // Use recursive delete to handle cascading deletion of children
+    await recursivelyDeleteSidebarItem(req.params.id);
+
     return res.json({
       success: true,
-      message: 'Sidebar item deleted successfully',
+      message: 'Sidebar item and all children deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting sidebar item:', error);
@@ -594,7 +630,6 @@ app.delete('/api/sidebar-items/:id', async (req, res) => {
   }
 });
 
-// Get post by sidebar item
 app.get('/api/sidebar-items/:id/post', async (req, res) => {
   try {
     const item = await SidebarItem.findById(req.params.id).populate('postId');
@@ -611,7 +646,6 @@ app.get('/api/sidebar-items/:id/post', async (req, res) => {
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
