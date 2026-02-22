@@ -1,4 +1,19 @@
-/* Modal — defined first to avoid specificity issues when nested elsewhere */
+/* stylelint-disable selector-class-pattern */
+
+.fm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+/* Modal — defined before compound selector to satisfy no-descending-specificity */
 .fm-modal {
   background: #fff;
   border-radius: 12px;
@@ -13,25 +28,12 @@
   transition: transform 0.18s ease;
 }
 
-.fm-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 16px;
-  opacity: 0;
-  transition: opacity 0.18s ease;
+.fm-overlay--in {
+  opacity: 1;
+}
 
-  &:is(.fm-overlay-in) {
-    opacity: 1;
-
-    & .fm-modal {
-      transform: translateY(0);
-    }
-  }
+.fm-overlay--in .fm-modal {
+  transform: translateY(0);
 }
 
 /* Header */
@@ -73,39 +75,50 @@
   }
 }
 
+/* ── Enhanced Breadcrumb ──────────────────────────────────────────────────── */
 .fm-breadcrumb {
   display: flex;
   align-items: center;
   gap: 2px;
   overflow: hidden;
   min-width: 0;
+  background: #efefef;
+  border-radius: 8px;
+  padding: 3px 6px;
+  border: 1px solid #e0e0e0;
 }
 
 .fm-crumb {
   all: unset;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: #999;
+  color: #888;
   cursor: pointer;
-  padding: 3px 6px;
+  padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
   transition: background 0.1s, color 0.1s;
 
-  /* Base modifier */
-  &:is(.fm-crumb-cur) {
-    color: #111;
-    cursor: default;
-  }
-
-  /* Interaction states */
   &:hover {
-    background: #ebebeb;
+    background: #ddd;
     color: #333;
   }
 
-  &:is(.fm-crumb-cur):hover {
+  &.fm-crumb--cur {
+    color: #1473e6;
+    background: #e8f0fe;
+    cursor: default;
+
+    &:hover {
+      background: #e8f0fe;
+    }
+  }
+
+  &.fm-crumb--search {
+    color: #888;
     background: transparent;
+    font-style: italic;
+    font-weight: 500;
   }
 }
 
@@ -113,6 +126,7 @@
   color: #bbb;
   font-size: 14px;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .fm-actions {
@@ -165,6 +179,254 @@
   }
 }
 
+/* ── Search bar ───────────────────────────────────────────────────────────── */
+.fm-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #ebebeb;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.fm-search-ico {
+  display: flex;
+  align-items: center;
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+.fm-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #333;
+  background: transparent;
+  padding: 2px 0;
+
+  &::placeholder {
+    color: #bbb;
+  }
+}
+
+.fm-search-clear {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #666;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s;
+
+  & svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    background: #ccc;
+  }
+}
+
+/* ── Search results panel ─────────────────────────────────────────────────── */
+.fm-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fm-search-row {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* hover is JS-driven via fm-search-row--hov so no CSS :hover/:active bleeds in */
+.fm-search-row--hov {
+  background: #f5f5f5;
+}
+
+.fm-search-row-ico {
+  width: 32px;
+  height: 28px;
+  flex-shrink: 0;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.fm-search-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── name row: folder name left, timestamp right ──────────────────────────── */
+.fm-search-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fm-search-row-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── timestamp: small, muted, right-aligned ───────────────────────────────── */
+.fm-search-row-ts {
+  font-size: 10px;
+  color: #bbb;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-search-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fm-search-row-path {
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-search-row-folders {
+  font-size: 11px;
+  color: #bbb;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fm-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 24px;
+  color: #bbb;
+
+  & svg {
+    width: 32px;
+    height: 32px;
+    opacity: 0.4;
+  }
+
+  & p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #bbb;
+  }
+}
+
+/* ── Direct-select hint banner ────────────────────────────────────────────── */
+.fm-hint-wrap {
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+.fm-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  margin: 10px 0 0;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6d4c00;
+  line-height: 1.5;
+  animation: fm-hint-in 0.18s ease;
+
+  & > svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #f59e0b;
+    width: 14px;
+    height: 14px;
+  }
+
+  & > span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  & strong {
+    font-weight: 700;
+  }
+}
+
+.fm-hint-close {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: #b8860b;
+  cursor: pointer;
+  opacity: 0.6;
+  margin-top: 1px;
+  transition: opacity 0.1s;
+
+  & svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+@keyframes fm-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Body */
 .fm-body {
   flex: 1;
@@ -175,13 +437,6 @@
 
 .fm-panel {
   height: 100%;
-
-  &:is(.fm-panel-drop) {
-    background: #f0f5ff;
-    border-radius: 8px;
-    outline: 2px dashed var(--link-color, #1473e6);
-    outline-offset: -4px;
-  }
 }
 
 /* Empty state */
@@ -222,21 +477,6 @@
   gap: 8px;
 }
 
-/* Item Icon — defined before fm-item usage */
-.fm-item-ico {
-  width: 64px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  & svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
 /* Grid item */
 .fm-item {
   display: flex;
@@ -251,48 +491,39 @@
   position: relative;
   border: 2px solid transparent;
 
-  /* Base Modifiers */
-  &:is(.fm-item-sel) {
-    background: #e8f0fe;
-    border-color: var(--link-color, #1473e6);
-  }
-
-  &:is(.fm-item-new) {
-    background: #f9f9f9;
-    border: 2px dashed #ccc;
-    cursor: default;
-  }
-
-  &:is(.fm-item-file) .fm-item-ico {
-    width: 52px;
-    height: 60px;
-  }
-
-  &:is(.fm-item-drag) {
-    opacity: 0.35;
-    cursor: grabbing;
-  }
-
-  &:is(.fm-item-over) {
-    background: #e8f0fe;
-    border-color: var(--link-color, #1473e6);
-    border-style: dashed;
-    transform: scale(1.04);
-    transition: transform 0.1s, background 0.1s;
-  }
-
-  /* Interaction States */
   &:hover {
     background: #f5f5f5;
   }
 
-  &[draggable="true"] {
-    cursor: grab;
-
-    &:active {
-      cursor: grabbing;
-    }
+  &.fm-item--sel {
+    background: #f0f0f0;
+    border-color: #bbb;
   }
+
+  &.fm-item--new {
+    background: #f9f9f9;
+    border: 2px dashed #ccc;
+    cursor: default;
+  }
+}
+
+.fm-item-ico {
+  width: 64px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.fm-item--file .fm-item-ico {
+  width: 52px;
+  height: 60px;
 }
 
 .fm-item-lbl {
@@ -300,7 +531,7 @@
   font-weight: 500;
   color: #333;
   text-align: center;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -323,14 +554,13 @@
   box-shadow: 0 0 0 2px rgb(20 115 230 / 15%);
   box-sizing: border-box;
 
-  &:is(.fm-name-input-err) {
+  &.fm-name-input--err {
     border-color: #c62828;
     box-shadow: 0 0 0 2px rgb(198 40 40 / 15%);
     animation: fm-shake 0.25s ease;
   }
 }
 
-/* Inline error message shown below the input */
 .fm-name-err {
   font-size: 10px;
   color: #c62828;
@@ -338,16 +568,29 @@
   text-align: center;
   line-height: 1.3;
   max-width: 100%;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
-/* Shake animation for duplicate-name error */
 @keyframes fm-shake {
-  0%   { transform: translateX(0); }
-  25%  { transform: translateX(-4px); }
-  50%  { transform: translateX(4px); }
-  75%  { transform: translateX(-3px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  50% {
+    transform: translateX(4px);
+  }
+
+  75% {
+    transform: translateX(-3px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 /* Right-click context menu */
@@ -376,16 +619,16 @@
   box-sizing: border-box;
   transition: background 0.1s;
 
-  &:is(.fm-ctx-btn-danger) {
-    color: #c62828;
-  }
-
   &:hover {
     background: #f5f5f5;
   }
 
-  &:is(.fm-ctx-btn-danger):hover {
-    background: #ffebee;
+  &.fm-ctx-btn--danger {
+    color: #c62828;
+
+    &:hover {
+      background: #ffebee;
+    }
   }
 }
 
@@ -393,6 +636,624 @@
   height: 1px;
   background: #f0f0f0;
   margin: 3px 0;
+}
+
+/* ── Folder item timestamp ────────────────────────────────────────────────── */
+.fm-item-ts {
+  font-size: 10px;
+  color: #aaa;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── PATH bar (above footer) ──────────────────────────────────────────────── */
+.fm-path-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-top: 1px solid #ebebeb;
+  background: #fafafa;
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+.fm-path-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #aaa;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.fm-path-value {
+  font-size: 12px;
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* ── View toggle buttons ──────────────────────────────────────────────────── */
+.fm-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #ebebeb;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.fm-view-btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: #ddd;
+    color: #333;
+  }
+
+  &.fm-view-btn--active {
+    background: var(--link-color, #1473e6);
+    color: #fff;
+  }
+}
+
+/* ── List view table ──────────────────────────────────────────────────────── */
+.fm-list-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.fm-list-header {
+  display: grid;
+  grid-template-columns: 24px 36px 1fr 80px 110px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #ebebeb;
+  background: #f8f8f8;
+  border-radius: 6px 6px 0 0;
+  gap: 8px;
+}
+
+.fm-list-header-expand,
+.fm-list-header-ico {
+  /* spacers */
+}
+
+.fm-list-header-name,
+.fm-list-header-topics,
+.fm-list-header-ts {
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 0.2px;
+}
+
+.fm-list-header-topics,
+.fm-list-header-ts {
+  text-align: right;
+}
+
+.fm-list-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.fm-list-row {
+  display: grid;
+  grid-template-columns: 24px 36px 1fr 80px 110px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-bottom: 1px solid #f4f4f4;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.1s;
+  user-select: none;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &.fm-list-row--sel {
+    background: #e8f0fe;
+  }
+
+  &.fm-list-row--new {
+    background: #fafafa;
+    cursor: default;
+  }
+}
+
+.fm-list-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #bbb;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: color 0.1s, background 0.1s;
+  all: unset;
+  cursor: pointer;
+
+  &:hover {
+    color: #555;
+    background: #e0e0e0;
+  }
+}
+
+.fm-list-ico {
+  width: 28px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.fm-list-name {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.fm-list-name-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.fm-list-topics {
+  font-size: 12px;
+  color: #888;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-list-ts {
+  font-size: 12px;
+  color: #aaa;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Time filter chips ────────────────────────────────────────────────────── */
+.fm-time-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px 8px;
+  border-bottom: 1px solid #ebebeb;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.fm-time-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  cursor: pointer;
+  background: #f5f5f5;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+
+  &:hover {
+    background: #e8e8e8;
+    color: #333;
+  }
+
+  &.fm-time-chip--active {
+    background: #e8f0fe;
+    color: var(--link-color, #1473e6);
+    border-color: var(--link-color, #1473e6);
+  }
+}
+
+/* ── Tree view — VSCode style (Image 1) ───────────────────────────────────── */
+.fm-tree {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.fm-tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.fm-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px 8px 2px 0;
+  cursor: pointer;
+  user-select: none;
+  min-height: 30px;
+  border-radius: 4px;
+  transition: background 0.1s;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+
+  &.fm-tree-row--sel {
+    background: #ebebeb;
+  }
+}
+
+/* Each depth level indent spacer — carries the vertical guide line */
+.fm-tree-indent {
+  display: inline-flex;
+  width: 20px;
+  flex-shrink: 0;
+  align-self: stretch;
+  position: relative;
+
+  /* vertical guide line */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #d0d0d0;
+  }
+}
+
+/* triangle toggle button */
+.fm-tree-toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.1s;
+
+  &:hover {
+    background: #e0e0e0;
+  }
+}
+
+.fm-tree-tri {
+  width: 8px;
+  height: 8px;
+  fill: #888;
+  transition: transform 0.15s;
+  transform: rotate(0deg);
+
+  &.fm-tree-tri--open {
+    transform: rotate(90deg);
+    fill: #444;
+  }
+}
+
+.fm-tree-tri-empty {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+}
+
+/* Folder icon — matches Image 1 size */
+.fm-tree-ico {
+  width: 28px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.fm-tree-name-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm-tree-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* children container — vertical connector on left */
+.fm-tree-children {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* search result path hint */
+.fm-list-name-path {
+  font-size: 11px;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  margin-top: 1px;
+}
+
+/* ── List view — Image 3 style (NAME | TOPICS | LAST UPDATED) ─────────────── */
+.fm-lv {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.fm-lv-head {
+  display: grid;
+  grid-template-columns: 1fr 80px 110px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #ebebeb;
+  background: #f8f8f8;
+  border-radius: 6px 6px 0 0;
+}
+
+.fm-lv-cell {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  letter-spacing: 0.2px;
+}
+
+.fm-lv-topics,
+.fm-lv-ts {
+  text-align: right;
+}
+
+.fm-lv-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 110px;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 42px;
+  border-bottom: 1px solid #f4f4f4;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 4px;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &.fm-lv-row--sel {
+    background: #f0f0f0;
+  }
+
+  &.fm-lv-row--new {
+    cursor: default;
+    background: #fafafa;
+  }
+}
+
+.fm-lv-cell.fm-lv-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.fm-lv-ico {
+  width: 26px;
+  height: 22px;
+  flex-shrink: 0;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.fm-lv-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-lv-cell.fm-lv-topics {
+  font-size: 13px;
+  color: #888;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.fm-lv-cell.fm-lv-ts {
+  font-size: 13px;
+  color: #aaa;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tiles view — big file-manager cards ─────────────────────────────────── */
+.fm-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.fm-tile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: #fafafa;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+
+  &:hover {
+    background: #f5f5f5;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+  }
+
+  &.fm-tile--sel {
+    background: #f0f0f0;
+    border-color: #bbb;
+    box-shadow: 0 0 0 2px rgb(0 0 0 / 8%);
+  }
+
+  &.fm-tile--drag {
+    opacity: 0.35;
+  }
+
+  &.fm-tile--over {
+    background: #f0f0f0;
+    border-color: #999;
+    border-style: dashed;
+  }
+
+  &.fm-tile--new {
+    border: 2px dashed #ccc;
+    background: #f9f9f9;
+    cursor: default;
+    box-shadow: none;
+  }
+}
+
+.fm-tile-ico {
+  width: 48px;
+  height: 42px;
+  flex-shrink: 0;
+
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.fm-tile-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fm-tile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.fm-tile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fm-tile-folders {
+  font-size: 11px;
+  color: #888;
+}
+
+.fm-tile-ts {
+  font-size: 11px;
+  color: #bbb;
+}
+
+/* ── List view inline nesting ─────────────────────────────────────────────── */
+.fm-lv-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.fm-lv-children {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid #ebebeb;
+  margin-left: 20px;
+}
+
+.fm-lv-chevron {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.1s;
+
+  & svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &.fm-lv-chevron--has:hover {
+    background: #e0e0e0;
+  }
+}
+
+.fm-lv-tri {
+  width: 8px;
+  height: 8px;
+  fill: #bbb;
+  transition: transform 0.15s;
+  transform: rotate(0deg);
+
+  &.fm-lv-tri--open {
+    transform: rotate(90deg);
+    fill: #555;
+  }
 }
 
 /* Footer */
@@ -419,28 +1280,62 @@
   border: 1px solid transparent;
   transition: background 0.12s;
 
-  /* 1. Define ALL base modifier classes first */
-  &:is(.fm-foot-btn-ok) {
-    background: var(--link-color, #1473e6);
-    color: #fff;
-  }
-
-  &:is(.fm-foot-btn-cancel) {
+  &.fm-foot-btn--cancel {
     background: #f0f0f0;
     color: #444;
     border-color: #d8d8d8;
+
+    &:hover {
+      background: #e4e4e4;
+    }
   }
 
-  /* 2. Define interaction states AFTER all base modifiers */
-  &:is(.fm-foot-btn-ok):hover {
-    background: var(--link-hover-color, #0d66d0);
-  }
+  &.fm-foot-btn--ok {
+    background: var(--link-color, #1473e6);
+    color: #fff;
 
-  &:is(.fm-foot-btn-ok):active {
-    background: #0a58b8;
-  }
+    &:hover {
+      background: var(--link-hover-color, #0d66d0);
+    }
 
-  &:is(.fm-foot-btn-cancel):hover {
-    background: #e4e4e4;
+    &:active {
+      background: #0a58b8;
+    }
   }
 }
+
+/* ── Drag-and-drop states ─────────────────────────────────────────────────── */
+
+/* Item being dragged — fade it so user sees it "lifted" */
+.fm-item--drag {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+
+/* Folder being hovered over as a drop target */
+.fm-item--over {
+  background: #e8f0fe;
+  border-color: var(--link-color, #1473e6);
+  border-style: dashed;
+  transform: scale(1.04);
+  transition: transform 0.1s, background 0.1s;
+}
+
+/* Panel background when dragging over empty space (reorder to current level) */
+.fm-panel--drop {
+  background: #f0f5ff;
+  border-radius: 8px;
+  outline: 2px dashed var(--link-color, #1473e6);
+  outline-offset: -4px;
+}
+
+/* Show grab cursor on draggable items */
+.fm-item[draggable="true"] {
+  cursor: grab;
+}
+
+.fm-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* stylelint-enable selector-class-pattern */

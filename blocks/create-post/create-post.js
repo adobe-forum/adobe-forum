@@ -1124,7 +1124,14 @@ function CreatePost() {
   }, []);
 
   const postDataRef = useRef({
-    title: '', category: '', categoryPath: '', body: null, tags: [],
+    title: '',
+    category: '',
+    categoryPath: '',
+    bodyHtml: '',
+    bodyJson: null,
+    tags: [],
+    sidebarPath: '',
+    created_at: null, // eslint-disable-line camelcase
   });
 
   const handleBodyChange = (htmlContent, jsonContent) => {
@@ -1137,10 +1144,17 @@ function CreatePost() {
       title,
       category,
       categoryPath,
-      body: bodyJson,
+      bodyHtml: body,
+      bodyJson,
       tags,
+      sidebarPath,
+      created_at: new Date().toISOString(), // eslint-disable-line camelcase
     };
-  }, [title, category, categoryPath, bodyJson, tags]);
+    /* eslint-disable no-console */
+    console.clear();
+    console.log('Live post JSON:', postDataRef.current);
+    /* eslint-enable no-console */
+  }, [title, category, categoryPath, body, bodyJson, tags, sidebarPath]);
 
   const missingFields = [];
   if (title.length < 15) missingFields.push('Title (min 15 characters)');
@@ -1162,8 +1176,11 @@ function CreatePost() {
       title,
       category,
       categoryPath,
-      body,
+      bodyHtml: body,
+      bodyJson,
       tags: tagsWithHash,
+      sidebarPath,
+      created_at: new Date().toISOString(), // eslint-disable-line camelcase
     };
 
     try {
@@ -1185,7 +1202,7 @@ function CreatePost() {
               category,
               categoryPath,
               postId: result.post._id, // eslint-disable-line no-underscore-dangle
-              path: sidebarPath || categoryPath || title,
+              path: sidebarPath || (categoryPath ? categoryPath.replace(/ > /g, '/') : title),
               autoNestES6: true,
             }),
           });
@@ -1362,7 +1379,7 @@ function CreatePost() {
                 <span className="category-breadcrumb-segments">
                   ${categoryPath.split(' > ').map((seg, i, arr) => html`
                     <span key=${i} className="category-breadcrumb-segment">${seg}</span>
-                    ${i < arr.length - 1 ? html`<span className="category-breadcrumb-sep">›</span>` : null}
+                    ${i < arr.length - 1 ? html`<span className="category-breadcrumb-sep">/</span>` : null}
                   `)}
                 </span>
                 <button
