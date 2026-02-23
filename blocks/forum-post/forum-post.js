@@ -89,13 +89,30 @@ const ContentBlock = ({ block }) => {
 };
 
 const ArrowIcon = () => html`
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 18 18">
+  <svg
+    class="spectrum-Icon spectrum-Icon--sizeS spectrum-ActionButton-icon"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 18 18"
+    aria-hidden="true"
+    focusable="false"
+  >
     <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
   </svg>
 `;
 
 const BackIcon = () => html`
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <svg
+    class="spectrum-Icon spectrum-Icon--sizeS spectrum-ActionButton-icon"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
     <line x1="19" y1="12" x2="5" y2="12"></line>
     <polyline points="12 19 5 12 12 5"></polyline>
   </svg>
@@ -212,9 +229,13 @@ const ForumPost = () => {
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
 
-      <button class="forum-back-btn" onClick=${handleBack}>
+      <button
+        class="spectrum-ActionButton spectrum-ActionButton--sizeM spectrum-ActionButton--quiet forum-back-btn"
+        onClick=${handleBack}
+        aria-label="Back to Posts"
+      >
         <${BackIcon} />
-        Back to Posts
+        <span class="spectrum-ActionButton-label">Back to Posts</span>
       </button>
 
       <div class="tags-row">
