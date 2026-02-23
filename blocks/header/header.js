@@ -36,22 +36,22 @@ const UserIcon = () => html`
 // ============================================
 
 function HeaderComponent() {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [profileImageError, setProfileImageError] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileImageError, setProfileImageError] = useState(false);
 
-    useEffect(() => {
-        const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
-        window.addEventListener('sidebar-state-changed', onSidebarStateChange);
-        return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
-    }, []);
+  useEffect(() => {
+    const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
+    window.addEventListener('sidebar-state-changed', onSidebarStateChange);
+    return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
+  }, []);
 
-    const toggleSidebar = () => {
-        const next = !sidebarOpen;
-        setSidebarOpen(next);
-        window.dispatchEvent(new CustomEvent('toggle-sidebar', { detail: { isOpen: next } }));
-    };
+  const toggleSidebar = () => {
+    const next = !sidebarOpen;
+    setSidebarOpen(next);
+    window.dispatchEvent(new CustomEvent('toggle-sidebar', { detail: { isOpen: next } }));
+  };
 
-    return html`
+  return html`
         <nav class="spectrum-nav">
             <div class="nav-hamburger ${sidebarOpen ? 'is-open' : ''}">
                 <button type="button" onClick=${toggleSidebar} aria-label="Toggle Sidebar" aria-expanded=${sidebarOpen}>
@@ -65,8 +65,8 @@ function HeaderComponent() {
                         src="/icons/logo.svg"
                         alt="Adobe Logo"
                         onError=${(e) => {
-        if (e.target.src.endsWith('.svg')) e.target.src = '/icons/logo.png';
-    }}
+    if (e.target.src.endsWith('.svg')) e.target.src = '/icons/logo.png';
+  }}
                     />
                 </a>
                 <a href="/create-post" class="nav-button spectrum-button">
@@ -91,8 +91,8 @@ function HeaderComponent() {
                         <a href="/profile" class="profile-link">
                             <div class="profile-avatar">
                                 ${!profileImageError
-        ? html`<img src="/icons/profile.png" alt="Profile" onError=${() => setProfileImageError(true)} />`
-        : html`<${UserIcon} />`}
+    ? html`<img src="/icons/profile.png" alt="Profile" onError=${() => setProfileImageError(true)} />`
+    : html`<${UserIcon} />`}
                             </div>
                         </a>
                     </li>
@@ -107,11 +107,11 @@ function HeaderComponent() {
 // ============================================
 
 function loadCSS(href) {
-    if (document.querySelector(`link[href="${href}"]`)) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    document.head.append(link);
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.append(link);
 }
 
 // ============================================
@@ -119,47 +119,47 @@ function loadCSS(href) {
 // ============================================
 
 export default async function decorate(block) {
-    block.textContent = '';
+  block.textContent = '';
 
-    const headerWrapper = document.createElement('div');
-    headerWrapper.className = 'header-wrapper';
-    block.append(headerWrapper);
+  const headerWrapper = document.createElement('div');
+  headerWrapper.className = 'header-wrapper';
+  block.append(headerWrapper);
 
-    try {
-        render(html`<${HeaderComponent} />`, headerWrapper);
-    } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Header render error:', err);
+  try {
+    render(html`<${HeaderComponent} />`, headerWrapper);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Header render error:', err);
+  }
+
+  try {
+    loadCSS('/blocks/sidebar/sidebar.css');
+
+    const sidebarMount = document.createElement('div');
+    sidebarMount.className = 'sidebar-mount';
+    document.body.append(sidebarMount);
+
+    const { default: decorateSidebar } = await import('../sidebar/sidebar.js');
+    decorateSidebar(sidebarMount);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load sidebar', e);
+  }
+
+  try {
+    const footerResp = await fetch('/footer.plain.html');
+    if (footerResp.ok) {
+      const footerHtml = await footerResp.text();
+      let footer = document.querySelector('footer');
+      if (!footer) {
+        footer = document.createElement('footer');
+        document.body.append(footer);
+      }
+      footer.innerHTML = footerHtml;
+      footer.classList.add('global-footer');
     }
-
-    try {
-        loadCSS('/blocks/sidebar/sidebar.css');
-
-        const sidebarMount = document.createElement('div');
-        sidebarMount.className = 'sidebar-mount';
-        document.body.append(sidebarMount);
-
-        const { default: decorateSidebar } = await import('../sidebar/sidebar.js');
-        decorateSidebar(sidebarMount);
-    } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load sidebar', e);
-    }
-
-    try {
-        const footerResp = await fetch('/footer.plain.html');
-        if (footerResp.ok) {
-            const footerHtml = await footerResp.text();
-            let footer = document.querySelector('footer');
-            if (!footer) {
-                footer = document.createElement('footer');
-                document.body.append(footer);
-            }
-            footer.innerHTML = footerHtml;
-            footer.classList.add('global-footer');
-        }
-    } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load global footer', e);
-    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load global footer', e);
+  }
 }
