@@ -134,11 +134,7 @@ const moveNode = (tree, nodeId, targetParentId) => {
   return insertInto(withoutNode, targetParentId, node);
 };
 
-// ── FIX 1: removed unused buildPath ──────────────────────────────────────────
-// (was: const buildPath = ...) — replaced by findAncestors everywhere
-
 // ── Find ancestors of a node by id ──────────────────────────────────────────
-// FIX 2: replaced for..of loop with Array.reduce to satisfy no-restricted-syntax
 const findAncestors = (nodes, targetId, path = []) => {
   const found = nodes.reduce((acc, n) => {
     if (acc) return acc;
@@ -181,15 +177,13 @@ const countFolders = (node) => {
 };
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
-// FIX 3: removed unused IcoGrid, IcoTree, IcoChevron
 const IcoClose = () => html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const IcoEdit = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const IcoTrash = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
 const IcoSearch = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 const IcoInfo = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-const IcoList = () => html`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`;
-const IcoTiles = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
+
 const IcoFolder = () => html`
   <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
     <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
@@ -293,11 +287,8 @@ function DirectSelectHint({ folderName, onDismiss }) {
 }
 
 // ── Search results panel ──────────────────────────────────────────────────────
-// Uses its own local hoveredId — never touches global selected state,
-// so switching time filters or navigating never leaves a red badge behind.
+// No JS-driven hover state — plain CSS :hover handles it (see fm-search-row in CSS)
 function SearchResults({ results, onNavigate }) {
-  const [hoveredId, setHoveredId] = useState(null);
-
   if (results.length === 0) {
     return html`
       <div class="fm-search-empty">
@@ -312,13 +303,10 @@ function SearchResults({ results, onNavigate }) {
     const pathStr = [...ancestors.map((a) => a.name), node.name].slice(0, -1).join(' › ');
     const folders = countFolders(node);
     const ts = timeAgo(node.updatedAt);
-    const isHovered = hoveredId === node.id;
     return html`
         <button key=${node.id} type="button"
-          class=${`fm-search-row${isHovered ? ' fm-search-row--hov' : ''}`}
-          onMouseEnter=${() => setHoveredId(node.id)}
-          onMouseLeave=${() => setHoveredId(null)}
-          onClick=${() => { setHoveredId(null); onNavigate(node, ancestors); }}>
+          class="fm-search-row"
+          onClick=${() => onNavigate(node, ancestors)}>
           <div class="fm-search-row-ico"><${IcoFolder}/></div>
           <div class="fm-search-row-info">
             <div class="fm-search-row-top">
@@ -335,176 +323,9 @@ function SearchResults({ results, onNavigate }) {
     </div>`;
 }
 
-// ── Tree view — VSCode folder structure ───────────────────────────────────────
-// `siblings` = folders at THIS node's own level (for rename duplicate validation)
-// FIX 4: removed unused `isLast` prop from destructuring
-function TreeNode({
-  node, siblings, selected, renamingId, onSelect, onOpen, onCtx,
-  onCommitRename, onCancelRename, depth,
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const sel = selected === node.id;
-  const ren = renamingId === node.id;
-  const children = (node.children || []).filter((c) => c.type === 'folder');
-  const hasChildren = children.length > 0;
-
-  return html`
-    <div class="fm-tree-node">
-      <div
-        class=${`fm-tree-row${sel ? ' fm-tree-row--sel' : ''}`}
-        onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
-        onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
-        onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
-
-        ${Array.from({ length: depth }).map((_, i) => html`
-          <span key=${i} class="fm-tree-indent"></span>`)}
-
-        <button type="button" class="fm-tree-toggle"
-          onClick=${(e) => {
-    e.stopPropagation();
-    if (hasChildren) setExpanded((v) => !v); else onOpen(node);
-  }}>
-          ${hasChildren
-    ? html`<svg class=${`fm-tree-tri${expanded ? ' fm-tree-tri--open' : ''}`} viewBox="0 0 24 24"><polygon points="8,6 18,12 8,18"/></svg>`
-    : html`<span class="fm-tree-tri-empty"></span>`}
-        </button>
-
-        <div class="fm-tree-ico">
-          <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
-            <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
-            <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
-          </svg>
-        </div>
-
-        <div class="fm-tree-name-wrap">
-          ${ren
-    ? html`<${NameInput}
-                initial=${node.name}
-                placeholder="Folder name"
-                siblings=${siblings}
-                excludeId=${node.id}
-                onCommit=${(v) => onCommitRename(node.id, v)}
-                onCancel=${onCancelRename}/>`
-    : html`<span class="fm-tree-name">${node.name}</span>`}
-        </div>
-      </div>
-
-      ${expanded && hasChildren && html`
-        <div class="fm-tree-children">
-          ${sortNodes(children).map((child, idx) => html`
-            <${TreeNode}
-              key=${child.id}
-              node=${child}
-              siblings=${children}
-              selected=${selected}
-              renamingId=${renamingId}
-              onSelect=${onSelect}
-              onOpen=${onOpen}
-              onCtx=${onCtx}
-              onCommitRename=${onCommitRename}
-              onCancelRename=${onCancelRename}
-              depth=${depth + 1}
-              isLast=${idx === children.length - 1}/>`)}
-        </div>`}
-    </div>`;
-}
-
-function TreeView({
-  nodes, selected, renamingId, onSelect, onOpen, onCtx, onCommitRename, onCancelRename,
-}) {
-  return html`
-    <div class="fm-tree">
-      ${nodes.map((node, idx) => html`
-        <${TreeNode}
-          key=${node.id}
-          node=${node}
-          siblings=${nodes}
-          selected=${selected}
-          renamingId=${renamingId}
-          onSelect=${onSelect}
-          onOpen=${onOpen}
-          onCtx=${onCtx}
-          onCommitRename=${onCommitRename}
-          onCancelRename=${onCancelRename}
-          depth=${0}
-          isLast=${idx === nodes.length - 1}/>`)}
-    </div>`;
-}
-
-// ── List view row — expandable inline nested ─────────────────────────────────
-// FIX 5: removed unused `folderNodes` prop from destructuring
-function ListViewRow({
-  node, depth, selected, renamingId, siblings,
-  onSelect, onOpen, onCtx, onCommitRename, onCancelRename,
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const sel = selected === node.id;
-  const ren = renamingId === node.id;
-  const children = (node.children || []).filter((c) => c.type === 'folder');
-  const hasKids = children.length > 0;
-  const ts = timeAgo(node.updatedAt);
-  const indent = depth * 20;
-
-  // FIX 6: replaced nested ternary with explicit function for topics cell value
-  const getTopicsDisplay = () => {
-    if (node.topics) return node.topics.toLocaleString();
-    if (children.length > 0) return children.length;
-    return '—';
-  };
-
-  return html`
-    <div class="fm-lv-node">
-      <div
-        class=${`fm-lv-row${sel ? ' fm-lv-row--sel' : ''}`}
-        onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
-        onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
-        onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
-
-        <div class="fm-lv-cell fm-lv-name" style=${{ paddingLeft: `${indent}px` }}>
-          <button type="button" class=${`fm-lv-chevron${hasKids ? ' fm-lv-chevron--has' : ''}`}
-            onClick=${(e) => { e.stopPropagation(); if (hasKids) setExpanded((v) => !v); }}>
-            ${hasKids
-    ? html`<svg class=${`fm-lv-tri${expanded ? ' fm-lv-tri--open' : ''}`} viewBox="0 0 24 24"><polygon points="8,6 18,12 8,18"/></svg>`
-    : ''}
-          </button>
-          <div class="fm-lv-ico"><${IcoFolder}/></div>
-          ${ren
-    ? html`<${NameInput}
-                initial=${node.name}
-                placeholder="Folder name"
-                siblings=${siblings}
-                excludeId=${node.id}
-                onCommit=${(v) => onCommitRename(node.id, v)}
-                onCancel=${onCancelRename}/>`
-    : html`<span class="fm-lv-label">${node.name}</span>`}
-        </div>
-        <div class="fm-lv-cell fm-lv-topics">${getTopicsDisplay()}</div>
-        <div class="fm-lv-cell fm-lv-ts">${ts || '—'}</div>
-      </div>
-
-      ${expanded && hasKids && html`
-        <div class="fm-lv-children">
-          ${sortNodes(children).map((child) => html`
-            <${ListViewRow}
-              key=${child.id}
-              node=${child}
-              depth=${depth + 1}
-              selected=${selected}
-              renamingId=${renamingId}
-              siblings=${children}
-              onSelect=${onSelect}
-              onOpen=${onOpen}
-              onCtx=${onCtx}
-              onCommitRename=${onCommitRename}
-              onCancelRename=${onCancelRename}/>`)}
-        </div>`}
-    </div>`;
-}
-
-// ── Grid panel ────────────────────────────────────────────────────────────────
+// ── Grid panel (tiles only) ───────────────────────────────────────────────────
 function GridPanel({
-  nodes, isRoot, selected, renamingId, adding, viewMode,
+  nodes, isRoot, selected, renamingId, adding,
   onSelect, onOpen, onCtx, onCommitRename, onCancelRename,
   onCommitAdd, onCancelAdd, onMove, onDelete,
 }) {
@@ -525,7 +346,7 @@ function GridPanel({
     if (idx === -1) return;
 
     const cols = gridRef.current
-      ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118))
+      ? Math.max(1, Math.round(gridRef.current.offsetWidth / 162))
       : 1;
 
     switch (e.key) {
@@ -619,156 +440,6 @@ function GridPanel({
 
   const panelClass = `fm-panel${overRoot ? ' fm-panel--drop' : ''}`;
 
-  // ── List view ────────────────────────────────────────────────────────────────
-  if (viewMode === 'list') {
-    return html`
-      <div
-        class=${panelClass}
-        tabIndex="0"
-        onKeyDown=${handleGridKeyDown}
-        onClick=${() => onSelect(null)}
-        onDragOver=${onDragOverPanel}
-        onDragLeave=${() => setOverRoot(false)}
-        onDrop=${onDropPanel}>
-
-        ${empty && html`
-          <div class="fm-empty">
-            <${IcoEmptyBox}/>
-            <p>${emptyTitle}</p>
-            <span>${emptyMsg}</span>
-          </div>`}
-
-        ${!empty && html`
-          <div class="fm-lv">
-            <div class="fm-lv-head">
-              <div class="fm-lv-cell fm-lv-name">NAME</div>
-              <div class="fm-lv-cell fm-lv-topics">TOPICS</div>
-              <div class="fm-lv-cell fm-lv-ts">LAST UPDATED</div>
-            </div>
-            ${sortedNodes.map((node) => html`
-              <${ListViewRow}
-                key=${node.id}
-                node=${node}
-                depth=${0}
-                selected=${selected}
-                renamingId=${renamingId}
-                siblings=${folderNodes}
-                onSelect=${onSelect}
-                onOpen=${onOpen}
-                onCtx=${onCtx}
-                onCommitRename=${onCommitRename}
-                onCancelRename=${onCancelRename}/>`)}
-            ${adding && html`
-              <div class="fm-lv-row fm-lv-row--new">
-                <div class="fm-lv-cell fm-lv-name">
-                  <span class="fm-lv-chevron"></span>
-                  <div class="fm-lv-ico"><${IcoFolder}/></div>
-                  <${NameInput}
-                    placeholder="Folder name"
-                    siblings=${folderNodes}
-                    onCommit=${onCommitAdd}
-                    onCancel=${onCancelAdd}/>
-                </div>
-                <div class="fm-lv-cell fm-lv-topics">—</div>
-                <div class="fm-lv-cell fm-lv-ts">—</div>
-              </div>`}
-          </div>`}
-      </div>`;
-  }
-
-  // ── Tiles view ───────────────────────────────────────────────────────────────
-  if (viewMode === 'tiles') {
-    return html`
-      <div
-        class=${panelClass}
-        tabIndex="0"
-        onKeyDown=${handleGridKeyDown}
-        onClick=${() => onSelect(null)}
-        onDragOver=${onDragOverPanel}
-        onDragLeave=${() => setOverRoot(false)}
-        onDrop=${onDropPanel}>
-
-        ${empty && html`
-          <div class="fm-empty">
-            <${IcoEmptyBox}/>
-            <p>${emptyTitle}</p>
-            <span>${emptyMsg}</span>
-          </div>`}
-
-        <div class="fm-tiles-grid" ref=${gridRef}>
-          ${sortedNodes.map((node) => {
-    const sel = selected === node.id;
-    const ren = renamingId === node.id;
-    const drag = dragId === node.id;
-    const over = overId === node.id;
-    const fc = countFolders(node);
-    const ts = timeAgo(node.updatedAt);
-    const tileClass = ['fm-tile', sel ? 'fm-tile--sel' : '', drag ? 'fm-tile--drag' : '', over ? 'fm-tile--over' : '']
-      .filter(Boolean).join(' ');
-    const foldersLabel = fc > 0 ? `${fc} folder${fc !== 1 ? 's' : ''}` : 'No subfolders';
-
-    return html`
-              <div key=${node.id}
-                class=${tileClass}
-                draggable="true"
-                onDragStart=${(e) => onDragStart(e, node)}
-                onDragEnd=${onDragEnd}
-                onDragOver=${(e) => onDragOverFolder(e, node)}
-                onDragLeave=${() => { if (overId === node.id) setOverId(null); }}
-                onDrop=${(e) => onDropFolder(e, node)}
-                onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
-                onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
-                onContextMenu=${(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onCtx(e, node);
-  }}>
-                <div class="fm-tile-ico">
-                  <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
-                    <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
-                    <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
-                  </svg>
-                </div>
-                <div class="fm-tile-body">
-                  ${ren
-    ? html`<${NameInput}
-                        initial=${node.name}
-                        placeholder="Folder name"
-                        siblings=${folderNodes}
-                        excludeId=${node.id}
-                        onCommit=${(v) => onCommitRename(node.id, v)}
-                        onCancel=${onCancelRename}/>`
-    : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
-                  <div class="fm-tile-meta">
-                    <span class="fm-tile-folders">${foldersLabel}</span>
-                    ${ts && html`<span class="fm-tile-ts">${ts}</span>`}
-                  </div>
-                </div>
-              </div>`;
-  })}
-
-          ${adding && html`
-            <div class="fm-tile fm-tile--new">
-              <div class="fm-tile-ico">
-                <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300" opacity="0.4"/>
-                  <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107" opacity="0.4"/>
-                </svg>
-              </div>
-              <div class="fm-tile-body">
-                <${NameInput}
-                  placeholder="Folder name"
-                  siblings=${folderNodes}
-                  onCommit=${onCommitAdd}
-                  onCancel=${onCancelAdd}/>
-              </div>
-            </div>`}
-        </div>
-      </div>`;
-  }
-
-  // ── Tree view ────────────────────────────────────────────────────────────────
   return html`
     <div
       class=${panelClass}
@@ -786,27 +457,76 @@ function GridPanel({
           <span>${emptyMsg}</span>
         </div>`}
 
-      ${!empty && html`<${TreeView}
-        nodes=${sortedNodes}
-        selected=${selected}
-        renamingId=${renamingId}
-        onSelect=${onSelect}
-        onOpen=${onOpen}
-        onCtx=${onCtx}
-        onCommitRename=${onCommitRename}
-        onCancelRename=${onCancelRename}/>`}
+      <div class="fm-tiles-grid" ref=${gridRef}>
+        ${sortedNodes.map((node) => {
+    const sel = selected === node.id;
+    const ren = renamingId === node.id;
+    const drag = dragId === node.id;
+    const over = overId === node.id;
+    const fc = countFolders(node);
+    const ts = timeAgo(node.updatedAt);
+    const tileClass = ['fm-tile', sel ? 'fm-tile--sel' : '', drag ? 'fm-tile--drag' : '', over ? 'fm-tile--over' : '']
+      .filter(Boolean).join(' ');
+    const foldersLabel = fc > 0 ? `${fc} folder${fc !== 1 ? 's' : ''}` : 'No subfolders';
 
-      ${adding && html`
-        <div class="fm-tree-row fm-tree-row--new" style="padding-left:8px">
-          <div class="fm-tree-ico"><${IcoFolder}/></div>
-          <div class="fm-tree-name-wrap">
-            <${NameInput}
-              placeholder="Folder name"
-              siblings=${folderNodes}
-              onCommit=${onCommitAdd}
-              onCancel=${onCancelAdd}/>
-          </div>
-        </div>`}
+    return html`
+            <div key=${node.id}
+              class=${tileClass}
+              draggable="true"
+              onDragStart=${(e) => onDragStart(e, node)}
+              onDragEnd=${onDragEnd}
+              onDragOver=${(e) => onDragOverFolder(e, node)}
+              onDragLeave=${() => { if (overId === node.id) setOverId(null); }}
+              onDrop=${(e) => onDropFolder(e, node)}
+              onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
+              onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
+              onContextMenu=${(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onCtx(e, node);
+  }}>
+              <div class="fm-tile-ico">
+                <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
+                  <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
+                  <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
+                </svg>
+              </div>
+              <div class="fm-tile-body">
+                ${ren
+    ? html`<${NameInput}
+                      initial=${node.name}
+                      placeholder="Folder name"
+                      siblings=${folderNodes}
+                      excludeId=${node.id}
+                      onCommit=${(v) => onCommitRename(node.id, v)}
+                      onCancel=${onCancelRename}/>`
+    : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
+                <div class="fm-tile-meta">
+                  <span class="fm-tile-folders">${foldersLabel}</span>
+                  ${ts && html`<span class="fm-tile-ts">${ts}</span>`}
+                </div>
+              </div>
+            </div>`;
+  })}
+
+        ${adding && html`
+          <div class="fm-tile fm-tile--new">
+            <div class="fm-tile-ico">
+              <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300" opacity="0.4"/>
+                <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107" opacity="0.4"/>
+              </svg>
+            </div>
+            <div class="fm-tile-body">
+              <${NameInput}
+                placeholder="Folder name"
+                siblings=${folderNodes}
+                onCommit=${onCommitAdd}
+                onCancel=${onCancelAdd}/>
+            </div>
+          </div>`}
+      </div>
     </div>`;
 }
 
@@ -821,8 +541,6 @@ function FolderModal({ onClose, onSelect }) {
   const [visible, setVisible] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [hintDismissed, setHintDismissed] = useState(false);
-  const [viewMode, setViewMode] = useState('tiles'); // 'tiles' | 'list'
-  const [timeFilter, setTimeFilter] = useState('all'); // 'all'|'today'|'week'|'month'
 
   const persist = (t) => { setTree(t); saveTree(t); };
   const doClose = () => { setVisible(false); setTimeout(onClose, 200); };
@@ -838,10 +556,9 @@ function FolderModal({ onClose, onSelect }) {
   // Reset hint when selection changes
   useEffect(() => { setHintDismissed(false); }, [selected]);
 
-  const isSearching = searchQ.trim().length > 0 || timeFilter !== 'all';
+  const isSearching = searchQ.trim().length > 0;
 
-  // Clear selection whenever search/filter mode activates —
-  // prevents selected node's highlight bleeding into search results
+  // Clear selection whenever search mode activates
   useEffect(() => { if (isSearching) setSelected(null); }, [isSearching]);
 
   const doOk = () => {
@@ -919,21 +636,8 @@ function FolderModal({ onClose, onSelect }) {
   const allFolders = flattenTree(tree);
   const searchQ2 = searchQ.trim().toLowerCase();
 
-  const timeFilterMs = {
-    all: Infinity,
-    today: 86400 * 1000,
-    week: 7 * 86400 * 1000,
-    month: 30 * 86400 * 1000,
-  };
-
   const searchResults = isSearching
-    ? allFolders.filter(({ node }) => {
-      const nameMatch = !searchQ2 || node.name.toLowerCase().includes(searchQ2);
-      const cutoff = timeFilterMs[timeFilter] ?? Infinity;
-      const timeMatch = cutoff === Infinity
-        || (node.updatedAt && Date.now() - node.updatedAt <= cutoff);
-      return nameMatch && timeMatch;
-    })
+    ? allFolders.filter(({ node }) => node.name.toLowerCase().includes(searchQ2))
     : [];
 
   const navigateToResult = (node, ancestors) => {
@@ -959,12 +663,7 @@ function FolderModal({ onClose, onSelect }) {
   const extraAncestors = allSelectedAncestors.slice(stack.length);
   const showSelectedCrumb = !isSearching && selected && selectedNode;
 
-  const chipLabels = {
-    all: 'All time', today: 'Today', week: 'This week', month: 'This month',
-  };
-
-  // FIX 7: line 934 was >100 chars — split search-clear onClick into named handler
-  const clearSearch = () => { setSearchQ(''); setTimeFilter('all'); setSelected(null); };
+  const clearSearch = () => { setSearchQ(''); setSelected(null); };
 
   return html`
     <div class=${`fm-overlay ${visible ? 'fm-overlay--in' : ''}`}
@@ -1003,20 +702,6 @@ function FolderModal({ onClose, onSelect }) {
           </div>
 
           <div class="fm-actions">
-            <div class="fm-view-toggle">
-              <button type="button"
-                class=${`fm-view-btn${viewMode === 'tiles' ? ' fm-view-btn--active' : ''}`}
-                title="Tiles view"
-                onClick=${(e) => { e.stopPropagation(); setViewMode('tiles'); }}>
-                <${IcoTiles}/>
-              </button>
-              <button type="button"
-                class=${`fm-view-btn${viewMode === 'list' ? ' fm-view-btn--active' : ''}`}
-                title="Nested view"
-                onClick=${(e) => { e.stopPropagation(); setViewMode('list'); }}>
-                <${IcoList}/>
-              </button>
-            </div>
             <button type="button" class="fm-btn" onClick=${startAdd}>
               + New Folder
             </button>
@@ -1035,20 +720,10 @@ function FolderModal({ onClose, onSelect }) {
             value=${searchQ}
             onInput=${(e) => setSearchQ(e.target.value)}
             onClick=${(e) => e.stopPropagation()}/>
-          ${(searchQ || timeFilter !== 'all') && html`
+          ${isSearching && html`
             <button type="button" class="fm-search-clear" onClick=${clearSearch}>
               <${IcoClose}/>
             </button>`}
-        </div>
-
-        <!-- TIME FILTER CHIPS -->
-        <div class="fm-time-filters" onClick=${(e) => e.stopPropagation()}>
-          ${['all', 'today', 'week', 'month'].map((f) => html`
-            <button key=${f} type="button"
-              class=${`fm-time-chip${timeFilter === f ? ' fm-time-chip--active' : ''}`}
-              onClick=${() => { setTimeFilter(f); setSelected(null); }}>
-              ${chipLabels[f]}
-            </button>`)}
         </div>
 
         <!-- HINT BANNER -->
@@ -1066,7 +741,6 @@ function FolderModal({ onClose, onSelect }) {
     : html`<${GridPanel}
               nodes=${nodes} isRoot=${isRoot}
               selected=${selected} renamingId=${renamingId} adding=${adding}
-              viewMode=${viewMode}
               onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
               onOpen=${goInto}
               onCtx=${(e, node) => setCtx({ x: e.clientX, y: e.clientY, node })}

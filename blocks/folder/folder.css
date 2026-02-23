@@ -64,18 +64,36 @@
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  color: #555;
+  color: #555 !important;
+  background: transparent !important;
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
 
   &:hover {
-    background: #e8e8e8;
-    color: #111;
+    background: #e8e8e8 !important;
+    color: #111 !important;
+  }
+
+  &:active {
+    background: #e0e0e0 !important;
+    color: #111 !important;
+  }
+
+  &:focus {
+    background: transparent !important;
+    color: #555 !important;
+    outline: none;
+  }
+
+  &:focus-visible {
+    background: #e8e8e8 !important;
+    outline: none;
   }
 }
 
-/* ── Enhanced Breadcrumb ──────────────────────────────────────────────────── */
+/* ── Breadcrumb ──────────────────────────────────────────────────────────────── */
 .fm-breadcrumb {
   display: flex;
   align-items: center;
@@ -98,9 +116,15 @@
   border-radius: 4px;
   white-space: nowrap;
   transition: background 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
 
   &:hover {
     background: #ddd;
+    color: #333;
+  }
+
+  &:active {
+    background: #d0d0d0;
     color: #333;
   }
 
@@ -179,7 +203,7 @@
   }
 }
 
-/* ── Search bar ───────────────────────────────────────────────────────────── */
+/* ── Search bar ───────────────────────────────────────────────────────────────── */
 .fm-search-bar {
   display: flex;
   align-items: center;
@@ -235,7 +259,7 @@
   }
 }
 
-/* ── Search results panel ─────────────────────────────────────────────────── */
+/* ── Search results panel ─────────────────────────────────────────────────────── */
 .fm-search-results {
   display: flex;
   flex-direction: column;
@@ -253,11 +277,14 @@
   transition: background 0.1s;
   width: 100%;
   box-sizing: border-box;
-}
 
-/* hover is JS-driven via fm-search-row--hov so no CSS :hover/:active bleeds in */
-.fm-search-row--hov {
-  background: #f5f5f5;
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &:active {
+    background: #efefef;
+  }
 }
 
 .fm-search-row-ico {
@@ -470,76 +497,6 @@
   }
 }
 
-/* Grid */
-.fm-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 8px;
-}
-
-/* Grid item */
-.fm-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 8px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.12s;
-  position: relative;
-  border: 2px solid transparent;
-
-  &:hover {
-    background: #f5f5f5;
-  }
-
-  &.fm-item--sel {
-    background: #f0f0f0;
-    border-color: #bbb;
-  }
-
-  &.fm-item--new {
-    background: #f9f9f9;
-    border: 2px dashed #ccc;
-    cursor: default;
-  }
-}
-
-.fm-item-ico {
-  width: 64px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  & svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.fm-item--file .fm-item-ico {
-  width: 52px;
-  height: 60px;
-}
-
-.fm-item-lbl {
-  font-size: 12px;
-  font-weight: 500;
-  color: #333;
-  text-align: center;
-  overflow-wrap: anywhere;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  line-height: 1.4;
-  max-width: 100%;
-}
-
 /* Inline name input */
 .fm-name-input {
   width: 100%;
@@ -638,481 +595,7 @@
   margin: 3px 0;
 }
 
-/* ── Folder item timestamp ────────────────────────────────────────────────── */
-.fm-item-ts {
-  font-size: 10px;
-  color: #aaa;
-  text-align: center;
-  line-height: 1.2;
-  white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── PATH bar (above footer) ──────────────────────────────────────────────── */
-.fm-path-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-top: 1px solid #ebebeb;
-  background: #fafafa;
-  flex-shrink: 0;
-  min-height: 36px;
-}
-
-.fm-path-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #aaa;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-}
-
-.fm-path-value {
-  font-size: 12px;
-  color: #555;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-/* ── View toggle buttons ──────────────────────────────────────────────────── */
-.fm-view-toggle {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: #ebebeb;
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.fm-view-btn {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 4px;
-  color: #888;
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-
-  &:hover {
-    background: #ddd;
-    color: #333;
-  }
-
-  &.fm-view-btn--active {
-    background: var(--link-color, #1473e6);
-    color: #fff;
-  }
-}
-
-/* ── List view table ──────────────────────────────────────────────────────── */
-.fm-list-table {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.fm-list-header {
-  display: grid;
-  grid-template-columns: 24px 36px 1fr 80px 110px;
-  align-items: center;
-  padding: 6px 8px;
-  border-bottom: 1px solid #ebebeb;
-  background: #f8f8f8;
-  border-radius: 6px 6px 0 0;
-  gap: 8px;
-}
-
-.fm-list-header-expand,
-.fm-list-header-ico {
-  /* spacers */
-}
-
-.fm-list-header-name,
-.fm-list-header-topics,
-.fm-list-header-ts {
-  font-size: 11px;
-  font-weight: 600;
-  color: #999;
-  letter-spacing: 0.2px;
-}
-
-.fm-list-header-topics,
-.fm-list-header-ts {
-  text-align: right;
-}
-
-.fm-list-body {
-  display: flex;
-  flex-direction: column;
-}
-
-.fm-list-row {
-  display: grid;
-  grid-template-columns: 24px 36px 1fr 80px 110px;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  border-bottom: 1px solid #f4f4f4;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.1s;
-  user-select: none;
-
-  &:hover {
-    background: #f5f5f5;
-  }
-
-  &.fm-list-row--sel {
-    background: #e8f0fe;
-  }
-
-  &.fm-list-row--new {
-    background: #fafafa;
-    cursor: default;
-  }
-}
-
-.fm-list-expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: #bbb;
-  flex-shrink: 0;
-  border-radius: 4px;
-  transition: color 0.1s, background 0.1s;
-  all: unset;
-  cursor: pointer;
-
-  &:hover {
-    color: #555;
-    background: #e0e0e0;
-  }
-}
-
-.fm-list-ico {
-  width: 28px;
-  height: 24px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-
-  & svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.fm-list-name {
-  overflow: hidden;
-  min-width: 0;
-}
-
-.fm-list-name-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #222;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-.fm-list-topics {
-  font-size: 12px;
-  color: #888;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.fm-list-ts {
-  font-size: 12px;
-  color: #aaa;
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Time filter chips ────────────────────────────────────────────────────── */
-.fm-time-filters {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 16px 8px;
-  border-bottom: 1px solid #ebebeb;
-  background: #fff;
-  flex-shrink: 0;
-}
-
-.fm-time-chip {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #888;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  cursor: pointer;
-  background: #f5f5f5;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-
-  &:hover {
-    background: #e8e8e8;
-    color: #333;
-  }
-
-  &.fm-time-chip--active {
-    background: #e8f0fe;
-    color: var(--link-color, #1473e6);
-    border-color: var(--link-color, #1473e6);
-  }
-}
-
-/* ── Tree view — VSCode style (Image 1) ───────────────────────────────────── */
-.fm-tree {
-  display: flex;
-  flex-direction: column;
-  padding: 4px 0;
-}
-
-.fm-tree-node {
-  display: flex;
-  flex-direction: column;
-}
-
-.fm-tree-row {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 2px 8px 2px 0;
-  cursor: pointer;
-  user-select: none;
-  min-height: 30px;
-  border-radius: 4px;
-  transition: background 0.1s;
-
-  &:hover {
-    background: #f0f0f0;
-  }
-
-  &.fm-tree-row--sel {
-    background: #ebebeb;
-  }
-}
-
-/* Each depth level indent spacer — carries the vertical guide line */
-.fm-tree-indent {
-  display: inline-flex;
-  width: 20px;
-  flex-shrink: 0;
-  align-self: stretch;
-  position: relative;
-
-  /* vertical guide line */
-  &::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: #d0d0d0;
-  }
-}
-
-/* triangle toggle button */
-.fm-tree-toggle {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.1s;
-
-  &:hover {
-    background: #e0e0e0;
-  }
-}
-
-.fm-tree-tri {
-  width: 8px;
-  height: 8px;
-  fill: #888;
-  transition: transform 0.15s;
-  transform: rotate(0deg);
-
-  &.fm-tree-tri--open {
-    transform: rotate(90deg);
-    fill: #444;
-  }
-}
-
-.fm-tree-tri-empty {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-}
-
-/* Folder icon — matches Image 1 size */
-.fm-tree-ico {
-  width: 28px;
-  height: 24px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  margin-right: 4px;
-
-  & svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.fm-tree-name-wrap {
-  flex: 1;
-  min-width: 0;
-}
-
-.fm-tree-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1a1a1a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-/* children container — vertical connector on left */
-.fm-tree-children {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-/* search result path hint */
-.fm-list-name-path {
-  font-size: 11px;
-  color: #aaa;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-  margin-top: 1px;
-}
-
-/* ── List view — Image 3 style (NAME | TOPICS | LAST UPDATED) ─────────────── */
-.fm-lv {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.fm-lv-head {
-  display: grid;
-  grid-template-columns: 1fr 80px 110px;
-  padding: 6px 12px;
-  border-bottom: 1px solid #ebebeb;
-  background: #f8f8f8;
-  border-radius: 6px 6px 0 0;
-}
-
-.fm-lv-cell {
-  font-size: 11px;
-  font-weight: 600;
-  color: #aaa;
-  letter-spacing: 0.2px;
-}
-
-.fm-lv-topics,
-.fm-lv-ts {
-  text-align: right;
-}
-
-.fm-lv-row {
-  display: grid;
-  grid-template-columns: 1fr 80px 110px;
-  align-items: center;
-  padding: 0 12px;
-  min-height: 42px;
-  border-bottom: 1px solid #f4f4f4;
-  cursor: pointer;
-  transition: background 0.1s;
-  border-radius: 4px;
-
-  &:hover {
-    background: #f5f5f5;
-  }
-
-  &.fm-lv-row--sel {
-    background: #f0f0f0;
-  }
-
-  &.fm-lv-row--new {
-    cursor: default;
-    background: #fafafa;
-  }
-}
-
-.fm-lv-cell.fm-lv-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
-}
-
-.fm-lv-ico {
-  width: 26px;
-  height: 22px;
-  flex-shrink: 0;
-
-  & svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.fm-lv-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #222;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fm-lv-cell.fm-lv-topics {
-  font-size: 13px;
-  color: #888;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 400;
-}
-
-.fm-lv-cell.fm-lv-ts {
-  font-size: 13px;
-  color: #aaa;
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Tiles view — big file-manager cards ─────────────────────────────────── */
+/* ── Tiles view ──────────────────────────────────────────────────────────── */
 .fm-tiles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -1208,54 +691,6 @@
   color: #bbb;
 }
 
-/* ── List view inline nesting ─────────────────────────────────────────────── */
-.fm-lv-node {
-  display: flex;
-  flex-direction: column;
-}
-
-.fm-lv-children {
-  display: flex;
-  flex-direction: column;
-  border-left: 2px solid #ebebeb;
-  margin-left: 20px;
-}
-
-.fm-lv-chevron {
-  all: unset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.1s;
-
-  & svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  &.fm-lv-chevron--has:hover {
-    background: #e0e0e0;
-  }
-}
-
-.fm-lv-tri {
-  width: 8px;
-  height: 8px;
-  fill: #bbb;
-  transition: transform 0.15s;
-  transform: rotate(0deg);
-
-  &.fm-lv-tri--open {
-    transform: rotate(90deg);
-    fill: #555;
-  }
-}
-
 /* Footer */
 .fm-footer {
   display: flex;
@@ -1330,11 +765,11 @@
 }
 
 /* Show grab cursor on draggable items */
-.fm-item[draggable="true"] {
+.fm-tile[draggable="true"] {
   cursor: grab;
 }
 
-.fm-item[draggable="true"]:active {
+.fm-tile[draggable="true"]:active {
   cursor: grabbing;
 }
 
