@@ -22,7 +22,7 @@
 }
 
 /* --- 2. Back Button — matches site-wide primary "Add Post" button --- */
-.spectrum-ActionButton {
+.spectrum-action-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -44,37 +44,37 @@
   color: #fff;
 }
 
-.spectrum-ActionButton:hover {
+.spectrum-action-button:hover {
   background-color: var(--spectrum-red-1000, #b22829);
 }
 
-.spectrum-ActionButton:active {
+.spectrum-action-button:active {
   background-color: var(--spectrum-red-1100, #8d1b1c);
   transform: scale(0.98);
 }
 
-.spectrum-ActionButton--quiet {
+.spectrum-action-button-quiet {
   background-color: var(--spectrum-red-900, #d7373f);
   color: #fff;
 }
 
-.spectrum-ActionButton--quiet:hover {
+.spectrum-action-button-quiet:hover {
   background-color: var(--spectrum-red-1000, #b22829);
 }
 
-.spectrum-ActionButton-icon {
+.spectrum-action-button-icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
 }
 
-.spectrum-ActionButton-label {
+.spectrum-action-button-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.spectrum-ActionButton--sizeM {
+.spectrum-action-button-size-m {
   height: 40px;
   padding: 0 20px;
   font-size: 0.9375rem;
@@ -150,6 +150,7 @@
 .block-text i { font-style: italic; }
 
 .block-text u { text-decoration: underline; }
+
 .block-text s { text-decoration: line-through; }
 
 .block-text code {
@@ -196,15 +197,21 @@
 }
 
 .block-text h1 { font-size: 2em; }
+
 .block-text h2 { font-size: 1.5em; }
+
 .block-text h3 { font-size: 1.25em; }
 
 .block-text .ql-align-center  { text-align: center; }
+
 .block-text .ql-align-right   { text-align: right; }
+
 .block-text .ql-align-justify { text-align: justify; }
 
 .block-text .ql-indent-1 { padding-left: 3em; }
+
 .block-text .ql-indent-2 { padding-left: 6em; }
+
 .block-text .ql-indent-3 { padding-left: 9em; }
 
 .block-text table {
@@ -318,14 +325,17 @@
 }
 
 .comments-list::-webkit-scrollbar { width: 8px; }
+
 .comments-list::-webkit-scrollbar-track {
   background: var(--spectrum-gray-100);
   border-radius: var(--spectrum-border-radius-100);
 }
+
 .comments-list::-webkit-scrollbar-thumb {
   background: var(--spectrum-gray-300);
   border-radius: var(--spectrum-border-radius-100);
 }
+
 .comments-list::-webkit-scrollbar-thumb:hover { background: var(--spectrum-gray-400); }
 
 .comment-row {
