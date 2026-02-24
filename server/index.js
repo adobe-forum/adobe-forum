@@ -12,6 +12,7 @@ import SidebarItem from './models/SidebarItem.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '..', '.env') });
+console.log('Environment variables loaded');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -643,6 +644,41 @@ app.get('/api/sidebar-items/:id/post', async (req, res) => {
   } catch (error) {
     console.error('Error fetching post:', error);
     return res.status(500).json({ error: 'Failed to fetch post' });
+  }
+});
+
+// ============================================
+// DELETE: Remove an entire category and all its items
+// ============================================
+app.delete('/api/sidebar/categories/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    // categoryId is the slug (e.g. "api-test"), find matching items by category name
+    // We need to find all items where category slug matches
+    const allItems = await SidebarItem.find();
+    const matchingItems = allItems.filter((item) => {
+      const slug = item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      return slug === categoryId;
+    });
+
+    if (matchingItems.length === 0) {
+      return res.status(404).json({ success: false, error: 'Category not found' });
+    }
+
+    // Recursively delete all items in this category
+    for (const item of matchingItems) {
+      // eslint-disable-next-line no-await-in-loop
+      await SidebarItem.findByIdAndDelete(item._id);
+    }
+
+    return res.json({
+      success: true,
+      message: `Category deleted with ${matchingItems.length} items`,
+    });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
