@@ -1280,7 +1280,8 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const inputRef = useRef(null);
   const wrapperRef = useRef(null);
 
-  // Mock tag suggestions - replace with your actual data
+  // Mock tag suggestions -
+  // replace with your actual data
   const TAG_SUGGESTIONS = [
     'sql-server', 'objective-c', 'ajax', 'javascript', 'python',
     'java', 'react', 'node.js', 'css', 'html', 'angular',

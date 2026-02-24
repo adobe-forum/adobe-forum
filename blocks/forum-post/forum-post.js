@@ -26,20 +26,17 @@ function parseHtmlToContentBlocks(htmlString) {
     }
   };
 
-  // Process all children of the body
   Array.from(doc.body.childNodes).forEach((node) => {
-    // Code block - flush text buffer and add as separate block
     if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'PRE' && node.classList.contains('ql-syntax')) {
       flushTextBuffer();
       contentBlocks.push({
         type: 'code',
-        lang: 'javascript', // Default language, could be enhanced
+        lang: 'javascript',
         value: node.textContent,
       });
       return;
     }
 
-    // Image - flush text buffer and add as separate block
     if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
       flushTextBuffer();
       contentBlocks.push({
@@ -49,7 +46,6 @@ function parseHtmlToContentBlocks(htmlString) {
       return;
     }
 
-    // All other content - add to text buffer
     if (node.nodeType === Node.ELEMENT_NODE) {
       const tempDiv = document.createElement('div');
       tempDiv.appendChild(node.cloneNode(true));
@@ -59,10 +55,8 @@ function parseHtmlToContentBlocks(htmlString) {
     }
   });
 
-  // Flush any remaining text
   flushTextBuffer();
 
-  // If no blocks were created, return the original HTML as a single text block
   if (contentBlocks.length === 0 && htmlString.trim()) {
     return [{ type: 'text', value: htmlString }];
   }
@@ -70,53 +64,6 @@ function parseHtmlToContentBlocks(htmlString) {
   return contentBlocks;
 }
 
-/**
- * 1. SYNCHRONOUS DUMMY DATA
- * No promises, no timeouts. This data is instantly available to pass PSI checks.
- */
-const DUMMY_POST_DATA = {
-  id: '123',
-  title: 'Frontend Resources',
-  topic: 'JavaScript',
-  author: 'Sarah',
-  tags: ['#react', '#frontend', '#hooks'],
-  content: [
-    {
-      type: 'text',
-      value: '<p>React hooks have changed how we write components. Before we dive in, let’s look at the lifecycle.</p>',
-    },
-    {
-      type: 'image',
-      src: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      type: 'text',
-      value: '<p>As you can see above, the ecosystem is vast. Here is a basic example of using <code>useState</code>:</p>',
-    },
-    {
-      type: 'code',
-      lang: 'javascript',
-      value: `const [count, setCount] = useState(0);
-
-// Update state
-<button onClick={() => setCount(count + 1)}>
-  Count is {count}
-</button>`,
-    },
-    {
-      type: 'text',
-      value: '<p>Keep practicing and you will master it in no time.</p>',
-    },
-  ],
-  comments: [
-    { user: 'Guest', text: 'The code snippet is very helpful!' },
-    { user: 'DevMike', text: 'Thanks for sharing this.' },
-  ],
-};
-
-/**
- * Helper: Content Renderer
- */
 const ContentBlock = ({ block }) => {
   switch (block.type) {
     case 'text':
@@ -124,13 +71,15 @@ const ContentBlock = ({ block }) => {
     case 'image':
       return html`<figure class="block-image"><img src="${block.src}" alt="Post Image" /></figure>`;
     case 'code': {
-      // Calculate line numbers for the gutter
-      const lineCount = block.value.split('\n').length;
-      const nums = Array.from({ length: lineCount }, (_, i) => i + 1).join('\\a ');
+      const lines = block.value.split('\n');
+      const lineNumbers = lines.map((_, i) => html`<span>${i + 1}</span>`);
 
       return html`
         <div class="block-code">
-          <pre style="--line-nums: '${nums}'">${block.value}</pre>
+          <div class="code-inner">
+            <div class="code-line-nums">${lineNumbers}</div>
+            <pre class="code-content">${block.value}</pre>
+          </div>
         </div>
       `;
     }
@@ -140,61 +89,105 @@ const ContentBlock = ({ block }) => {
 };
 
 const ArrowIcon = () => html`
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"></line>
-    <polyline points="12 5 19 12 12 19"></polyline>
+  <svg
+    class="spectrum-Icon spectrum-Icon--sizeS spectrum-ActionButton-icon"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 18 18"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
   </svg>
 `;
 
-/**
- * 2. MAIN COMPONENT
- */
+const BackIcon = () => html`
+  <svg
+    class="spectrum-Icon spectrum-Icon--sizeS spectrum-ActionButton-icon"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+`;
+
 const ForumPost = () => {
-  const [post, setPost] = useState(DUMMY_POST_DATA);
+  const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
-  // Auto-scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
-  }, [post.comments]);
+  }, [post ? post.comments : null]);
 
-  // Listen for sidebar click events
   useEffect(() => {
     const handleLoadPost = async (event) => {
       const { postId } = event.detail;
-      if (!postId) return;
+      // eslint-disable-next-line no-console
+      console.log('🔵 load-forum-post event received with postId:', postId);
+      if (!postId) {
+        // eslint-disable-next-line no-console
+        console.warn('⚠️ No postId provided to load-forum-post event');
+        return;
+      }
 
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:5000/api/posts/${postId}`);
+        const url = `http://localhost:5000/api/posts/${postId}`;
+        // eslint-disable-next-line no-console
+        console.log('🚀 Fetching post from:', url);
+        const response = await fetch(url);
+        // eslint-disable-next-line no-console
+        console.log('📡 Response status:', response.status, response.statusText);
+
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.post) {
-            // Transform the post data to match the expected format
-            const fetchedPost = data.post;
+          // eslint-disable-next-line no-console
+          console.log('📦 Response data:', data);
 
-            // Parse HTML body to extract code blocks and other content
+          if (data.success && data.post) {
+            const fetchedPost = data.post;
+            // eslint-disable-next-line no-console
+            console.log('✓ Post fetched successfully:', fetchedPost.title);
+
             const contentBlocks = parseHtmlToContentBlocks(fetchedPost.body);
 
             const transformedPost = {
               id: fetchedPost._id, // eslint-disable-line no-underscore-dangle
               title: fetchedPost.title,
               topic: fetchedPost.category,
-              author: 'User', // Default author since it's not in the schema
+              author: 'User',
               tags: fetchedPost.tags || [],
               content: contentBlocks,
-              comments: post.comments || [], // Keep existing comments
+              comments: [],
             };
+            // eslint-disable-next-line no-console
+            console.log('✓ Post loaded and displayed:', transformedPost.title);
             setPost(transformedPost);
+          } else {
+            // eslint-disable-next-line no-console
+            console.error('❌ API returned unsuccessful response:', data);
           }
+        } else {
+          // eslint-disable-next-line no-console
+          console.error('❌ HTTP Error - Status:', response.status);
+          const errorData = await response.json().catch(() => ({}));
+          // eslint-disable-next-line no-console
+          console.error('Error details:', errorData);
         }
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Failed to load post:', error);
+        console.error('❌ Network/fetch error:', error.message);
       } finally {
         setLoading(false);
       }
@@ -204,12 +197,21 @@ const ForumPost = () => {
     return () => {
       window.removeEventListener('load-forum-post', handleLoadPost);
     };
-  }, [post.comments]);
+  }, []);
+
+  if (!post) {
+    return html`
+      <div class="forum-post-wrapper">
+        <div class="loading-state">
+          ${loading ? 'Loading post...' : 'Select a post from the sidebar to view it.'}
+        </div>
+      </div>
+    `;
+  }
 
   const addComment = () => {
     if (!inputValue.trim()) return;
     const newComment = { user: 'You', text: inputValue };
-
     setPost({
       ...post,
       comments: [...post.comments, newComment],
@@ -217,10 +219,25 @@ const ForumPost = () => {
     setInputValue('');
   };
 
+  // ── Back to cards ──────────────────────────────────────────────────
+  const handleBack = () => {
+    window.dispatchEvent(new CustomEvent('show-cards'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return html`
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
-      
+
+      <button
+        class="spectrum-ActionButton spectrum-ActionButton--sizeM spectrum-ActionButton--quiet forum-back-btn"
+        onClick=${handleBack}
+        aria-label="Back to Posts"
+      >
+        <${BackIcon} />
+        <span class="spectrum-ActionButton-label">Back to Posts</span>
+      </button>
+
       <div class="tags-row">
         ${post.tags.map((tag) => html`<span class="tag-pill">${tag}</span>`)}
       </div>
@@ -269,7 +286,6 @@ const ForumPost = () => {
             </button>
           </div>
         </div>
-        
       </div>
     </div>
   `;
