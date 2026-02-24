@@ -159,27 +159,34 @@ export default async function decorate(block) {
     </div>
   `).join('');
 
-  const getCardsWrapper = () => document.querySelector('.cards-display-wrapper');
+  // 1. Select ALL possible card wrappers that sidebar.js might have hidden
+  const getCardsWrappers = () => document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
   const getForumWrapper = () => document.querySelector('.forum-post-wrapper');
   const getSearchWrapper = () => document.querySelector('.search-bar-wrapper');
 
   const showCards = () => {
-    const cw = getCardsWrapper();
+    const cws = getCardsWrappers();
     const fw = getForumWrapper();
     const sw = getSearchWrapper();
-    if (cw) cw.style.display = '';
+
+    // 2. Loop through and unhide all of them
+    cws.forEach((cw) => { if (cw) cw.style.display = ''; });
     if (fw) fw.style.display = 'none';
     if (sw) sw.style.display = '';
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const showPost = (postId) => {
-    const cw = getCardsWrapper();
+    const cws = getCardsWrappers();
     const fw = getForumWrapper();
     const sw = getSearchWrapper();
-    if (cw) cw.style.display = 'none';
+
+    // 3. Loop through and hide all of them to remain consistent
+    cws.forEach((cw) => { if (cw) cw.style.display = 'none'; });
     if (fw) fw.style.display = '';
     if (sw) sw.style.display = 'none';
+
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
