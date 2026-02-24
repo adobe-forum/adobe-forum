@@ -185,6 +185,7 @@ const ForumPost = () => {
   // Listen for sidebar click events
   useEffect(() => {
     const handleLoadPost = async (event) => {
+      
       const { postId } = event.detail;
       // eslint-disable-next-line no-console
       console.log('🔵 load-forum-post event received with postId:', postId);
@@ -265,6 +266,10 @@ const ForumPost = () => {
       comments: [...post.comments, newComment],
     });
     setInputValue('');
+  };
+
+
+  const handleBack = () => {
   };
 
   return html`

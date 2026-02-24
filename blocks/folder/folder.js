@@ -9,8 +9,69 @@ let seedCounter = Date.now();
 // eslint-disable-next-line no-plusplus
 const uid = () => `n${++seedCounter}`;
 
+const SEED_TREE = [
+  {
+    id: 's1',
+    name: 'JavaScript',
+    type: 'folder',
+    topics: 1245,
+    updatedAt: Date.now() - 2 * 60 * 1000,
+    children: [
+      {
+        id: 's1a', name: 'ES6+', type: 'folder', topics: 412, updatedAt: Date.now() - 30 * 60 * 1000, children: [],
+      },
+      {
+        id: 's1b', name: 'Async / Promises', type: 'folder', topics: 298, updatedAt: Date.now() - 2 * 3600 * 1000, children: [],
+      },
+    ],
+  },
+  {
+    id: 's2',
+    name: 'React',
+    type: 'folder',
+    topics: 892,
+    updatedAt: Date.now() - 1 * 3600 * 1000,
+    children: [
+      {
+        id: 's2a', name: 'Hooks', type: 'folder', topics: 334, updatedAt: Date.now() - 4 * 3600 * 1000, children: [],
+      },
+      {
+        id: 's2b', name: 'State Management', type: 'folder', topics: 221, updatedAt: Date.now() - 86400 * 1000, children: [],
+      },
+    ],
+  },
+  {
+    id: 's3', name: 'Node.js', type: 'folder', topics: 567, updatedAt: Date.now() - 3 * 3600 * 1000, children: [],
+  },
+  {
+    id: 's4', name: 'CSS', type: 'folder', topics: 432, updatedAt: Date.now() - 5 * 3600 * 1000, children: [],
+  },
+  {
+    id: 's5', name: 'Python', type: 'folder', topics: 765, updatedAt: Date.now() - 86400 * 1000, children: [],
+  },
+  {
+    id: 's6', name: 'Java', type: 'folder', topics: 654, updatedAt: Date.now() - 2 * 86400 * 1000, children: [],
+  },
+  {
+    id: 's7', name: 'DBMS', type: 'folder', topics: 345, updatedAt: Date.now() - 3 * 86400 * 1000, children: [],
+  },
+  {
+    id: 's8', name: 'DevOps', type: 'folder', topics: 298, updatedAt: Date.now() - 7 * 86400 * 1000, children: [],
+  },
+  {
+    id: 's9', name: 'AI & Machine Learning', type: 'folder', topics: 187, updatedAt: Date.now() - 14 * 86400 * 1000, children: [],
+  },
+  {
+    id: 's10', name: 'Mobile Development', type: 'folder', topics: 523, updatedAt: Date.now() - 7 * 86400 * 1000, children: [],
+  },
+];
+
 const loadTree = () => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+    return SEED_TREE;
+  } catch { return SEED_TREE; }
 };
 const saveTree = (t) => {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); } catch { /* noop */ }
@@ -42,7 +103,7 @@ const deleteById = (tree, id) => tree
   .map((n) => (n.children ? { ...n, children: deleteById(n.children, id) } : n));
 
 const renameById = (tree, id, name) => tree.map((n) => {
-  if (n.id === id) return { ...n, name };
+  if (n.id === id) return { ...n, name, updatedAt: Date.now() };
   if (n.children) return { ...n, children: renameById(n.children, id, name) };
   return n;
 });
@@ -73,14 +134,15 @@ const moveNode = (tree, nodeId, targetParentId) => {
   return insertInto(withoutNode, targetParentId, node);
 };
 
-// ── Build full path string for a node ────────────────────────────────────────
-const buildPath = (tree, stack, nodeName) => {
-  const parts = stack
-    .map((id) => findNode(tree, id))
-    .filter(Boolean)
-    .map((n) => n.name);
-  if (nodeName) parts.push(nodeName);
-  return parts.join(' > ');
+// ── Find ancestors of a node by id ──────────────────────────────────────────
+const findAncestors = (nodes, targetId, path = []) => {
+  const found = nodes.reduce((acc, n) => {
+    if (acc) return acc;
+    if (n.id === targetId) return path;
+    if (n.children) return findAncestors(n.children, targetId, [...path, n]);
+    return null;
+  }, null);
+  return found;
 };
 
 // ── Flatten tree for search ───────────────────────────────────────────────────
@@ -97,13 +159,30 @@ const flattenTree = (nodes, ancestors = []) => {
   return results;
 };
 
+// ── Timestamp formatter ───────────────────────────────────────────────────────
+const timeAgo = (ts) => {
+  if (!ts) return null;
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return `${Math.floor(diff / 604800)}w ago`;
+};
+
+// ── Count direct child folders ───────────────────────────────────────────────
+const countFolders = (node) => {
+  if (!node.children) return 0;
+  return node.children.filter((c) => c.type === 'folder').length;
+};
+
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcoClose = () => html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const IcoEdit = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const IcoTrash = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
 const IcoSearch = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-const IcoInfo = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
 const IcoFolder = () => html`
   <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
     <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
@@ -193,18 +272,6 @@ function CtxMenu({
     </div>`;
 }
 
-// ── Direct-select hint banner ─────────────────────────────────────────────────
-function DirectSelectHint({ folderName, onDismiss }) {
-  return html`
-    <div class="fm-hint">
-      <${IcoInfo}/>
-      <span>
-        <strong>${folderName}</strong> has subfolders. You can open it to pick a subfolder, or click <strong>Select</strong> to use it directly.
-      </span>
-      <button type="button" class="fm-hint-close" onClick=${onDismiss}><${IcoClose}/></button>
-    </div>`;
-}
-
 // ── Search results panel ──────────────────────────────────────────────────────
 function SearchResults({ results, onNavigate }) {
   if (results.length === 0) {
@@ -218,24 +285,30 @@ function SearchResults({ results, onNavigate }) {
   return html`
     <div class="fm-search-results">
       ${results.map(({ node, ancestors }) => {
-    const pathParts = [...ancestors.map((a) => a.name), node.name];
+    const pathStr = [...ancestors.map((a) => a.name), node.name].slice(0, -1).join(' › ');
+    const folders = countFolders(node);
+    const ts = timeAgo(node.updatedAt);
     return html`
-        <button key=${node.id} type="button" class="fm-search-row"
+        <button key=${node.id} type="button"
+          class="fm-search-row"
           onClick=${() => onNavigate(node, ancestors)}>
           <div class="fm-search-row-ico"><${IcoFolder}/></div>
           <div class="fm-search-row-info">
-            <span class="fm-search-row-name">${node.name}</span>
-            ${ancestors.length > 0 && html`
-              <span class="fm-search-row-path">
-                ${pathParts.slice(0, -1).join(' › ')}
-              </span>`}
+            <div class="fm-search-row-top">
+              <span class="fm-search-row-name">${node.name}</span>
+              ${ts && html`<span class="fm-search-row-ts">${ts}</span>`}
+            </div>
+            <div class="fm-search-row-meta">
+              ${ancestors.length > 0 && html`<span class="fm-search-row-path">${pathStr}</span>`}
+              ${folders > 0 && html`<span class="fm-search-row-folders">${folders} folder${folders !== 1 ? 's' : ''}</span>`}
+            </div>
           </div>
         </button>`;
   })}
     </div>`;
 }
 
-// ── Grid panel ────────────────────────────────────────────────────────────────
+// ── Grid panel (tiles only) ───────────────────────────────────────────────────
 function GridPanel({
   nodes, isRoot, selected, renamingId, adding,
   onSelect, onOpen, onCtx, onCommitRename, onCancelRename,
@@ -258,7 +331,7 @@ function GridPanel({
     if (idx === -1) return;
 
     const cols = gridRef.current
-      ? Math.max(1, Math.round(gridRef.current.offsetWidth / 118))
+      ? Math.max(1, Math.round(gridRef.current.offsetWidth / 162))
       : 1;
 
     switch (e.key) {
@@ -344,9 +417,17 @@ function GridPanel({
     setOverRoot(false);
   };
 
+  const emptyMsg = isRoot
+    ? 'Click "+ New Folder" to create your first category folder'
+    : 'Use "+ New Folder" above to add a subfolder';
+
+  const emptyTitle = isRoot ? 'No folders yet' : 'This folder is empty';
+
+  const panelClass = `fm-panel${overRoot ? ' fm-panel--drop' : ''}`;
+
   return html`
     <div
-      class=${`fm-panel${overRoot ? ' fm-panel--drop' : ''}`}
+      class=${panelClass}
       tabIndex="0"
       onKeyDown=${handleGridKeyDown}
       onClick=${() => onSelect(null)}
@@ -357,29 +438,25 @@ function GridPanel({
       ${empty && html`
         <div class="fm-empty">
           <${IcoEmptyBox}/>
-          <p>${isRoot ? 'No folders yet' : 'This folder is empty'}</p>
-          <span>${isRoot
-    ? 'Click "+ New Folder" to create your first category folder'
-    : 'Use "+ New Folder" above to add a subfolder'}</span>
+          <p>${emptyTitle}</p>
+          <span>${emptyMsg}</span>
         </div>`}
 
-      <div class="fm-grid" ref=${gridRef}>
+      <div class="fm-tiles-grid" ref=${gridRef}>
         ${sortedNodes.map((node) => {
     const sel = selected === node.id;
     const ren = renamingId === node.id;
     const drag = dragId === node.id;
     const over = overId === node.id;
+    const fc = countFolders(node);
+    const ts = timeAgo(node.updatedAt);
+    const tileClass = ['fm-tile', sel ? 'fm-tile--sel' : '', drag ? 'fm-tile--drag' : '', over ? 'fm-tile--over' : '']
+      .filter(Boolean).join(' ');
+    const foldersLabel = fc > 0 ? `${fc} folder${fc !== 1 ? 's' : ''}` : 'No subfolders';
 
     return html`
             <div key=${node.id}
-              class=${[
-    'fm-item',
-    'fm-item--dir',
-    sel ? 'fm-item--sel' : '',
-    drag ? 'fm-item--drag' : '',
-    over ? 'fm-item--over' : '',
-  ].filter(Boolean).join(' ')}
-              tabIndex=${sel ? '0' : '-1'}
+              class=${tileClass}
               draggable="true"
               onDragStart=${(e) => onDragStart(e, node)}
               onDragEnd=${onDragEnd}
@@ -393,33 +470,46 @@ function GridPanel({
     e.stopPropagation();
     onCtx(e, node);
   }}>
-
-              <div class="fm-item-ico">
-                <${IcoFolder}/>
+              <div class="fm-tile-ico">
+                <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
+                  <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
+                  <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
+                </svg>
               </div>
-
-              ${ren
+              <div class="fm-tile-body">
+                ${ren
     ? html`<${NameInput}
-                    initial=${node.name}
-                    placeholder="Folder name"
-                    siblings=${folderNodes}
-                    excludeId=${node.id}
-                    onCommit=${(v) => onCommitRename(node.id, v)}
-                    onCancel=${onCancelRename}/>`
-    : html`<span class="fm-item-lbl" title=${node.name}>${node.name}</span>`}
+                      initial=${node.name}
+                      placeholder="Folder name"
+                      siblings=${folderNodes}
+                      excludeId=${node.id}
+                      onCommit=${(v) => onCommitRename(node.id, v)}
+                      onCancel=${onCancelRename}/>`
+    : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
+                <div class="fm-tile-meta">
+                  <span class="fm-tile-folders">${foldersLabel}</span>
+                  ${ts && html`<span class="fm-tile-ts">${ts}</span>`}
+                </div>
+              </div>
             </div>`;
   })}
 
         ${adding && html`
-          <div class="fm-item fm-item--dir fm-item--new">
-            <div class="fm-item-ico">
-              <${IcoFolder}/>
+          <div class="fm-tile fm-tile--new">
+            <div class="fm-tile-ico">
+              <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300" opacity="0.4"/>
+                <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107" opacity="0.4"/>
+              </svg>
             </div>
-            <${NameInput}
-              placeholder="Folder name"
-              siblings=${folderNodes}
-              onCommit=${onCommitAdd}
-              onCancel=${onCancelAdd}/>
+            <div class="fm-tile-body">
+              <${NameInput}
+                placeholder="Folder name"
+                siblings=${folderNodes}
+                onCommit=${onCommitAdd}
+                onCancel=${onCancelAdd}/>
+            </div>
           </div>`}
       </div>
     </div>`;
@@ -435,10 +525,8 @@ function FolderModal({ onClose, onSelect }) {
   const [ctx, setCtx] = useState(null);
   const [visible, setVisible] = useState(false);
   const [searchQ, setSearchQ] = useState('');
-  const [hintDismissed, setHintDismissed] = useState(false);
 
   const persist = (t) => { setTree(t); saveTree(t); };
-
   const doClose = () => { setVisible(false); setTimeout(onClose, 200); };
 
   useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
@@ -449,23 +537,10 @@ function FolderModal({ onClose, onSelect }) {
     return () => document.removeEventListener('keydown', esc);
   }, [renamingId, adding]);
 
-  // Reset hint when selection changes
-  useEffect(() => { setHintDismissed(false); }, [selected]);
+  const isSearching = searchQ.trim().length > 0;
 
-  const doOk = () => {
-    const node = selected ? findNode(tree, selected) : null;
-    if (node) {
-      const path = buildPath(tree, stack, node.name);
-      if (onSelect) onSelect(node.name, path);
-    } else if (stack.length > 0) {
-      const currentNode = findNode(tree, stack[stack.length - 1]);
-      const path = buildPath(tree, stack, null);
-      if (onSelect && currentNode) onSelect(currentNode.name, path);
-    } else if (onSelect) {
-      onSelect(null, null);
-    }
-    doClose();
-  };
+  // Clear selection whenever search mode activates
+  useEffect(() => { if (isSearching) setSelected(null); }, [isSearching]);
 
   const isRoot = stack.length === 0;
   const parentId = stack.length ? stack[stack.length - 1] : null;
@@ -473,18 +548,48 @@ function FolderModal({ onClose, onSelect }) {
   const nodes = parentNode ? (parentNode.children || []) : tree;
   const crumbs = stack.map((id) => findNode(tree, id)).filter(Boolean);
 
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  // Must be defined before startAdd so they are not used before definition
+  const selectedNode = selected ? findNode(tree, selected) : null;
+  const selectedChildCount = selectedNode
+    ? (selectedNode.children || []).filter((c) => c.type === 'folder').length
+    : 0;
+
   const reset = () => { setSelected(null); setAdding(null); setRenamingId(null); };
   const goRoot = () => { setStack([]); reset(); setSearchQ(''); };
   const goCrumb = (i) => { setStack(stack.slice(0, i + 1)); reset(); setSearchQ(''); };
   const goBack = () => { setStack(stack.slice(0, -1)); reset(); setSearchQ(''); };
-  const goInto = (node) => { setStack([...stack, node.id]); reset(); setSearchQ(''); };
 
-  const startAdd = () => { setAdding({ type: 'folder' }); setRenamingId(null); setSelected(null); };
+  const goInto = (node) => {
+    const ancestors = findAncestors(tree, node.id) || [];
+    const fullStack = [...ancestors.map((a) => a.id), node.id];
+    setStack(fullStack);
+    reset();
+    setSearchQ('');
+  };
+
+  const addTargetParentId = useRef(null);
+  const startAdd = () => {
+    if (selected && selectedNode && selectedChildCount === 0) {
+      // Leaf folder selected: create inside it and navigate in
+      addTargetParentId.current = selectedNode.id;
+      const ancestors = findAncestors(tree, selectedNode.id) || [];
+      const fullStack = [...ancestors.map((a) => a.id), selectedNode.id];
+      setStack(fullStack);
+      setSearchQ('');
+    } else {
+      addTargetParentId.current = parentId;
+    }
+    setAdding({ type: 'folder' });
+    setRenamingId(null);
+    setSelected(null);
+  };
   const commitAdd = (name) => {
     const newNode = {
-      id: uid(), name, type: 'folder', children: [],
+      id: uid(), name, type: 'folder', children: [], updatedAt: Date.now(),
     };
-    persist(insertInto(tree, parentId, newNode));
+    persist(insertInto(tree, addTargetParentId.current, newNode));
+    addTargetParentId.current = null;
     setAdding(null);
   };
 
@@ -509,29 +614,53 @@ function FolderModal({ onClose, onSelect }) {
     if (newTree !== tree) persist(newTree);
   };
 
+  const doOk = () => {
+    const node = selected ? findNode(tree, selected) : null;
+    if (node) {
+      const ancestors = findAncestors(tree, selected) || [];
+      const pathParts = [...ancestors.map((a) => a.name), node.name];
+      const path = pathParts.join(' > ');
+      if (onSelect) onSelect(node.name, path);
+    } else if (stack.length > 0) {
+      const currentId = stack[stack.length - 1];
+      const currentNode = findNode(tree, currentId);
+      if (onSelect && currentNode) {
+        const ancestors = findAncestors(tree, currentId) || [];
+        const pathParts = [...ancestors.map((a) => a.name), currentNode.name];
+        const path = pathParts.join(' > ');
+        onSelect(currentNode.name, path);
+      }
+    } else if (onSelect) {
+      onSelect(null, null);
+    }
+    doClose();
+  };
+
   // ── Search logic ────────────────────────────────────────────────────────────
-  const isSearching = searchQ.trim().length > 0;
   const allFolders = flattenTree(tree);
   const searchQ2 = searchQ.trim().toLowerCase();
+
   const searchResults = isSearching
     ? allFolders.filter(({ node }) => node.name.toLowerCase().includes(searchQ2))
     : [];
 
-  // Navigate to a search result: set stack to its ancestors then select it
   const navigateToResult = (node, ancestors) => {
-    setStack(ancestors.map((a) => a.id));
-    setSelected(node.id);
+    const fullStack = [...ancestors.map((a) => a.id)];
+    setStack(fullStack);
+    setSelected(null);
     setSearchQ('');
     setAdding(null);
     setRenamingId(null);
   };
 
-  // ── Direct-select hint logic ────────────────────────────────────────────────
-  const selectedNode = selected ? findNode(tree, selected) : null;
-  const selectedHasChildren = selectedNode
-    && selectedNode.children
-    && selectedNode.children.filter((c) => c.type === 'folder').length > 0;
-  const showHint = selectedHasChildren && !hintDismissed;
+  // ── Breadcrumb ──────────────────────────────────────────────────────────────
+  const allSelectedAncestors = (selected && selectedNode)
+    ? findAncestors(tree, selected) || []
+    : [];
+  const extraAncestors = allSelectedAncestors.slice(stack.length);
+  const showSelectedCrumb = !isSearching && selected && selectedNode;
+
+  const clearSearch = () => { setSearchQ(''); setSelected(null); };
 
   return html`
     <div class=${`fm-overlay ${visible ? 'fm-overlay--in' : ''}`}
@@ -546,13 +675,23 @@ function FolderModal({ onClose, onSelect }) {
               <button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
             <div class="fm-breadcrumb">
               <button type="button"
-                class=${`fm-crumb ${isRoot && !isSearching ? 'fm-crumb--cur' : ''}`}
+                class=${`fm-crumb ${isRoot && !isSearching && !showSelectedCrumb ? 'fm-crumb--cur' : ''}`}
                 onClick=${goRoot}>Categories</button>
+
               ${!isSearching && crumbs.map((c, i) => html`
                 <span key=${`s${c.id}`} class="fm-sep">›</span>
                 <button key=${c.id} type="button"
-                  class=${`fm-crumb ${i === crumbs.length - 1 ? 'fm-crumb--cur' : ''}`}
+                  class=${`fm-crumb ${i === crumbs.length - 1 && !showSelectedCrumb ? 'fm-crumb--cur' : ''}`}
                   onClick=${() => goCrumb(i)}>${c.name}</button>`)}
+
+              ${!isSearching && extraAncestors.map((a) => html`
+                <span key=${`sa${a.id}`} class="fm-sep">›</span>
+                <span key=${`an${a.id}`} class="fm-crumb">${a.name}</span>`)}
+
+              ${showSelectedCrumb && html`
+                <span class="fm-sep">›</span>
+                <span class="fm-crumb fm-crumb--cur">${selectedNode.name}</span>`}
+
               ${isSearching && html`
                 <span class="fm-sep">›</span>
                 <span class="fm-crumb fm-crumb--cur fm-crumb--search">Search results</span>`}
@@ -579,18 +718,10 @@ function FolderModal({ onClose, onSelect }) {
             onInput=${(e) => setSearchQ(e.target.value)}
             onClick=${(e) => e.stopPropagation()}/>
           ${isSearching && html`
-            <button type="button" class="fm-search-clear" onClick=${() => setSearchQ('')}>
+            <button type="button" class="fm-search-clear" onClick=${clearSearch}>
               <${IcoClose}/>
             </button>`}
         </div>
-
-        <!-- HINT BANNER -->
-        ${showHint && html`
-          <div class="fm-hint-wrap" onClick=${(e) => e.stopPropagation()}>
-            <${DirectSelectHint}
-              folderName=${selectedNode.name}
-              onDismiss=${() => setHintDismissed(true)}/>
-          </div>`}
 
         <!-- BODY -->
         <div class="fm-body" onClick=${(e) => e.stopPropagation()}>
@@ -612,9 +743,13 @@ function FolderModal({ onClose, onSelect }) {
 
         <!-- FOOTER -->
         <div class="fm-footer">
-          <button type="button" class="fm-foot-btn fm-foot-btn--cancel" onClick=${doClose}>Cancel</button>
-          <button type="button" class="fm-foot-btn fm-foot-btn--ok" onClick=${doOk}>
-            ${selected ? 'Select' : 'OK'}
+          <button type="button" class="fm-foot-btn fm-foot-btn--cancel" onClick=${doClose}>
+            Cancel
+          </button>
+          <button type="button" class="fm-foot-btn fm-foot-btn--ok" onClick=${doOk}
+            disabled=${!selected}
+            style=${{ opacity: selected ? 1 : 0.45, cursor: selected ? 'pointer' : 'not-allowed' }}>
+            Select
           </button>
         </div>
       </div>

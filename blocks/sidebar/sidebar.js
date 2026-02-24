@@ -369,6 +369,7 @@ function Sidebar() {
   }, [isCreating]);
 
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
+    
     setActiveSubcategory(subcategoryId);
     if (!postId) return;
     window.dispatchEvent(new CustomEvent('load-forum-post', {
