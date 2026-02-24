@@ -111,10 +111,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const activeCellRef = useRef(null);
   const resizeRef = useRef(null);
   const fileInputRef = useRef(null);
-  const [charCount, setCharCount] = useState(0);
   const [showTableTools, setShowTableTools] = useState(false);
   const [icons, setIcons] = useState(iconCache);
   const [activeFormats, setActiveFormats] = useState({});
+  const [charCount, setCharCount] = useState(0);
 
   // Load icons from /icons/ folder on mount
   useEffect(() => {
@@ -124,10 +124,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const emitChange = () => {
     const editor = editorRef.current;
     if (!editor) return;
-    const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
-    const jsonContent = domToJson(editor);
     const textLength = editor.textContent.replace(/\u200B/g, '').trim().length;
     setCharCount(textLength);
+    const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
+    const jsonContent = domToJson(editor);
     onChange(htmlContent, jsonContent);
   };
 
@@ -1158,8 +1158,6 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     };
   }, []);
 
-  const isValid = charCount >= minChars;
-
   // Toolbar button helper
   const tbBtn = (cmd, title) => html`
     <button type="button"
@@ -1265,9 +1263,9 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
           </div>
         </div>
       `}
-      ${!isValid && html`
-        <div className=${`char-counter ${charCount > 0 ? 'warning' : ''}`}>
-          ${charCount} / ${minChars} characters minimum
+      ${charCount > 0 && charCount < minChars && html`
+        <div className="char-counter warning">
+          ${charCount} / ${minChars} minimum
         </div>
       `}
     </div>
@@ -1536,6 +1534,7 @@ function CreatePost() {
       category,
       body,
       tags: tagsWithHash,
+      created_at: new Date().toISOString(), // eslint-disable-line camelcase
     };
 
     try {
@@ -1577,87 +1576,124 @@ function CreatePost() {
           onPost=${handlePost}
         />
       ` : html`
-        <h1>
-          Post your thoughts
-          <span className="required-text">Required fields *</span>
-        </h1>
+        <div className="cp-page-header">
+          <div className="cp-header-content">
+            <h1 className="cp-page-title">Post your thoughts</h1>
+            <p className="cp-page-subtitle">Ask a question and get helpful answers from the community!</p>
+            <div className="cp-header-divider"></div>
+          </div>
+          <div className="cp-required-badge">
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
+              <path d="M9 1a8 8 0 1 0 0 16A8 8 0 0 0 9 1zm1 12.5H8v-6h2v6zm0-8H8v-2h2v2z"/>
+            </svg>
+            <span><span className="required">*</span> Required fields</span>
+          </div>
+        </div>
 
         <form onSubmit=${handleSubmit}>
-          <div className="form-group">
-            <label>
-              Title<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Be specific and imagine you're asking a question to another person. Min 15 characters.
-            </p>
-            <input
-              type="text"
-              value=${title}
-              onInput=${(e) => setTitle(e.target.value)}
-              placeholder=""
-            />
-            ${title.trim().length < 15 && html`
-              <div className=${`char-counter ${title.trim().length > 0 ? 'warning' : ''}`}>
-                ${title.trim().length} / 15 characters minimum
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M16.12 2.59a2 2 0 0 0-2.83 0L3 12.88V16h3.12L16.4 5.72a2 2 0 0 0-.28-3.13zM5.5 14.5H4.5v-1l7.88-7.88 1 1L5.5 14.5zm9.35-9.35-.65.65-1-1 .65-.65a.5.5 0 0 1 .71 0l.29.29a.5.5 0 0 1 0 .71z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Title<span className="required">*</span>
+              </label>
+              <p className="helper-text">Craft a clear, specific question (min. 15 characters)</p>
+              <div className="cp-input-wrapper">
+                <input
+                  type="text"
+                  value=${title}
+                  onInput=${(e) => setTitle(e.target.value)}
+                  placeholder="What would you like to ask?"
+                />
               </div>
-            `}
-          </div>
-
-          <div className="form-group">
-            <label>
-              Category<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Browse the category tree or create a new one.
-            </p>
-            <div
-              className="category-selector"
-              onClick=${openCategoryExplorer}
-            >
-              ${category ? html`
-                <span className="category-selector-text">${category}</span>
-                <button
-                  type="button"
-                  className="category-remove"
-                  onClick=${(e) => { e.stopPropagation(); setCategory(''); }}
-                  aria-label="Remove category"
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-                  </svg>
-                </button>
-              ` : html`
-                <span className="category-selector-placeholder">Click to select a category...</span>
+              ${title.trim().length < 15 && title.trim().length > 0 && html`
+                <div className="char-counter warning">
+                  ${title.trim().length} / 15 minimum
+                </div>
               `}
             </div>
           </div>
 
-          <div className="form-group">
-            <label>
-              Body<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Include all the information someone would need to answer your question. Min 20 characters.
-            </p>
-            <${RichTextEditor}
-              onChange=${handleBodyChange}
-              minChars=${20}
-              initialValue=${body}
-            />
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M9 1 .5 5.5l8.5 4.5 8.5-4.5L9 1zM.5 13l8.5 4.5L17.5 13l-1.3-.7L9 16.2l-7.2-3.9L.5 13zm0-3.5 8.5 4.5 8.5-4.5-1.3-.7L9 12.7 1.8 8.8.5 9.5z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Category<span className="required">*</span>
+              </label>
+              <p className="helper-text">Choose the most relevant category</p>
+              <div
+                className="category-selector"
+                onClick=${openCategoryExplorer}
+              >
+                <svg className="cp-category-icon" width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
+                  <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
+                </svg>
+                ${category ? html`
+                  <span className="category-selector-text">${category}</span>
+                  <button
+                    type="button"
+                    className="category-remove"
+                    onClick=${(e) => { e.stopPropagation(); setCategory(''); }}
+                    aria-label="Remove category"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                ` : html`
+                  <span className="category-selector-placeholder">Select a category</span>
+                  <svg className="cp-category-chevron" width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M4 7l5 5 5-5"/>
+                  </svg>
+                `}
+              </div>
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>
-              Tags<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
-            </p>
-            <${TagsInput}
-              tags=${tags}
-              onTagsChange=${setTags}
-              maxTags=${5}
-            />
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M14 1H6L3 4v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 2.5V4H4.5L6 2.5zM13 15H5v-1h8v1zm0-3H5v-1h8v1zm0-3H5V8h8v1zm0-3H8V5h5v1z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Body<span className="required">*</span>
+              </label>
+              <p className="helper-text">Provide details to help others answer your question (min. 20 characters)</p>
+              <${RichTextEditor}
+                onChange=${handleBodyChange}
+                minChars=${20}
+                initialValue=${body}
+              />
+            </div>
+          </div>
+
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M16.56 8.94 10.06 2.5H3v7.06l6.44 6.5a1.5 1.5 0 0 0 2.12 0l5-5a1.5 1.5 0 0 0 0-2.12zM5.5 7A1.5 1.5 0 1 1 7 5.5 1.5 1.5 0 0 1 5.5 7z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Tags<span className="required">*</span>
+              </label>
+              <p className="helper-text">Add up to 5 tags to describe your question</p>
+              <${TagsInput}
+                tags=${tags}
+                onTagsChange=${setTags}
+                maxTags=${5}
+              />
+            </div>
           </div>
 
           <div className="submit-section">

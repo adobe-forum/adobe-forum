@@ -4,69 +4,103 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-// CATEGORY TREE POPUP (VS Code explorer style)
+// Time helpers
+const NOW = Date.now();
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+
+function formatRelativeTime(ts) {
+  if (!ts) return '—';
+  const diff = NOW - ts;
+  if (diff < 2 * MIN) return 'just now';
+  if (diff < HOUR) return `${Math.floor(diff / MIN)}m ago`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)}h ago`;
+  if (diff < WEEK) return `${Math.floor(diff / DAY)}d ago`;
+  return `${Math.floor(diff / WEEK)}w ago`;
+}
+
+// Pure helper — checks if any node in the subtree is in favIds.
+// Lets the Favorites filter include root categories whose children are favorited.
+function hasAnyFavoriteChild(nodes, favIds) {
+  return nodes.some((n) => favIds.has(n.id) || hasAnyFavoriteChild(n.children || [], favIds));
+}
+
+// favoriteIds: Set<string> of favorited node IDs (any depth).
+function getFilteredData(filter, data, favoriteIds = new Set()) {
+  switch (filter) {
+    case 'favorites':
+      return data.filter(
+        (c) => favoriteIds.has(c.id) || hasAnyFavoriteChild(c.items || [], favoriteIds),
+      );
+    case 'popular':
+      return [...data].sort((a, b) => (b.topicCount || 0) - (a.topicCount || 0));
+    case 'new':
+      return data
+        .filter((c) => c.createdAt && (NOW - c.createdAt) < 30 * DAY)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    case 'myCreated':
+      return data.filter((c) => c.createdByUser || c.postedByUser);
+    default:
+      return data;
+  }
+}
 
 function getNodeId(node) {
   return node['_id'] || node.id; // eslint-disable-line dot-notation
 }
 
-function TreeNode({
-  node, depth, expanded, selected, onToggle, onSelectNode,
-}) {
-  const hasChildren = node.children && node.children.length > 0;
-  const nodeId = getNodeId(node);
-  const isExpanded = expanded[nodeId];
-  const isSelected = selected === nodeId;
-  const isFolder = node.isFolder || hasChildren;
+const SIDEBAR_SECTIONS = [
+  {
+    key: 'nav',
+    label: 'Browse',
+    items: [
+      {
+        key: 'allCategories',
+        label: 'All Categories',
+        iconSvg: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>',
+      },
+      {
+        key: 'favorites',
+        label: 'Favorites',
+        iconSvg: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="8,2 9.8,6.5 15,6.5 10.9,9.5 12.4,14 8,11 3.6,14 5.1,9.5 1,6.5 6.2,6.5"/></svg>',
+      },
+    ],
+  },
+  {
+    key: 'filters',
+    label: 'Filters',
+    items: [
+      {
+        key: 'popular',
+        label: 'Popular',
+        iconSvg: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,12 6,7 9,10 13,4"/><polyline points="10,4 13,4 13,7"/></svg>',
+      },
+      {
+        key: 'new',
+        label: 'New',
+        iconSvg: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="11"/><line x1="5" y1="8" x2="11" y2="8"/></svg>',
+      },
+      {
+        key: 'myCreated',
+        label: 'My Categories',
+        iconSvg: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M2 14a6 6 0 0 1 12 0"/></svg>',
+      },
+    ],
+  },
+];
 
-  const folderIcon = isExpanded ? '\u{1F4C2}' : '\u{1F4C1}';
-  const icon = folderIcon;
-
-  return html`
-    <div className="tree-node-group">
-      <div
-        className=${`tree-node ${isSelected ? 'selected' : ''}`}
-        style=${{ paddingLeft: `${12 + depth * 16}px` }}
-        onClick=${() => {
-    if (isFolder && hasChildren) onToggle(nodeId);
-    onSelectNode(node);
-  }}
-      >
-        ${isFolder ? html`
-          <span className="tree-arrow ${isExpanded ? 'expanded' : ''}">
-            <svg width="10" height="10" viewBox="0 0 10 10">
-              <path d="M3 2 L7 5 L3 8" fill="none"
-                stroke="currentColor" stroke-width="1.5" />
-            </svg>
-          </span>
-        ` : html`<span className="tree-arrow-spacer" />`}
-        <span className="tree-icon">${icon}</span>
-        <span className="tree-label">${node.title}</span>
-      </div>
-      ${isFolder && isExpanded && hasChildren && html`
-        <div className="tree-children">
-          ${node.children.map((child) => html`
-            <${TreeNode}
-              key=${getNodeId(child)}
-              node=${child}
-              depth=${depth + 1}
-              expanded=${expanded}
-              selected=${selected}
-              onToggle=${onToggle}
-              onSelectNode=${onSelectNode}
-            />
-          `)}
-        </div>
-      `}
-    </div>
-  `;
-}
-
-// Mock tree data — replace with API fetch after approval
+// Mock tree data with metadata — replace with API fetch after approval
 const MOCK_TREE = [
   {
     id: 'javascript',
     name: 'JavaScript',
+    topicCount: 1245,
+    lastUpdated: NOW - 2 * MIN,
+    createdAt: NOW - 365 * DAY,
+    createdByUser: true,
+    isFavorite: true,
     items: [
       {
         id: 'js-basics',
@@ -121,6 +155,11 @@ const MOCK_TREE = [
   {
     id: 'react',
     name: 'React',
+    topicCount: 892,
+    lastUpdated: NOW - HOUR,
+    createdAt: NOW - 300 * DAY,
+    createdByUser: true,
+    isFavorite: true,
     items: [
       {
         id: 'react-hooks',
@@ -176,56 +215,11 @@ const MOCK_TREE = [
     ],
   },
   {
-    id: 'css',
-    name: 'CSS',
-    items: [
-      {
-        id: 'css-layout',
-        title: 'Layout',
-        isFolder: true,
-        children: [
-          {
-            id: 'css-flexbox', title: 'Flexbox', isFolder: false, children: [],
-          },
-          {
-            id: 'css-grid', title: 'Grid', isFolder: false, children: [],
-          },
-          {
-            id: 'css-position', title: 'Positioning', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'css-responsive',
-        title: 'Responsive Design',
-        isFolder: true,
-        children: [
-          {
-            id: 'css-media', title: 'Media Queries', isFolder: false, children: [],
-          },
-          {
-            id: 'css-mobile', title: 'Mobile First', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'css-animation',
-        title: 'Animations',
-        isFolder: true,
-        children: [
-          {
-            id: 'css-transitions', title: 'Transitions', isFolder: false, children: [],
-          },
-          {
-            id: 'css-keyframes', title: 'Keyframes', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
     id: 'nodejs',
     name: 'Node.js',
+    topicCount: 567,
+    lastUpdated: NOW - 3 * HOUR,
+    createdAt: NOW - 320 * DAY,
     items: [
       {
         id: 'node-core',
@@ -275,8 +269,65 @@ const MOCK_TREE = [
     ],
   },
   {
+    id: 'css',
+    name: 'CSS',
+    topicCount: 432,
+    lastUpdated: NOW - 5 * HOUR,
+    createdAt: NOW - 280 * DAY,
+    createdByUser: true,
+    items: [
+      {
+        id: 'css-layout',
+        title: 'Layout',
+        isFolder: true,
+        children: [
+          {
+            id: 'css-flexbox', title: 'Flexbox', isFolder: false, children: [],
+          },
+          {
+            id: 'css-grid', title: 'Grid', isFolder: false, children: [],
+          },
+          {
+            id: 'css-position', title: 'Positioning', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'css-responsive',
+        title: 'Responsive Design',
+        isFolder: true,
+        children: [
+          {
+            id: 'css-media', title: 'Media Queries', isFolder: false, children: [],
+          },
+          {
+            id: 'css-mobile', title: 'Mobile First', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'css-animation',
+        title: 'Animations',
+        isFolder: true,
+        children: [
+          {
+            id: 'css-transitions', title: 'Transitions', isFolder: false, children: [],
+          },
+          {
+            id: 'css-keyframes', title: 'Keyframes', isFolder: false, children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: 'python',
     name: 'Python',
+    topicCount: 765,
+    lastUpdated: NOW - DAY,
+    createdAt: NOW - 400 * DAY,
+    postedByUser: true,
+    isFavorite: true,
     items: [
       {
         id: 'py-basics',
@@ -304,6 +355,191 @@ const MOCK_TREE = [
           },
           {
             id: 'py-flask', title: 'Flask', isFolder: false, children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'java',
+    name: 'Java',
+    topicCount: 654,
+    lastUpdated: NOW - 2 * DAY,
+    createdAt: NOW - 350 * DAY,
+    items: [
+      {
+        id: 'java-core',
+        title: 'Core Java',
+        isFolder: true,
+        children: [
+          {
+            id: 'java-oop', title: 'OOP Concepts', isFolder: false, children: [],
+          },
+          {
+            id: 'java-collections', title: 'Collections', isFolder: false, children: [],
+          },
+          {
+            id: 'java-streams', title: 'Streams & Lambda', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'java-spring',
+        title: 'Spring Framework',
+        isFolder: true,
+        children: [
+          {
+            id: 'java-springboot', title: 'Spring Boot', isFolder: false, children: [],
+          },
+          {
+            id: 'java-mvc', title: 'Spring MVC', isFolder: false, children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dbms',
+    name: 'DBMS',
+    topicCount: 345,
+    lastUpdated: NOW - 3 * DAY,
+    createdAt: NOW - 200 * DAY,
+    items: [
+      {
+        id: 'db-sql',
+        title: 'SQL',
+        isFolder: true,
+        children: [
+          {
+            id: 'db-queries', title: 'Queries & Joins', isFolder: false, children: [],
+          },
+          {
+            id: 'db-indexes', title: 'Indexes', isFolder: false, children: [],
+          },
+          {
+            id: 'db-transactions', title: 'Transactions', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'db-nosql',
+        title: 'NoSQL',
+        isFolder: true,
+        children: [
+          {
+            id: 'db-mongodb', title: 'MongoDB', isFolder: false, children: [],
+          },
+          {
+            id: 'db-redis', title: 'Redis', isFolder: false, children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'devops',
+    name: 'DevOps',
+    topicCount: 298,
+    lastUpdated: NOW - WEEK,
+    createdAt: NOW - 20 * DAY,
+    items: [
+      {
+        id: 'devops-ci',
+        title: 'CI/CD',
+        isFolder: true,
+        children: [
+          {
+            id: 'devops-github', title: 'GitHub Actions', isFolder: false, children: [],
+          },
+          {
+            id: 'devops-jenkins', title: 'Jenkins', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'devops-containers',
+        title: 'Containers',
+        isFolder: true,
+        children: [
+          {
+            id: 'devops-docker', title: 'Docker', isFolder: false, children: [],
+          },
+          {
+            id: 'devops-k8s', title: 'Kubernetes', isFolder: false, children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'aiml',
+    name: 'AI & Machine Learning',
+    topicCount: 187,
+    lastUpdated: NOW - 2 * WEEK,
+    createdAt: NOW - 25 * DAY,
+    items: [
+      {
+        id: 'ml-foundations',
+        title: 'Foundations',
+        isFolder: true,
+        children: [
+          {
+            id: 'ml-supervised', title: 'Supervised Learning', isFolder: false, children: [],
+          },
+          {
+            id: 'ml-unsupervised', title: 'Unsupervised Learning', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'ml-dl',
+        title: 'Deep Learning',
+        isFolder: true,
+        children: [
+          {
+            id: 'ml-nn', title: 'Neural Networks', isFolder: false, children: [],
+          },
+          {
+            id: 'ml-cnn', title: 'CNN', isFolder: false, children: [],
+          },
+          {
+            id: 'ml-nlp', title: 'NLP', isFolder: false, children: [],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'mobile',
+    name: 'Mobile Development',
+    topicCount: 523,
+    lastUpdated: NOW - WEEK,
+    createdAt: NOW - 15 * DAY,
+    postedByUser: true,
+    items: [
+      {
+        id: 'mob-react',
+        title: 'React Native',
+        isFolder: true,
+        children: [
+          {
+            id: 'mob-rn-basics', title: 'RN Basics', isFolder: false, children: [],
+          },
+          {
+            id: 'mob-rn-nav', title: 'Navigation', isFolder: false, children: [],
+          },
+        ],
+      },
+      {
+        id: 'mob-flutter',
+        title: 'Flutter',
+        isFolder: true,
+        children: [
+          {
+            id: 'mob-dart', title: 'Dart Language', isFolder: false, children: [],
+          },
+          {
+            id: 'mob-widgets', title: 'Widgets', isFolder: false, children: [],
           },
         ],
       },
@@ -345,26 +581,147 @@ function filterFoldersOnly(items) {
     }));
 }
 
+function TreeNode({
+  node, depth, expanded, selected, onToggle, onSelectNode, onToggleFavorite, isFavorite,
+}) {
+  const hasChildren = node.children && node.children.length > 0;
+  const nodeId = getNodeId(node);
+  const isExpanded = expanded[nodeId];
+  const isSelected = selected === nodeId;
+  const isFolder = node.isFolder || hasChildren;
+  const folderIcon = isExpanded ? '\u{1F4C2}' : '\u{1F4C1}';
+  const nodeIsFav = isFavorite(nodeId);
+
+  const handleStarClick = (e) => {
+    e.stopPropagation();
+    onToggleFavorite(nodeId);
+    e.currentTarget.blur();
+  };
+
+  const handleClick = () => {
+    if (isFolder && hasChildren) onToggle(nodeId);
+    onSelectNode(node);
+  };
+
+  return html`
+    <div className="tree-node-group">
+      <div
+        className=${`tree-node ${isSelected ? 'selected' : ''}`}
+        style=${{ paddingLeft: `${12 + depth * 16}px` }}
+        onClick=${handleClick}
+      >
+        ${isFolder ? html`
+          <span className="tree-arrow ${isExpanded ? 'expanded' : ''}">
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path d="M3 2 L7 5 L3 8" fill="none"
+                stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </span>
+        ` : html`<span className="tree-arrow-spacer" />`}
+        <span className="tree-icon">${folderIcon}</span>
+        <span className="tree-col-name">${node.title}</span>
+        <span className="tree-col-topics">
+          ${node.topicCount ? node.topicCount.toLocaleString() : '—'}
+        </span>
+        <span className="tree-col-time">
+          ${node.lastUpdated ? formatRelativeTime(node.lastUpdated) : '—'}
+        </span>
+        <span className="tree-col-star">
+          <button
+            type="button"
+            className="ct-star-btn"
+            title=${nodeIsFav ? 'Remove from Favorites' : 'Add to Favorites'}
+            aria-label=${nodeIsFav ? 'Remove from Favorites' : 'Add to Favorites'}
+            onClick=${handleStarClick}
+          >${nodeIsFav ? '\u2605' : '\u2606'}</button>
+        </span>
+      </div>
+      ${isFolder && isExpanded && hasChildren && html`
+        <div className="tree-children">
+          ${node.children.map((child) => html`
+            <${TreeNode}
+              key=${getNodeId(child)}
+              node=${child}
+              depth=${depth + 1}
+              expanded=${expanded}
+              selected=${selected}
+              onToggle=${onToggle}
+              onSelectNode=${onSelectNode}
+              onToggleFavorite=${onToggleFavorite}
+              isFavorite=${isFavorite}
+            />
+          `)}
+        </div>
+      `}
+    </div>
+  `;
+}
+
 function CategoryTreePopup({ isOpen, onClose, onSelect }) {
   const [treeData, setTreeData] = useState(() => MOCK_TREE.map((cat) => ({
     ...cat,
     items: filterFoldersOnly(cat.items || []),
   })));
+  // Mock: centralized favorites store — Set<nodeId>.
+  // Replace with API calls (POST/DELETE /favorites/:nodeId) when backend is ready.
+  const [favoriteIds, setFavoriteIds] = useState(() => {
+    const initial = new Set();
+    MOCK_TREE.forEach((cat) => {
+      if (cat.isFavorite) initial.add(cat.id);
+    });
+    return initial;
+  });
   const [expanded, setExpanded] = useState({});
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [creatingType, setCreatingType] = useState(null);
   const [newItemName, setNewItemName] = useState('');
   const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'grid'
-  const [gridFolder, setGridFolder] = useState(null); // current folder in grid view
+  const [gridFolder, setGridFolder] = useState(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('allCategories');
   const overlayRef = useRef(null);
   const createInputRef = useRef(null);
   const searchRef = useRef(null);
   const lastToastRef = useRef({ id: null, time: 0 });
   const toastTimerRef = useRef(null);
 
-  // Reset state on open — all folders collapsed by default
+  // Mock: toggle favorite for any node (root or sub-category).
+  // Replace Set mutation with API call (POST/DELETE /favorites/:nodeId) when backend is ready.
+  const toggleFavorite = (nodeId) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  };
+
+  // Derived helper — use this everywhere instead of reading isFavorite from data objects.
+  // Backend version: return favoritesCache.has(nodeId) after hydrating from API.
+  const isFavorite = (nodeId) => favoriteIds.has(nodeId);
+
+  // Filtered display data — derived from treeData + activeFilter + favoriteIds
+  const displayData = getFilteredData(activeFilter, treeData, favoriteIds);
+
+  // Scroll lock — prevent background scroll while popup is open
+  useEffect(() => {
+    const { body } = document;
+    if (isOpen) {
+      const scrollbarWidth = window.innerWidth - body.clientWidth;
+      body.style.overflow = 'hidden';
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      body.style.overflow = '';
+      body.style.paddingRight = '';
+    }
+    return () => {
+      body.style.overflow = '';
+      body.style.paddingRight = '';
+    };
+  }, [isOpen]);
+
+  // Reset state on open
   useEffect(() => {
     if (!isOpen) return;
     setExpanded({});
@@ -375,8 +732,8 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     setViewMode('tree');
     setGridFolder(null);
     setToastVisible(false);
+    setActiveFilter('allCategories');
     clearTimeout(toastTimerRef.current);
-    // Focus search on open
     requestAnimationFrame(() => {
       if (searchRef.current) searchRef.current.focus();
     });
@@ -400,7 +757,6 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
       children = selectedNode.children || [];
     }
     if (children.length > 0) return;
-    // Debounce: skip if same folder was toasted within 5 s
     if (lastToastRef.current.id === nodeId
       && Date.now() - lastToastRef.current.time < 5000) return;
     lastToastRef.current = { id: nodeId, time: Date.now() };
@@ -409,7 +765,7 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     toastTimerRef.current = setTimeout(() => setToastVisible(false), 5000);
   }, [selectedNode]);
 
-  // Search results
+  // Search results — always search full treeData regardless of filter
   const flatNodes = flattenTree(treeData);
   const query = searchQuery.trim().toLowerCase();
   const searchResults = query
@@ -427,6 +783,14 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     setSelectedNode(node);
     setCreatingType(null);
     setNewItemName('');
+  };
+
+  const handleFilterSelect = (filterKey) => {
+    setActiveFilter(filterKey);
+    setSearchQuery('');
+    setSelectedNode(null);
+    setExpanded({});
+    setGridFolder(null);
   };
 
   const walkForPath = (nodes, targetId, prefix) => {
@@ -472,9 +836,7 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
         return true;
       }
       if (nodes[i].children && nodes[i].children.length > 0) {
-        if (addToNode(nodes[i].children, targetId, newNode)) {
-          return true;
-        }
+        if (addToNode(nodes[i].children, targetId, newNode)) return true;
       }
     }
     return false;
@@ -492,7 +854,6 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     return cats;
   };
 
-  // Add new folder/file into mock tree
   const handleCreateItem = () => {
     if (!newItemName.trim()) return;
     const newNode = {
@@ -501,7 +862,6 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
       isFolder: true,
       children: [],
     };
-
     setTreeData((prev) => {
       const clone = JSON.parse(JSON.stringify(prev));
       if (!selectedNode) {
@@ -514,7 +874,6 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
       }
       return insertIntoTree(clone, selectedNode, newNode);
     });
-
     if (selectedNode) {
       const selId = selectedNode.id || selectedNode.name;
       setExpanded((prev) => ({ ...prev, [selId]: true }));
@@ -537,54 +896,91 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     }
   };
 
+  const handleExpandAll = () => {
+    const ids = {};
+    const collect = (nodes) => {
+      nodes.forEach((n) => {
+        const nId = n.id || n.name;
+        ids[nId] = true;
+        const kids = n.children || n.items || [];
+        if (kids.length > 0) collect(kids);
+      });
+    };
+    treeData.forEach((cat) => {
+      ids[cat.id] = true;
+      collect(cat.items || []);
+    });
+    setExpanded(ids);
+  };
+
+  const handleStartCreating = () => {
+    setCreatingType('folder');
+    setNewItemName('');
+  };
+
+  const handleCancelCreate = () => {
+    setCreatingType(null);
+    setNewItemName('');
+  };
+
+  const handleSwitchToTree = () => setViewMode('tree');
+
+  const handleSwitchToGrid = () => {
+    setViewMode('grid');
+    setGridFolder(null);
+  };
+
   if (!isOpen) return null;
 
-  // Render search results as flat list
+  // ===== SEARCH RESULTS =====
   const renderSearchResults = () => {
     if (searchResults.length === 0) {
       return html`
-        <div className="ct-empty">
-          No results for "${searchQuery}"
-        </div>`;
+        <div className="ct-empty">No results for "${searchQuery}"</div>
+      `;
     }
     return searchResults.map((node) => {
-      const selId = selectedNode
-        ? (selectedNode.id || selectedNode.name)
-        : null;
+      const selId = selectedNode ? (selectedNode.id || selectedNode.name) : null;
       const nodeId = node.id || node.name;
       const isSel = selId === nodeId;
-      const icon = '\u{1F4C1}';
       return html`
         <div
           key=${nodeId}
           className=${`tree-node ct-search-result${isSel ? ' selected' : ''}`}
           onClick=${() => handleSelectNode(node)}
         >
-          <span className="tree-icon">${icon}</span>
-          <span className="tree-label">${node.title || node.name}</span>
+          <span className="tree-icon">${'\u{1F4C1}'}</span>
+          <span className="tree-col-name">${node.title || node.name}</span>
           <span className="ct-search-path">${node.fullPath}</span>
-        </div>`;
+        </div>
+      `;
     });
   };
 
-  // Render tree list view (default)
-  const renderTreeView = () => treeData.map((cat) => {
+  // ===== TREE VIEW =====
+  const renderTreeView = () => displayData.map((cat) => {
     const isRootSel = selectedNode
-      && (selectedNode.name === cat.name
-        || selectedNode.id === cat.id)
+      && (selectedNode.name === cat.name || selectedNode.id === cat.id)
       && !selectedNode.title;
-    const rootCls = `tree-node ct-root-cat${
-      isRootSel ? ' selected' : ''}`;
-    const rootIcon = expanded[cat.id]
-      ? '\u{1F4C2}' : '\u{1F4C1}';
+    const rootCls = `tree-node ct-root-cat${isRootSel ? ' selected' : ''}`;
+    const rootIcon = expanded[cat.id] ? '\u{1F4C2}' : '\u{1F4C1}';
+    const isFav = isFavorite(cat.id);
+
+    const handleRootClick = () => {
+      handleToggle(cat.id);
+      handleSelectNode({ name: cat.name, id: cat.id, isRoot: true });
+    };
+
+    const handleStarClick = (e) => {
+      e.stopPropagation();
+      toggleFavorite(cat.id);
+      // Blur immediately so no focus state lingers after a mouse click.
+      e.currentTarget.blur();
+    };
+
     return html`
       <div key=${cat.id} className="ct-category-group">
-        <div className=${rootCls} onClick=${() => {
-  handleToggle(cat.id);
-  handleSelectNode({
-    name: cat.name, id: cat.id, isRoot: true,
-  });
-}}>
+        <div className=${rootCls} onClick=${handleRootClick}>
           <span className="tree-arrow ${expanded[cat.id] ? 'expanded' : ''}">
             <svg width="10" height="10" viewBox="0 0 10 10">
               <path d="M3 2 L7 5 L3 8" fill="none"
@@ -592,28 +988,43 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
             </svg>
           </span>
           <span className="tree-icon">${rootIcon}</span>
-          <span className="tree-label ct-root-label">
-            ${cat.name}
+          <span className="tree-col-name ct-root-label">${cat.name}</span>
+          <span className="tree-col-topics">
+            ${cat.topicCount ? cat.topicCount.toLocaleString() : '—'}
+          </span>
+          <span className="tree-col-time">
+            ${cat.lastUpdated ? formatRelativeTime(cat.lastUpdated) : '—'}
+          </span>
+          <span className="tree-col-star">
+            <button
+              type="button"
+              className="ct-star-btn"
+              title=${isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+              aria-label=${isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+              onClick=${handleStarClick}
+            >${isFav ? '\u2605' : '\u2606'}</button>
           </span>
         </div>
         ${expanded[cat.id] && cat.items
-  && cat.items.map((item) => html`
-          <${TreeNode}
-            key=${item.id}
-            node=${item}
-            depth=${1}
-            expanded=${expanded}
-            selected=${selectedNode && selectedNode.id}
-            onToggle=${handleToggle}
-            onSelectNode=${handleSelectNode}
-          />
-        `)}
-      </div>`;
+          && cat.items.map((item) => html`
+            <${TreeNode}
+              key=${item.id}
+              node=${item}
+              depth=${1}
+              expanded=${expanded}
+              selected=${selectedNode && selectedNode.id}
+              onToggle=${handleToggle}
+              onSelectNode=${handleSelectNode}
+              onToggleFavorite=${toggleFavorite}
+              isFavorite=${isFavorite}
+            />
+          `)}
+      </div>
+    `;
   });
 
-  // ===== GRID VIEW helpers =====
+  // ===== GRID VIEW =====
 
-  // Resolve a node by ID from the current treeData (avoids stale references)
   const findNodeById = (targetId) => {
     const search = (nodes) => {
       for (let i = 0; i < nodes.length; i += 1) {
@@ -633,11 +1044,9 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     return null;
   };
 
-  // Get items to display in grid view based on current gridFolder
   const getGridItems = () => {
     if (!gridFolder) {
-      // Show root categories as tiles
-      return treeData.map((cat) => ({
+      return displayData.map((cat) => ({
         id: cat.id,
         title: cat.name,
         isFolder: true,
@@ -646,7 +1055,6 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
         catRef: cat,
       }));
     }
-    // Resolve folder from fresh treeData to avoid stale references
     const folder = findNodeById(gridFolder.id) || gridFolder;
     const items = folder.children || folder.items || [];
     return items.map((item) => ({
@@ -658,14 +1066,12 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     }));
   };
 
-  // Navigate into a folder in grid view (double-click)
   const gridNavigate = (item) => {
     if (item.isFolder) {
       setGridFolder(item.catRef || item.nodeRef || item);
     }
   };
 
-  // Build breadcrumb path for current grid folder
   const gridBreadcrumbs = () => {
     const crumbs = [{ id: null, title: 'Root' }];
     if (!gridFolder) return crumbs;
@@ -689,28 +1095,22 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     return crumbs;
   };
 
-  // Handle grid tile click (single-click selects, ctrl-click multi-selects)
   const handleGridClick = (item, e) => {
     const node = item.catRef || item.nodeRef || item;
     if (item.isRoot) {
-      handleSelectNode({
-        name: item.title, id: item.id, isRoot: true,
-      });
+      handleSelectNode({ name: item.title, id: item.id, isRoot: true });
     } else {
       handleSelectNode(node);
     }
-    // Prevent default
     e.stopPropagation();
   };
 
-  // Handle grid tile double-click (navigate into folder only if it has subfolders)
   const handleGridDblClick = (item) => {
     if (item.isFolder && item.children && item.children.length > 0) {
       gridNavigate(item);
     }
   };
 
-  // Render grid view
   const renderGridView = () => {
     const items = getGridItems();
     const crumbs = gridBreadcrumbs();
@@ -728,7 +1128,8 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
                   onClick=${() => setGridFolder(crumb.ref || null)}
                   disabled=${isLast}
                 >${crumb.title}</button>
-              </span>`;
+              </span>
+            `;
   })}
         </div>
         ${items.length === 0
@@ -736,41 +1137,92 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     : html`
           <div className="ct-grid">
             ${items.map((item) => {
-    const selId = selectedNode
-      ? (selectedNode.id || selectedNode.name)
-      : null;
+    const selId = selectedNode ? (selectedNode.id || selectedNode.name) : null;
     const isSel = selId === item.id;
-    const tileCls = `ct-grid-tile${isSel ? ' selected' : ''}`;
+    const tileIsFav = isFavorite(item.id);
+    const handleTileStarClick = (e) => {
+      e.stopPropagation();
+      toggleFavorite(item.id);
+      e.currentTarget.blur();
+    };
     return html`
-                <div key=${item.id} className=${tileCls}
+                <div key=${item.id}
+                  className=${`ct-grid-tile${isSel ? ' selected' : ''}`}
                   onClick=${(e) => handleGridClick(item, e)}
                   onDblClick=${() => handleGridDblClick(item)}>
+                  <button
+                    type="button"
+                    className="ct-star-btn ct-tile-star"
+                    title=${tileIsFav ? 'Remove from Favorites' : 'Add to Favorites'}
+                    aria-label=${tileIsFav ? 'Remove from Favorites' : 'Add to Favorites'}
+                    onClick=${handleTileStarClick}
+                  >${tileIsFav ? '\u2605' : '\u2606'}</button>
                   <div className="ct-tile-icon">
-                    ${html`<svg viewBox="0 0 48 48" width="48" height="48">
-                        <path d="M4 8h14l4 4h22a2 2 0 0 1 2 2v26a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"
-                          fill="#e8a838" stroke="#c4882a" stroke-width="1"/>
-                        <path d="M2 16h44v24a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V16z"
-                          fill="#ffc84d" />
-                      </svg>`}
+                    <svg viewBox="0 0 48 48" width="48" height="48">
+                      <path d="M4 8h14l4 4h22a2 2 0 0 1 2 2v26a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"
+                        fill="#e8a838" stroke="#c4882a" stroke-width="1"/>
+                      <path d="M2 16h44v24a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V16z"
+                        fill="#ffc84d" />
+                    </svg>
                   </div>
                   <div className="ct-tile-label">${item.title}</div>
-                </div>`;
+                </div>
+              `;
   })}
-          </div>`}
-      </div>`;
+          </div>
+        `}
+      </div>
+    `;
   };
 
-  // Decide which content to show in tree area
+  // ===== PATH BAR =====
+  const renderPathBar = () => {
+    const path = selectedNode ? buildPath(selectedNode) : '';
+    return html`
+      <div className="ct-path-bar">
+        <span className="ct-path-label">Path:</span>
+        <span className="ct-path-value">${path || 'None selected'}</span>
+      </div>
+    `;
+  };
+
+  // ===== MAIN CONTENT =====
   const renderMainContent = () => {
     if (searchResults) return renderSearchResults();
     if (viewMode === 'grid') return renderGridView();
     return renderTreeView();
   };
 
+  // ===== SIDEBAR =====
+  const renderSidebar = () => html`
+    <div className="ct-sidebar">
+      ${SIDEBAR_SECTIONS.map((section) => html`
+        <div key=${section.key} className="ct-sb-section">
+          <div className="ct-sb-label">${section.label}</div>
+          ${section.items.map((item) => html`
+            <button
+              key=${item.key}
+              type="button"
+              title=${item.label}
+              className=${`ct-sb-item${activeFilter === item.key ? ' active' : ''}`}
+              onClick=${() => handleFilterSelect(item.key)}
+            >
+              <span
+                className="ct-sb-icon"
+                dangerouslySetInnerHTML=${{ __html: item.iconSvg }}
+              />
+              <span className="ct-sb-label-text">${item.label}</span>
+            </button>
+          `)}
+        </div>
+      `)}
+    </div>
+  `;
+
   return html`
-    <div className="ct-overlay" ref=${overlayRef}
-      onClick=${handleOverlayClick}>
+    <div className="ct-overlay" ref=${overlayRef} onClick=${handleOverlayClick}>
       <div className="ct-popup">
+
         <div className="ct-header">
           <h2>Select Category</h2>
           <button type="button" className="ct-close"
@@ -779,144 +1231,136 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
           </button>
         </div>
 
-        <div className="ct-search-bar">
-          <svg className="ct-search-icon" width="14" height="14"
-            viewBox="0 0 16 16" fill="none"
-            stroke="currentColor" stroke-width="1.5">
-            <circle cx="7" cy="7" r="5" />
-            <line x1="11" y1="11" x2="14" y2="14" />
-          </svg>
-          <input
-            ref=${searchRef}
-            type="text"
-            className="ct-search-input"
-            placeholder="Search folders..."
-            value=${searchQuery}
-            onInput=${(e) => setSearchQuery(e.target.value)}
-          />
-          ${searchQuery && html`
-            <button type="button" className="ct-search-clear"
-              onClick=${() => setSearchQuery('')}>
-              \u00D7
-            </button>
-          `}
-        </div>
+        <div className="ct-body">
+          ${renderSidebar()}
 
-        <div className="ct-toolbar">
-          <button type="button" className="ct-tool-btn"
-            title="New Folder"
-            onClick=${() => {
-    setCreatingType('folder');
-    setNewItemName('');
-  }}>
-            <svg width="16" height="16" viewBox="0 0 16 16"
-              fill="none" stroke="currentColor" stroke-width="1.2">
-              <path d="M1 3h5l1.5 1.5H14a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3z" />
-              <line x1="7.5" y1="7.5" x2="7.5" y2="11.5" />
-              <line x1="5.5" y1="9.5" x2="9.5" y2="9.5" />
-            </svg>
-          </button>
-          <button type="button" className="ct-tool-btn"
-            title="Expand All"
-            onClick=${() => {
-    const ids = {};
-    const collect = (nodes) => {
-      nodes.forEach((n) => {
-        const nId = n.id || n.name;
-        ids[nId] = true;
-        const kids = n.children || n.items || [];
-        if (kids.length > 0) collect(kids);
-      });
-    };
-    treeData.forEach((cat) => {
-      ids[cat.id] = true;
-      collect(cat.items || []);
-    });
-    setExpanded(ids);
-  }}>
-            <svg width="16" height="16" viewBox="0 0 16 16"
-              fill="none" stroke="currentColor" stroke-width="1.2">
-              <path d="M4 4h8M4 8h8M4 12h8" />
-              <path d="M1 7l2 2 2-2" />
-            </svg>
-          </button>
-          <button type="button" className="ct-tool-btn"
-            title="Collapse All"
-            onClick=${() => setExpanded({})}>
-            <svg width="16" height="16" viewBox="0 0 16 16"
-              fill="none" stroke="currentColor" stroke-width="1.2">
-              <path d="M4 4h8M4 8h8M4 12h8" />
-              <path d="M1 9l2-2 2 2" />
-            </svg>
-          </button>
-          <span className="ct-toolbar-spacer" />
-          <button type="button"
-            className=${`ct-tool-btn ct-view-btn${viewMode === 'tree' ? ' active' : ''}`}
-            title="Tree View"
-            onClick=${() => { setViewMode('tree'); }}>
-            <svg width="16" height="16" viewBox="0 0 16 16"
-              fill="none" stroke="currentColor" stroke-width="1.2">
-              <path d="M2 3h12M2 7h12M2 11h12" />
-              <rect x="2" y="2" width="2" height="2" rx="0.3" fill="currentColor"
-                stroke="none" />
-              <rect x="2" y="6" width="2" height="2" rx="0.3" fill="currentColor"
-                stroke="none" />
-              <rect x="2" y="10" width="2" height="2" rx="0.3" fill="currentColor"
-                stroke="none" />
-            </svg>
-          </button>
-          <button type="button"
-            className=${`ct-tool-btn ct-view-btn${viewMode === 'grid' ? ' active' : ''}`}
-            title="Grid View"
-            onClick=${() => { setViewMode('grid'); setGridFolder(null); }}>
-            <svg width="16" height="16" viewBox="0 0 16 16"
-              fill="none" stroke="currentColor" stroke-width="1.2">
-              <rect x="1" y="1" width="6" height="6" rx="1" />
-              <rect x="9" y="1" width="6" height="6" rx="1" />
-              <rect x="1" y="9" width="6" height="6" rx="1" />
-              <rect x="9" y="9" width="6" height="6" rx="1" />
-            </svg>
-          </button>
-        </div>
-
-        ${creatingType && html`
-          <div className="ct-create-bar">
-            <span className="ct-create-icon">
-              ${'\u{1F4C1}'}
-            </span>
-            <input
-              ref=${createInputRef}
-              type="text"
-              className="ct-create-input"
-              placeholder="New folder name..."
-              value=${newItemName}
-              onInput=${(e) => setNewItemName(e.target.value)}
-              onKeyDown=${handleCreateKeyDown}
-            />
-            <button type="button" className="ct-create-ok"
-              onClick=${handleCreateItem}
-              disabled=${!newItemName.trim()}>
-              Create
-            </button>
-            <button type="button" className="ct-create-cancel"
-              onClick=${() => {
-    setCreatingType(null);
-    setNewItemName('');
-  }}>
-              \u00D7
-            </button>
-          </div>
-          ${selectedNode && html`
-            <div className="ct-create-hint">
-              Inside: ${selectedNode.title
-    || selectedNode.name
-    || 'Root'}
+          <div className="ct-main">
+            <div className="ct-search-bar">
+              <svg className="ct-search-icon" width="14" height="14"
+                viewBox="0 0 16 16" fill="none"
+                stroke="currentColor" stroke-width="1.5">
+                <circle cx="7" cy="7" r="5" />
+                <line x1="11" y1="11" x2="14" y2="14" />
+              </svg>
+              <input
+                ref=${searchRef}
+                type="text"
+                className="ct-search-input"
+                placeholder="Search folders..."
+                value=${searchQuery}
+                onInput=${(e) => setSearchQuery(e.target.value)}
+              />
+              ${searchQuery && html`
+                <button type="button" className="ct-search-clear"
+                  onClick=${() => setSearchQuery('')}>
+                  \u00D7
+                </button>
+              `}
             </div>
-          `}
-        `}
 
-        <div className="ct-tree">
-          ${renderMainContent()}
+            <div className="ct-toolbar">
+              <button type="button" className="ct-tool-btn"
+                title="New Folder"
+                onClick=${handleStartCreating}>
+                <svg width="16" height="16" viewBox="0 0 16 16"
+                  fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M1 3h5l1.5 1.5H14a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3z" />
+                  <line x1="7.5" y1="7.5" x2="7.5" y2="11.5" />
+                  <line x1="5.5" y1="9.5" x2="9.5" y2="9.5" />
+                </svg>
+              </button>
+              <button type="button" className="ct-tool-btn"
+                title="Expand All"
+                onClick=${handleExpandAll}>
+                <svg width="16" height="16" viewBox="0 0 16 16"
+                  fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M4 4h8M4 8h8M4 12h8" />
+                  <path d="M1 7l2 2 2-2" />
+                </svg>
+              </button>
+              <button type="button" className="ct-tool-btn"
+                title="Collapse All"
+                onClick=${() => setExpanded({})}>
+                <svg width="16" height="16" viewBox="0 0 16 16"
+                  fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M4 4h8M4 8h8M4 12h8" />
+                  <path d="M1 9l2-2 2 2" />
+                </svg>
+              </button>
+              <span className="ct-toolbar-spacer" />
+              <button type="button"
+                className=${`ct-tool-btn ct-view-btn${viewMode === 'tree' ? ' active' : ''}`}
+                title="Tree View"
+                onClick=${handleSwitchToTree}>
+                <svg width="16" height="16" viewBox="0 0 16 16"
+                  fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M2 3h12M2 7h12M2 11h12" />
+                  <rect x="2" y="2" width="2" height="2" rx="0.3"
+                    fill="currentColor" stroke="none" />
+                  <rect x="2" y="6" width="2" height="2" rx="0.3"
+                    fill="currentColor" stroke="none" />
+                  <rect x="2" y="10" width="2" height="2" rx="0.3"
+                    fill="currentColor" stroke="none" />
+                </svg>
+              </button>
+              <button type="button"
+                className=${`ct-tool-btn ct-view-btn${viewMode === 'grid' ? ' active' : ''}`}
+                title="Grid View"
+                onClick=${handleSwitchToGrid}>
+                <svg width="16" height="16" viewBox="0 0 16 16"
+                  fill="none" stroke="currentColor" stroke-width="1.2">
+                  <rect x="1" y="1" width="6" height="6" rx="1" />
+                  <rect x="9" y="1" width="6" height="6" rx="1" />
+                  <rect x="1" y="9" width="6" height="6" rx="1" />
+                  <rect x="9" y="9" width="6" height="6" rx="1" />
+                </svg>
+              </button>
+            </div>
+
+            ${creatingType && html`
+              <div className="ct-create-bar">
+                <span className="ct-create-icon">${'\u{1F4C1}'}</span>
+                <input
+                  ref=${createInputRef}
+                  type="text"
+                  className="ct-create-input"
+                  placeholder="New folder name..."
+                  value=${newItemName}
+                  onInput=${(e) => setNewItemName(e.target.value)}
+                  onKeyDown=${handleCreateKeyDown}
+                />
+                <button type="button" className="ct-create-ok"
+                  onClick=${handleCreateItem}
+                  disabled=${!newItemName.trim()}>
+                  Create
+                </button>
+                <button type="button" className="ct-create-cancel"
+                  onClick=${handleCancelCreate}>
+                  \u00D7
+                </button>
+              </div>
+              ${selectedNode && html`
+                <div className="ct-create-hint">
+                  Inside: ${selectedNode.title || selectedNode.name || 'Root'}
+                </div>
+              `}
+            `}
+
+            ${!searchResults && viewMode === 'tree' && html`
+              <div className="ct-col-headers">
+                <span className="ct-col-h-name">Name</span>
+                <span className="ct-col-h-topics">Topics</span>
+                <span className="ct-col-h-time">Last Updated</span>
+                <span className="ct-col-h-star" aria-label="Favorites" />
+              </div>
+            `}
+
+            <div className="ct-tree">
+              ${renderMainContent()}
+            </div>
+
+            ${renderPathBar()}
+          </div>
         </div>
 
         ${toastVisible && html`
@@ -926,15 +1370,30 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
         `}
 
         <div className="ct-footer">
-          <button type="button" className="btn btn-cancel"
-            onClick=${onClose}>Cancel</button>
-          <button type="button"
-            className="btn btn-submit btn-ready"
-            onClick=${handleConfirm}
-            disabled=${!selectedNode}>
-            Select
-          </button>
+          <div className="ct-footer-left">
+            <button type="button" className="btn btn-ghost"
+              onClick=${handleStartCreating}>
+              <svg width="13" height="13" viewBox="0 0 16 16"
+                fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="8" y1="2" x2="8" y2="14" />
+                <line x1="2" y1="8" x2="14" y2="8" />
+              </svg>
+              New Category
+            </button>
+
+          </div>
+          <div className="ct-footer-right">
+            <button type="button" className="btn btn-cancel"
+              onClick=${onClose}>Cancel</button>
+            <button type="button"
+              className="btn btn-submit"
+              onClick=${handleConfirm}
+              disabled=${!selectedNode}>
+              Select Category
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   `;
