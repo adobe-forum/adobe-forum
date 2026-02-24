@@ -182,7 +182,6 @@ const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill=
 const IcoEdit = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const IcoTrash = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
 const IcoSearch = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-const IcoInfo = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
 
 const IcoFolder = () => html`
   <svg viewBox="0 0 88 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
@@ -273,21 +272,7 @@ function CtxMenu({
     </div>`;
 }
 
-// ── Direct-select hint banner ─────────────────────────────────────────────────
-function DirectSelectHint({ folderName, onDismiss }) {
-  return html`
-    <div class="fm-hint">
-      <${IcoInfo}/>
-      <span>
-        <strong>${folderName}</strong> has subfolders. You can open it to pick a subfolder,
-        or click <strong>Select</strong> to use it directly.
-      </span>
-      <button type="button" class="fm-hint-close" onClick=${onDismiss}><${IcoClose}/></button>
-    </div>`;
-}
-
 // ── Search results panel ──────────────────────────────────────────────────────
-// No JS-driven hover state — plain CSS :hover handles it (see fm-search-row in CSS)
 function SearchResults({ results, onNavigate }) {
   if (results.length === 0) {
     return html`
@@ -540,7 +525,6 @@ function FolderModal({ onClose, onSelect }) {
   const [ctx, setCtx] = useState(null);
   const [visible, setVisible] = useState(false);
   const [searchQ, setSearchQ] = useState('');
-  const [hintDismissed, setHintDismissed] = useState(false);
 
   const persist = (t) => { setTree(t); saveTree(t); };
   const doClose = () => { setVisible(false); setTimeout(onClose, 200); };
@@ -553,41 +537,23 @@ function FolderModal({ onClose, onSelect }) {
     return () => document.removeEventListener('keydown', esc);
   }, [renamingId, adding]);
 
-  // Reset hint when selection changes
-  useEffect(() => { setHintDismissed(false); }, [selected]);
-
   const isSearching = searchQ.trim().length > 0;
 
   // Clear selection whenever search mode activates
   useEffect(() => { if (isSearching) setSelected(null); }, [isSearching]);
-
-  const doOk = () => {
-    const node = selected ? findNode(tree, selected) : null;
-    if (node) {
-      const ancestors = findAncestors(tree, selected) || [];
-      const pathParts = [...ancestors.map((a) => a.name), node.name];
-      const path = pathParts.join(' > ');
-      if (onSelect) onSelect(node.name, path);
-    } else if (stack.length > 0) {
-      const currentId = stack[stack.length - 1];
-      const currentNode = findNode(tree, currentId);
-      if (onSelect && currentNode) {
-        const ancestors = findAncestors(tree, currentId) || [];
-        const pathParts = [...ancestors.map((a) => a.name), currentNode.name];
-        const path = pathParts.join(' > ');
-        onSelect(currentNode.name, path);
-      }
-    } else if (onSelect) {
-      onSelect(null, null);
-    }
-    doClose();
-  };
 
   const isRoot = stack.length === 0;
   const parentId = stack.length ? stack[stack.length - 1] : null;
   const parentNode = parentId ? findNode(tree, parentId) : null;
   const nodes = parentNode ? (parentNode.children || []) : tree;
   const crumbs = stack.map((id) => findNode(tree, id)).filter(Boolean);
+
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  // Must be defined before startAdd so they are not used before definition
+  const selectedNode = selected ? findNode(tree, selected) : null;
+  const selectedChildCount = selectedNode
+    ? (selectedNode.children || []).filter((c) => c.type === 'folder').length
+    : 0;
 
   const reset = () => { setSelected(null); setAdding(null); setRenamingId(null); };
   const goRoot = () => { setStack([]); reset(); setSearchQ(''); };
@@ -602,12 +568,28 @@ function FolderModal({ onClose, onSelect }) {
     setSearchQ('');
   };
 
-  const startAdd = () => { setAdding({ type: 'folder' }); setRenamingId(null); setSelected(null); };
+  const addTargetParentId = useRef(null);
+  const startAdd = () => {
+    if (selected && selectedNode && selectedChildCount === 0) {
+      // Leaf folder selected: create inside it and navigate in
+      addTargetParentId.current = selectedNode.id;
+      const ancestors = findAncestors(tree, selectedNode.id) || [];
+      const fullStack = [...ancestors.map((a) => a.id), selectedNode.id];
+      setStack(fullStack);
+      setSearchQ('');
+    } else {
+      addTargetParentId.current = parentId;
+    }
+    setAdding({ type: 'folder' });
+    setRenamingId(null);
+    setSelected(null);
+  };
   const commitAdd = (name) => {
     const newNode = {
       id: uid(), name, type: 'folder', children: [], updatedAt: Date.now(),
     };
-    persist(insertInto(tree, parentId, newNode));
+    persist(insertInto(tree, addTargetParentId.current, newNode));
+    addTargetParentId.current = null;
     setAdding(null);
   };
 
@@ -632,6 +614,28 @@ function FolderModal({ onClose, onSelect }) {
     if (newTree !== tree) persist(newTree);
   };
 
+  const doOk = () => {
+    const node = selected ? findNode(tree, selected) : null;
+    if (node) {
+      const ancestors = findAncestors(tree, selected) || [];
+      const pathParts = [...ancestors.map((a) => a.name), node.name];
+      const path = pathParts.join(' > ');
+      if (onSelect) onSelect(node.name, path);
+    } else if (stack.length > 0) {
+      const currentId = stack[stack.length - 1];
+      const currentNode = findNode(tree, currentId);
+      if (onSelect && currentNode) {
+        const ancestors = findAncestors(tree, currentId) || [];
+        const pathParts = [...ancestors.map((a) => a.name), currentNode.name];
+        const path = pathParts.join(' > ');
+        onSelect(currentNode.name, path);
+      }
+    } else if (onSelect) {
+      onSelect(null, null);
+    }
+    doClose();
+  };
+
   // ── Search logic ────────────────────────────────────────────────────────────
   const allFolders = flattenTree(tree);
   const searchQ2 = searchQ.trim().toLowerCase();
@@ -648,13 +652,6 @@ function FolderModal({ onClose, onSelect }) {
     setAdding(null);
     setRenamingId(null);
   };
-
-  // ── Hint logic ──────────────────────────────────────────────────────────────
-  const selectedNode = selected ? findNode(tree, selected) : null;
-  const selectedHasChildren = selectedNode
-    && selectedNode.children
-    && selectedNode.children.filter((c) => c.type === 'folder').length > 0;
-  const showHint = selectedHasChildren && !hintDismissed;
 
   // ── Breadcrumb ──────────────────────────────────────────────────────────────
   const allSelectedAncestors = (selected && selectedNode)
@@ -726,14 +723,6 @@ function FolderModal({ onClose, onSelect }) {
             </button>`}
         </div>
 
-        <!-- HINT BANNER -->
-        ${showHint && html`
-          <div class="fm-hint-wrap" onClick=${(e) => e.stopPropagation()}>
-            <${DirectSelectHint}
-              folderName=${selectedNode.name}
-              onDismiss=${() => setHintDismissed(true)}/>
-          </div>`}
-
         <!-- BODY -->
         <div class="fm-body" onClick=${(e) => e.stopPropagation()}>
           ${isSearching
@@ -757,7 +746,9 @@ function FolderModal({ onClose, onSelect }) {
           <button type="button" class="fm-foot-btn fm-foot-btn--cancel" onClick=${doClose}>
             Cancel
           </button>
-          <button type="button" class="fm-foot-btn fm-foot-btn--ok" onClick=${doOk}>
+          <button type="button" class="fm-foot-btn fm-foot-btn--ok" onClick=${doOk}
+            disabled=${!selected}
+            style=${{ opacity: selected ? 1 : 0.45, cursor: selected ? 'pointer' : 'not-allowed' }}>
             Select
           </button>
         </div>
