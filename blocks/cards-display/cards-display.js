@@ -159,24 +159,12 @@ export default async function decorate(block) {
     </div>
   `).join('');
 
-<<<<<<< HEAD
-  const getCardsWrapper = () => document.querySelector('.cards-display-wrapper');
-=======
   // 1. Select ALL possible card wrappers that sidebar.js might have hidden
   const getCardsWrappers = () => document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
->>>>>>> 006056fdac061aa159154640804f505a8350ade6
   const getForumWrapper = () => document.querySelector('.forum-post-wrapper');
   const getSearchWrapper = () => document.querySelector('.search-bar-wrapper');
 
   const showCards = () => {
-<<<<<<< HEAD
-    const cw = getCardsWrapper();
-    const fw = getForumWrapper();
-    const sw = getSearchWrapper();
-    if (cw) cw.style.display = '';
-    if (fw) fw.style.display = 'none';
-    if (sw) sw.style.display = '';
-=======
     const cws = getCardsWrappers();
     const fw = getForumWrapper();
     const sw = getSearchWrapper();
@@ -186,19 +174,10 @@ export default async function decorate(block) {
     if (fw) fw.style.display = 'none';
     if (sw) sw.style.display = '';
 
->>>>>>> 006056fdac061aa159154640804f505a8350ade6
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const showPost = (postId) => {
-<<<<<<< HEAD
-    const cw = getCardsWrapper();
-    const fw = getForumWrapper();
-    const sw = getSearchWrapper();
-    if (cw) cw.style.display = 'none';
-    if (fw) fw.style.display = '';
-    if (sw) sw.style.display = 'none';
-=======
     const cws = getCardsWrappers();
     const fw = getForumWrapper();
     const sw = getSearchWrapper();
@@ -208,7 +187,6 @@ export default async function decorate(block) {
     if (fw) fw.style.display = '';
     if (sw) sw.style.display = 'none';
 
->>>>>>> 006056fdac061aa159154640804f505a8350ade6
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
