@@ -53,15 +53,11 @@ app.post('/api/posts', async (req, res) => {
     } = req.body;
 
     if (!title || title.length < 15) {
-      return res.status(400).json({
-        error: 'Title must be at least 15 characters',
-      });
+      return res.status(400).json({ error: 'Title must be at least 15 characters' });
     }
 
     if (!category) {
-      return res.status(400).json({
-        error: 'Category is required',
-      });
+      return res.status(400).json({ error: 'Category is required' });
     }
 
     const nodeToHtml = (node) => {
@@ -106,15 +102,11 @@ app.post('/api/posts', async (req, res) => {
 
     const bodyText = String(bodyHtml).replace(/<[^>]*>/g, '').trim();
     if (!bodyHtml || bodyText.length < 20) {
-      return res.status(400).json({
-        error: `Body must be at least 20 characters. Current length: ${bodyText.length}`,
-      });
+      return res.status(400).json({ error: `Body must be at least 20 characters. Current length: ${bodyText.length}` });
     }
 
     if (!tags || tags.length === 0) {
-      return res.status(400).json({
-        error: 'At least one tag is required',
-      });
+      return res.status(400).json({ error: 'At least one tag is required' });
     }
 
     const newPost = new Post({
@@ -133,12 +125,7 @@ app.post('/api/posts', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating post:', error.message);
-    console.error('Request body:', req.body);
-    console.error('Full error:', error);
-    return res.status(500).json({
-      error: 'Failed to create post',
-      details: error.message,
-    });
+    return res.status(500).json({ error: 'Failed to create post', details: error.message });
   }
 });
 
@@ -194,9 +181,7 @@ app.get('/api/posts', async (req, res) => {
 app.get('/api/posts/:id', async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
+    if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });
   } catch (error) {
     console.error('Error fetching post:', error);
@@ -208,12 +193,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
-const createNestedStructure = async (pathString, postId, category, title, icon) => {
+const createNestedStructure = async (pathString, postId, category, title) => {
   if (!pathString || !pathString.trim()) {
     const newItem = new SidebarItem({
       title,
       category,
-      icon: icon || '📄',
+      icon: '',
       postId,
       isFolder: false,
       parentId: null,
@@ -227,7 +212,7 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
     const newItem = new SidebarItem({
       title,
       category,
-      icon: icon || '📄',
+      icon: '',
       postId,
       isFolder: false,
       parentId: null,
@@ -248,7 +233,7 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
       const contentItem = new SidebarItem({
         title: part,
         category,
-        icon: icon || '📄',
+        icon: '',
         postId,
         isFolder: false,
         parentId,
@@ -268,7 +253,7 @@ const createNestedStructure = async (pathString, postId, category, title, icon) 
       folder = new SidebarItem({
         title: part,
         category,
-        icon: '📁',
+        icon: '',
         postId: null,
         isFolder: true,
         parentId,
@@ -313,16 +298,12 @@ const buildTree = (items) => {
 app.get('/api/sidebar-items', async (req, res) => {
   try {
     const items = await SidebarItem.find()
-      .populate('postId', '_id title body')
+      .populate('postId', '_id title') // OPTIMIZED
       .sort({ category: 1, order: 1, createdAt: 1 });
 
     const tree = buildTree(items);
 
-    res.json({
-      success: true,
-      items: tree,
-      flatItems: items,
-    });
+    res.json({ success: true, items: tree, flatItems: items });
   } catch (error) {
     console.error('Error fetching sidebar items:', error);
     res.status(500).json({ error: 'Failed to fetch sidebar items' });
@@ -364,10 +345,8 @@ app.get('/api/sidebar-items/category/:category', async (req, res) => {
 
 app.get('/api/sidebar-items/:id', async (req, res) => {
   try {
-    const item = await SidebarItem.findById(req.params.id).populate('postId');
-    if (!item) {
-      return res.status(404).json({ error: 'Sidebar item not found' });
-    }
+    const item = await SidebarItem.findById(req.params.id).populate('postId'); // Detail view usually needs full object, left intact
+    if (!item) return res.status(404).json({ error: 'Sidebar item not found' });
     return res.json({ success: true, item });
   } catch (error) {
     console.error('Error fetching sidebar item:', error);
@@ -378,24 +357,17 @@ app.get('/api/sidebar-items/:id', async (req, res) => {
 app.post('/api/sidebar-items', async (req, res) => {
   try {
     const {
-      title, category, icon, postId, order, path, isFolder,
+      title, category, postId, path, isFolder,
     } = req.body;
 
-    if (!title) {
-      return res.status(400).json({ error: 'Title is required' });
-    }
-    if (!category) {
-      return res.status(400).json({ error: 'Category is required' });
-    }
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+    if (!category) return res.status(400).json({ error: 'Category is required' });
 
     if (!isFolder && postId) {
       const post = await Post.findById(postId);
-      if (!post) {
-        return res.status(404).json({ error: 'Post not found' });
-      }
+      if (!post) return res.status(404).json({ error: 'Post not found' });
     }
 
-    // ── Duplicate check: prevent creating the same folder twice ──────────
     if (isFolder) {
       const { parentId = null } = req.body;
       const existing = await SidebarItem.findOne({
@@ -405,15 +377,10 @@ app.post('/api/sidebar-items', async (req, res) => {
         isFolder: true,
       });
       if (existing) {
-        const populatedExisting = await SidebarItem.findById(existing._id).populate('postId', '_id title body');
-        return res.status(200).json({
-          success: true,
-          message: 'Folder already exists',
-          item: populatedExisting,
-        });
+        const populatedExisting = await SidebarItem.findById(existing._id).populate('postId', '_id title'); // OPTIMIZED
+        return res.status(200).json({ success: true, message: 'Folder already exists', item: populatedExisting });
       }
     }
-    // ────────────────────────────────────────────────────────────────────
 
     const { parentId = null } = req.body;
 
@@ -422,7 +389,7 @@ app.post('/api/sidebar-items', async (req, res) => {
       const newFolder = new SidebarItem({
         title,
         category,
-        icon: '📁',
+        icon: '',
         postId: null,
         isFolder: true,
         parentId: parentId || null,
@@ -434,24 +401,16 @@ app.post('/api/sidebar-items', async (req, res) => {
         path || '',
         postId || null,
         category,
-        title,
-        icon || '📄',
+        title
       );
     }
 
-    const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId', '_id title body');
+    const populatedItem = await SidebarItem.findById(savedItem._id).populate('postId', '_id title'); // OPTIMIZED
 
-    return res.status(201).json({
-      success: true,
-      message: 'Sidebar item created successfully',
-      item: populatedItem,
-    });
+    return res.status(201).json({ success: true, message: 'Sidebar item created successfully', item: populatedItem });
   } catch (error) {
     console.error('Error creating sidebar item:', error);
-    return res.status(500).json({
-      error: 'Failed to create sidebar item',
-      details: error.message,
-    });
+    return res.status(500).json({ error: 'Failed to create sidebar item', details: error.message });
   }
 });
 
@@ -461,26 +420,15 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       title, category, postId, parentId = null,
     } = req.body;
 
-    if (!title || !category) {
-      return res.status(400).json({
-        success: false,
-        error: 'Title and category are required',
-      });
-    }
+    if (!title || !category) return res.status(400).json({ success: false, error: 'Title and category are required' });
 
     const normalizedCategory = category.trim();
     const normalizedTitle = title.trim();
 
     let postIdObjectId = null;
     if (postId) {
-      try {
-        postIdObjectId = new mongoose.Types.ObjectId(postId);
-      } catch (err) {
-        return res.status(400).json({
-          success: false,
-          error: `Invalid postId format: ${postId}`,
-        });
-      }
+      try { postIdObjectId = new mongoose.Types.ObjectId(postId); } 
+      catch (err) { return res.status(400).json({ success: false, error: `Invalid postId format: ${postId}` }); }
     }
 
     const existingItem = await SidebarItem.findOne({
@@ -497,26 +445,18 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
           category: existingItem.category,
           parentId: existingItem._id,
           postId: postIdObjectId,
-          icon: '📄',
+          icon: '',
           isFolder: false,
           order: childCount,
         });
-
         await newItem.save();
-        await newItem.populate('postId', '_id title body');
-
-        return res.status(201).json({
-          success: true,
-          action: 'added_to_existing_folder',
-          item: newItem.toObject(),
-          parent: existingItem.toObject(),
-        });
+        await newItem.populate('postId', '_id title'); // OPTIMIZED
+        return res.status(201).json({ success: true, action: 'added_to_existing_folder', item: newItem.toObject(), parent: existingItem.toObject() });
       }
 
       const originalPostId = existingItem.postId;
-
       existingItem.isFolder = true;
-      existingItem.icon = '📁';
+      existingItem.icon = '';
       existingItem.postId = null;
       await existingItem.save();
 
@@ -525,7 +465,7 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
         category: existingItem.category,
         parentId: existingItem._id,
         postId: originalPostId,
-        icon: '📄',
+        icon: '',
         isFolder: false,
         order: 0,
       });
@@ -536,12 +476,12 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
         category: existingItem.category,
         parentId: existingItem._id,
         postId: postIdObjectId,
-        icon: '📄',
+        icon: '',
         isFolder: false,
         order: 1,
       });
       await newChild.save();
-      await newChild.populate('postId', '_id title body');
+      await newChild.populate('postId', '_id title'); // OPTIMIZED
 
       const children = await SidebarItem.find({ parentId: existingItem._id })
         .populate('postId', '_id title body')
@@ -565,19 +505,14 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       category: normalizedCategory,
       parentId: parentId || null,
       postId: postIdObjectId,
-      icon: '📄',
+      icon: '',
       isFolder: false,
       order: itemCount,
     });
 
     await newItem.save();
-    await newItem.populate('postId', '_id title body');
-
-    return res.status(201).json({
-      success: true,
-      action: 'created_new',
-      item: newItem.toObject(),
-    });
+    await newItem.populate('postId', '_id title'); // OPTIMIZED
+    return res.status(201).json({ success: true, action: 'created_new', item: newItem.toObject() });
   } catch (error) {
     console.error('Error in smart-add:', error);
     return res.status(500).json({ success: false, error: error.message });
@@ -587,43 +522,51 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
 app.get('/api/sidebar/categories', async (req, res) => {
   try {
     const items = await SidebarItem.find()
-      .populate('postId', '_id title body category tags')
+      .populate('postId', '_id title category tags') // OPTIMIZED
       .sort({ category: 1, order: 1, createdAt: 1 });
 
     const categoryMap = new Map();
 
     items.forEach((item) => {
       const catName = item.category;
-      if (!categoryMap.has(catName)) {
-        categoryMap.set(catName, []);
-      }
-      if (!item.postId && !item.isFolder) {
-        console.warn(`Warning: Item "${item.title}" has no postId`);
-      }
+      if (!categoryMap.has(catName)) categoryMap.set(catName, []);
+      if (!item.postId && !item.isFolder) console.warn(`Warning: Item "${item.title}" has no postId`);
       categoryMap.get(catName).push(item);
     });
 
     const categories = [];
     categoryMap.forEach((categoryItems, categoryName) => {
       const tree = buildTree(categoryItems);
-      
       categories.push({
         id: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         name: categoryName,
-        icon: '📁',
+        icon: '',
         items: tree,
       });
     });
 
     categories.sort((a, b) => a.name.localeCompare(b.name));
-
-    res.json({ 
-      success: true, 
-      categories,
-      totalItems: items.length,
-    });
+    res.json({ success: true, categories, totalItems: items.length });
   } catch (error) {
     console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// NEW ENDPOINT: Safely rename all matching categories
+app.put('/api/sidebar/categories/rename/:exactOldName', async (req, res) => {
+  try {
+    const { exactOldName } = req.params;
+    const { newName } = req.body;
+    if (!newName) return res.status(400).json({ error: 'New name is required' });
+
+    await SidebarItem.updateMany(
+      { category: exactOldName },
+      { $set: { category: newName } }
+    );
+    res.json({ success: true, message: 'Category renamed successfully' });
+  } catch (error) {
+    console.error('Error renaming category:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -631,37 +574,28 @@ app.get('/api/sidebar/categories', async (req, res) => {
 app.put('/api/sidebar-items/:id', async (req, res) => {
   try {
     const {
-      title, category, icon, postId, order,
+      title, category, icon, postId, order, parentId,
     } = req.body;
 
     const updateData = {};
     if (title) updateData.title = title;
     if (category) updateData.category = category;
-    if (icon) updateData.icon = icon;
+    if (icon !== undefined) updateData.icon = icon;
     if (postId) updateData.postId = postId;
     if (order !== undefined) updateData.order = order;
+    if (parentId !== undefined) updateData.parentId = parentId;
 
     const updatedItem = await SidebarItem.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true },
-    ).populate('postId', '_id title body');
+    ).populate('postId', '_id title'); // OPTIMIZED
 
-    if (!updatedItem) {
-      return res.status(404).json({ error: 'Sidebar item not found' });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Sidebar item updated successfully',
-      item: updatedItem,
-    });
+    if (!updatedItem) return res.status(404).json({ error: 'Sidebar item not found' });
+    return res.json({ success: true, message: 'Sidebar item updated successfully', item: updatedItem });
   } catch (error) {
     console.error('Error updating sidebar item:', error);
-    return res.status(500).json({
-      error: 'Failed to update sidebar item',
-      details: error.message,
-    });
+    return res.status(500).json({ error: 'Failed to update sidebar item', details: error.message });
   }
 });
 
@@ -687,29 +621,18 @@ app.delete('/api/sidebar-items/:id', async (req, res) => {
     }
 
     await recursivelyDeleteSidebarItem(req.params.id);
-
-    return res.json({
-      success: true,
-      message: 'Sidebar item and all children deleted successfully',
-    });
+    return res.json({ success: true, message: 'Sidebar item and all children deleted successfully' });
   } catch (error) {
     console.error('Error deleting sidebar item:', error);
-    return res.status(500).json({
-      error: 'Failed to delete sidebar item',
-      details: error.message,
-    });
+    return res.status(500).json({ error: 'Failed to delete sidebar item', details: error.message });
   }
 });
 
 app.get('/api/sidebar-items/:id/post', async (req, res) => {
   try {
     const item = await SidebarItem.findById(req.params.id).populate('postId');
-    if (!item) {
-      return res.status(404).json({ error: 'Sidebar item not found' });
-    }
-    if (!item.postId) {
-      return res.status(404).json({ error: 'Associated post not found' });
-    }
+    if (!item) return res.status(404).json({ error: 'Sidebar item not found' });
+    if (!item.postId) return res.status(404).json({ error: 'Associated post not found' });
     return res.json({ success: true, post: item.postId });
   } catch (error) {
     console.error('Error fetching post:', error);
@@ -720,26 +643,20 @@ app.get('/api/sidebar-items/:id/post', async (req, res) => {
 app.delete('/api/sidebar/categories/:categoryId', async (req, res) => {
   try {
     const { categoryId } = req.params;
-
     const allItems = await SidebarItem.find();
     const matchingItems = allItems.filter((item) => {
       const slug = item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       return slug === categoryId;
     });
 
-    if (matchingItems.length === 0) {
-      return res.status(404).json({ success: false, error: 'Category not found' });
-    }
+    if (matchingItems.length === 0) return res.status(404).json({ success: false, error: 'Category not found' });
 
     for (const item of matchingItems) {
+      if (item.postId) await Post.findByIdAndDelete(item.postId);
       // eslint-disable-next-line no-await-in-loop
       await SidebarItem.findByIdAndDelete(item._id);
     }
-
-    return res.json({
-      success: true,
-      message: `Category deleted with ${matchingItems.length} items`,
-    });
+    return res.json({ success: true, message: `Category and all associated posts deleted (${matchingItems.length} items)` });
   } catch (error) {
     console.error('Error deleting category:', error);
     return res.status(500).json({ success: false, error: error.message });
