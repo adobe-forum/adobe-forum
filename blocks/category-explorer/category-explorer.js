@@ -125,13 +125,24 @@ function filterFoldersOnly(items) {
     }));
 }
 
+// Returns the maximum lastUpdated across direct children (each child already
+// has its own subtree max propagated up by normalizeItems recursion).
+function maxDescendantTime(items) {
+  return items.reduce((acc, item) => Math.max(acc, item.lastUpdated || 0), 0);
+}
+
 function normalizeItems(items) {
-  return items.map((item) => ({
-    ...item,
-    id: item._id ? String(item._id) : item.id, // eslint-disable-line no-underscore-dangle
-    lastUpdated: item.updatedAt ? new Date(item.updatedAt).getTime() : null,
-    children: normalizeItems(item.children || []),
-  }));
+  return items.map((item) => {
+    const children = normalizeItems(item.children || []);
+    const ownTs = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+    const childMax = maxDescendantTime(children);
+    return {
+      ...item,
+      id: item._id ? String(item._id) : item.id, // eslint-disable-line no-underscore-dangle
+      lastUpdated: Math.max(ownTs, childMax) || null,
+      children,
+    };
+  });
 }
 
 function TreeNode({
@@ -221,10 +232,10 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
-          setTreeData(data.categories.map((cat) => ({
-            ...cat,
-            items: filterFoldersOnly(normalizeItems(cat.items || [])),
-          })));
+          setTreeData(data.categories.map((cat) => {
+            const items = filterFoldersOnly(normalizeItems(cat.items || []));
+            return { ...cat, items, lastUpdated: maxDescendantTime(items) || null };
+          }));
         }
         setTreeLoading(false);
       })
