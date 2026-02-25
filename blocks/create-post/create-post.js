@@ -1462,6 +1462,7 @@ function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [selectedCategoryNode, setSelectedCategoryNode] = useState(null);
+  const [pendingCategoryFolders, setPendingCategoryFolders] = useState([]);
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1504,6 +1505,7 @@ function CreatePost() {
     const handleSelect = (e) => {
       setCategory(e.detail.path);
       setSelectedCategoryNode(e.detail.node);
+      setPendingCategoryFolders(e.detail.pendingFolders || []);
     };
     document.addEventListener('category-explorer:select', handleSelect);
     return () => {
@@ -1554,12 +1556,63 @@ function CreatePost() {
       if (response.ok) {
         const { post: createdPost } = result;
         const node = selectedCategoryNode;
-        const isRoot = node && node.name && !node.title;
+        const isRoot = node && (node.isRoot || (node.name && !node.title));
+
+        // Create any temp folders sequentially (parent before child) before smart-add.
+        // Recursion avoids no-await-in-loop; each step depends on the previous real ID.
+        const createFoldersSeq = async (folders, idx, idMap) => {
+          if (idx >= folders.length) return idMap;
+          const folder = folders[idx];
+          let resolvedParentId = null;
+          if (folder.parentTempId) {
+            const isParentTemp = String(folder.parentTempId).startsWith('custom-');
+            resolvedParentId = isParentTemp
+              ? (idMap[folder.parentTempId] || null)
+              : folder.parentTempId;
+          }
+          try {
+            const res = await fetch('http://localhost:5000/api/sidebar-items', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: folder.title,
+                category: folder.category,
+                isFolder: true,
+                parentId: resolvedParentId,
+              }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.item && data.item._id) { // eslint-disable-line no-underscore-dangle
+                // eslint-disable-next-line no-underscore-dangle
+                const next = { ...idMap, [folder.tempId]: String(data.item._id) };
+                return createFoldersSeq(folders, idx + 1, next);
+              }
+            }
+          } catch (folderErr) { // eslint-disable-line no-unused-vars
+            /* folder creation failed; continue — post was already saved */
+          }
+          return createFoldersSeq(folders, idx + 1, idMap);
+        };
+
+        const idMap = await createFoldersSeq(pendingCategoryFolders, 0, {});
+
+        // Resolve the real parentId for smart-add (temp IDs → real MongoDB IDs)
+        let realParentId = null;
+        if (!isRoot && node) {
+          const nid = String(node.id || '');
+          realParentId = nid.startsWith('custom-') ? (idMap[nid] || null) : nid;
+        }
+
+        const catName = isRoot
+          ? node.name
+          : (node && node.category) || category.split(' / ')[0];
+
         const smartPayload = {
           title: title.trim(),
-          category: isRoot ? node.name : (node && node.category) || category.split(' / ')[0],
+          category: catName,
           postId: createdPost._id, // eslint-disable-line no-underscore-dangle
-          ...(!isRoot && node && { parentId: node.id }),
+          ...(realParentId && { parentId: realParentId }),
         };
         try {
           await fetch('http://localhost:5000/api/sidebar-items/smart-add', {

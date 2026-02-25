@@ -250,6 +250,7 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [creatingType, setCreatingType] = useState(null);
   const [newItemName, setNewItemName] = useState('');
+  const [sessionFolders, setSessionFolders] = useState([]);
   const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'grid'
   const [gridFolder, setGridFolder] = useState(null);
   const [toastVisible, setToastVisible] = useState(false);
@@ -303,6 +304,7 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
     setSearchQuery('');
     setCreatingType(null);
     setNewItemName('');
+    setSessionFolders([]);
     setViewMode('tree');
     setGridFolder(null);
     setToastVisible(false);
@@ -395,7 +397,23 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
   const handleConfirm = () => {
     if (!selectedNode) return;
     const path = buildPath(selectedNode);
-    onSelect(path, selectedNode);
+
+    // Collect only the temp folders that are ancestors-of (or are) the selected node.
+    // Root selections never need folder SidebarItems — the root emerges from its items.
+    let pendingFolders = [];
+    const selId = String(selectedNode.id || '');
+    if (!selectedNode.isRoot && selId.startsWith('custom-')) {
+      const buildChain = (tid) => {
+        if (!String(tid).startsWith('custom-')) return []; // real DB id — no chain needed
+        const f = sessionFolders.find((sf) => sf.tempId === tid);
+        if (!f) return [];
+        const parentChain = f.parentTempId ? buildChain(f.parentTempId) : [];
+        return [...parentChain, f];
+      };
+      pendingFolders = buildChain(selId);
+    }
+
+    onSelect(path, selectedNode, pendingFolders);
     onClose();
   };
 
@@ -430,20 +448,42 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
 
   const handleCreateItem = () => {
     if (!newItemName.trim()) return;
+    const trimmedName = newItemName.trim();
+
+    const isRootCreate = !selectedNode;
+    const isUnderRoot = selectedNode
+      && (selectedNode.isRoot || (selectedNode.name && !selectedNode.title));
+
+    let catName;
+    let parentTempId = null;
+    if (isRootCreate) {
+      catName = trimmedName;
+      // Root categories emerge from their items — no SidebarItem needed for the root itself
+    } else if (isUnderRoot) {
+      catName = selectedNode.name;
+      // parentTempId stays null: this is a direct child of the root (no folder parent)
+    } else {
+      catName = selectedNode.category;
+      parentTempId = selectedNode.id; // may be a real MongoDB ID or a temp custom- ID
+    }
+
+    const tempId = `custom-${Date.now()}`;
+
+    // Track non-root folders in session; DB write happens only on successful post
+    if (!isRootCreate) {
+      setSessionFolders((prev) => [...prev, {
+        tempId, title: trimmedName, category: catName, parentTempId,
+      }]);
+    }
+
+    // Optimistic local update so the UI responds instantly
     const newNode = {
-      id: `custom-${Date.now()}`,
-      title: newItemName.trim(),
-      isFolder: true,
-      children: [],
+      id: tempId, title: trimmedName, isFolder: true, children: [],
     };
     setTreeData((prev) => {
       const clone = JSON.parse(JSON.stringify(prev));
-      if (!selectedNode) {
-        clone.push({
-          id: newNode.id,
-          name: newNode.title,
-          items: [],
-        });
+      if (isRootCreate) {
+        clone.push({ id: tempId, name: trimmedName, items: [] });
         return clone;
       }
       return insertIntoTree(clone, selectedNode, newNode);
@@ -989,9 +1029,9 @@ function CategoryExplorerBlock() {
     document.dispatchEvent(new CustomEvent('category-explorer:close'));
   };
 
-  const handleSelect = (path, node) => {
+  const handleSelect = (path, node, pendingFolders = []) => {
     document.dispatchEvent(new CustomEvent('category-explorer:select', {
-      detail: { path, node },
+      detail: { path, node, pendingFolders },
     }));
   };
 
