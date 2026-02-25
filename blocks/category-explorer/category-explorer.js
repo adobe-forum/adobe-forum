@@ -91,462 +91,6 @@ const SIDEBAR_SECTIONS = [
   },
 ];
 
-// Mock tree data with metadata — replace with API fetch after approval
-const MOCK_TREE = [
-  {
-    id: 'javascript',
-    name: 'JavaScript',
-    topicCount: 1245,
-    lastUpdated: NOW - 2 * MIN,
-    createdAt: NOW - 365 * DAY,
-    createdByUser: true,
-    isFavorite: true,
-    items: [
-      {
-        id: 'js-basics',
-        title: 'Basics',
-        isFolder: true,
-        children: [
-          {
-            id: 'js-variables', title: 'Variables & Scope', isFolder: false, children: [],
-          },
-          {
-            id: 'js-functions', title: 'Functions', isFolder: false, children: [],
-          },
-          {
-            id: 'js-closures', title: 'Closures', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'js-es6',
-        title: 'ES6+',
-        isFolder: true,
-        children: [
-          {
-            id: 'js-arrow', title: 'Arrow Functions', isFolder: false, children: [],
-          },
-          {
-            id: 'js-promises', title: 'Promises & Async', isFolder: false, children: [],
-          },
-          {
-            id: 'js-destructure', title: 'Destructuring', isFolder: false, children: [],
-          },
-          {
-            id: 'js-modules', title: 'Modules', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'js-dom',
-        title: 'DOM Manipulation',
-        isFolder: true,
-        children: [
-          {
-            id: 'js-selectors', title: 'Selectors', isFolder: false, children: [],
-          },
-          {
-            id: 'js-events', title: 'Event Handling', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'react',
-    name: 'React',
-    topicCount: 892,
-    lastUpdated: NOW - HOUR,
-    createdAt: NOW - 300 * DAY,
-    createdByUser: true,
-    isFavorite: true,
-    items: [
-      {
-        id: 'react-hooks',
-        title: 'Hooks',
-        isFolder: true,
-        children: [
-          {
-            id: 'react-usestate', title: 'useState', isFolder: false, children: [],
-          },
-          {
-            id: 'react-useeffect', title: 'useEffect', isFolder: false, children: [],
-          },
-          {
-            id: 'react-useref', title: 'useRef', isFolder: false, children: [],
-          },
-          {
-            id: 'react-usememo', title: 'useMemo', isFolder: false, children: [],
-          },
-          {
-            id: 'react-custom', title: 'Custom Hooks', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'react-components',
-        title: 'Components',
-        isFolder: true,
-        children: [
-          {
-            id: 'react-props', title: 'Props & State', isFolder: false, children: [],
-          },
-          {
-            id: 'react-lifecycle', title: 'Lifecycle', isFolder: false, children: [],
-          },
-          {
-            id: 'react-context', title: 'Context API', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'react-routing',
-        title: 'Routing',
-        isFolder: true,
-        children: [
-          {
-            id: 'react-router', title: 'React Router', isFolder: false, children: [],
-          },
-          {
-            id: 'react-params', title: 'URL Parameters', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'nodejs',
-    name: 'Node.js',
-    topicCount: 567,
-    lastUpdated: NOW - 3 * HOUR,
-    createdAt: NOW - 320 * DAY,
-    items: [
-      {
-        id: 'node-core',
-        title: 'Core Modules',
-        isFolder: true,
-        children: [
-          {
-            id: 'node-fs', title: 'File System', isFolder: false, children: [],
-          },
-          {
-            id: 'node-http', title: 'HTTP Server', isFolder: false, children: [],
-          },
-          {
-            id: 'node-path', title: 'Path Module', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'node-express',
-        title: 'Express.js',
-        isFolder: true,
-        children: [
-          {
-            id: 'node-middleware', title: 'Middleware', isFolder: false, children: [],
-          },
-          {
-            id: 'node-routes', title: 'Routing', isFolder: false, children: [],
-          },
-          {
-            id: 'node-rest', title: 'REST APIs', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'node-db',
-        title: 'Databases',
-        isFolder: true,
-        children: [
-          {
-            id: 'node-mongo', title: 'MongoDB', isFolder: false, children: [],
-          },
-          {
-            id: 'node-sql', title: 'SQL', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'css',
-    name: 'CSS',
-    topicCount: 432,
-    lastUpdated: NOW - 5 * HOUR,
-    createdAt: NOW - 280 * DAY,
-    createdByUser: true,
-    items: [
-      {
-        id: 'css-layout',
-        title: 'Layout',
-        isFolder: true,
-        children: [
-          {
-            id: 'css-flexbox', title: 'Flexbox', isFolder: false, children: [],
-          },
-          {
-            id: 'css-grid', title: 'Grid', isFolder: false, children: [],
-          },
-          {
-            id: 'css-position', title: 'Positioning', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'css-responsive',
-        title: 'Responsive Design',
-        isFolder: true,
-        children: [
-          {
-            id: 'css-media', title: 'Media Queries', isFolder: false, children: [],
-          },
-          {
-            id: 'css-mobile', title: 'Mobile First', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'css-animation',
-        title: 'Animations',
-        isFolder: true,
-        children: [
-          {
-            id: 'css-transitions', title: 'Transitions', isFolder: false, children: [],
-          },
-          {
-            id: 'css-keyframes', title: 'Keyframes', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'python',
-    name: 'Python',
-    topicCount: 765,
-    lastUpdated: NOW - DAY,
-    createdAt: NOW - 400 * DAY,
-    postedByUser: true,
-    isFavorite: true,
-    items: [
-      {
-        id: 'py-basics',
-        title: 'Basics',
-        isFolder: true,
-        children: [
-          {
-            id: 'py-syntax', title: 'Syntax & Types', isFolder: false, children: [],
-          },
-          {
-            id: 'py-functions', title: 'Functions', isFolder: false, children: [],
-          },
-          {
-            id: 'py-oop', title: 'OOP', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'py-web',
-        title: 'Web Frameworks',
-        isFolder: true,
-        children: [
-          {
-            id: 'py-django', title: 'Django', isFolder: false, children: [],
-          },
-          {
-            id: 'py-flask', title: 'Flask', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'java',
-    name: 'Java',
-    topicCount: 654,
-    lastUpdated: NOW - 2 * DAY,
-    createdAt: NOW - 350 * DAY,
-    items: [
-      {
-        id: 'java-core',
-        title: 'Core Java',
-        isFolder: true,
-        children: [
-          {
-            id: 'java-oop', title: 'OOP Concepts', isFolder: false, children: [],
-          },
-          {
-            id: 'java-collections', title: 'Collections', isFolder: false, children: [],
-          },
-          {
-            id: 'java-streams', title: 'Streams & Lambda', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'java-spring',
-        title: 'Spring Framework',
-        isFolder: true,
-        children: [
-          {
-            id: 'java-springboot', title: 'Spring Boot', isFolder: false, children: [],
-          },
-          {
-            id: 'java-mvc', title: 'Spring MVC', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'dbms',
-    name: 'DBMS',
-    topicCount: 345,
-    lastUpdated: NOW - 3 * DAY,
-    createdAt: NOW - 200 * DAY,
-    items: [
-      {
-        id: 'db-sql',
-        title: 'SQL',
-        isFolder: true,
-        children: [
-          {
-            id: 'db-queries', title: 'Queries & Joins', isFolder: false, children: [],
-          },
-          {
-            id: 'db-indexes', title: 'Indexes', isFolder: false, children: [],
-          },
-          {
-            id: 'db-transactions', title: 'Transactions', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'db-nosql',
-        title: 'NoSQL',
-        isFolder: true,
-        children: [
-          {
-            id: 'db-mongodb', title: 'MongoDB', isFolder: false, children: [],
-          },
-          {
-            id: 'db-redis', title: 'Redis', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'devops',
-    name: 'DevOps',
-    topicCount: 298,
-    lastUpdated: NOW - WEEK,
-    createdAt: NOW - 20 * DAY,
-    items: [
-      {
-        id: 'devops-ci',
-        title: 'CI/CD',
-        isFolder: true,
-        children: [
-          {
-            id: 'devops-github', title: 'GitHub Actions', isFolder: false, children: [],
-          },
-          {
-            id: 'devops-jenkins', title: 'Jenkins', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'devops-containers',
-        title: 'Containers',
-        isFolder: true,
-        children: [
-          {
-            id: 'devops-docker', title: 'Docker', isFolder: false, children: [],
-          },
-          {
-            id: 'devops-k8s', title: 'Kubernetes', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'aiml',
-    name: 'AI & Machine Learning',
-    topicCount: 187,
-    lastUpdated: NOW - 2 * WEEK,
-    createdAt: NOW - 25 * DAY,
-    items: [
-      {
-        id: 'ml-foundations',
-        title: 'Foundations',
-        isFolder: true,
-        children: [
-          {
-            id: 'ml-supervised', title: 'Supervised Learning', isFolder: false, children: [],
-          },
-          {
-            id: 'ml-unsupervised', title: 'Unsupervised Learning', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'ml-dl',
-        title: 'Deep Learning',
-        isFolder: true,
-        children: [
-          {
-            id: 'ml-nn', title: 'Neural Networks', isFolder: false, children: [],
-          },
-          {
-            id: 'ml-cnn', title: 'CNN', isFolder: false, children: [],
-          },
-          {
-            id: 'ml-nlp', title: 'NLP', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'mobile',
-    name: 'Mobile Development',
-    topicCount: 523,
-    lastUpdated: NOW - WEEK,
-    createdAt: NOW - 15 * DAY,
-    postedByUser: true,
-    items: [
-      {
-        id: 'mob-react',
-        title: 'React Native',
-        isFolder: true,
-        children: [
-          {
-            id: 'mob-rn-basics', title: 'RN Basics', isFolder: false, children: [],
-          },
-          {
-            id: 'mob-rn-nav', title: 'Navigation', isFolder: false, children: [],
-          },
-        ],
-      },
-      {
-        id: 'mob-flutter',
-        title: 'Flutter',
-        isFolder: true,
-        children: [
-          {
-            id: 'mob-dart', title: 'Dart Language', isFolder: false, children: [],
-          },
-          {
-            id: 'mob-widgets', title: 'Widgets', isFolder: false, children: [],
-          },
-        ],
-      },
-    ],
-  },
-];
-
 // Flatten tree for search
 function flattenTree(categories) {
   const results = [];
@@ -579,6 +123,15 @@ function filterFoldersOnly(items) {
       ...item,
       children: item.children ? filterFoldersOnly(item.children) : [],
     }));
+}
+
+function normalizeItems(items) {
+  return items.map((item) => ({
+    ...item,
+    id: item._id ? String(item._id) : item.id, // eslint-disable-line no-underscore-dangle
+    lastUpdated: item.updatedAt ? new Date(item.updatedAt).getTime() : null,
+    children: normalizeItems(item.children || []),
+  }));
 }
 
 function TreeNode({
@@ -658,19 +211,29 @@ function TreeNode({
 }
 
 function CategoryTreePopup({ isOpen, onClose, onSelect }) {
-  const [treeData, setTreeData] = useState(() => MOCK_TREE.map((cat) => ({
-    ...cat,
-    items: filterFoldersOnly(cat.items || []),
-  })));
-  // Mock: centralized favorites store — Set<nodeId>.
+  const [treeData, setTreeData] = useState([]);
+  const [treeLoading, setTreeLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTreeLoading(true);
+    fetch('http://localhost:5000/api/sidebar/categories')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setTreeData(data.categories.map((cat) => ({
+            ...cat,
+            items: filterFoldersOnly(normalizeItems(cat.items || [])),
+          })));
+        }
+        setTreeLoading(false);
+      })
+      .catch(() => setTreeLoading(false));
+  }, [isOpen]);
+
+  // Centralized favorites store — Set<nodeId>.
   // Replace with API calls (POST/DELETE /favorites/:nodeId) when backend is ready.
-  const [favoriteIds, setFavoriteIds] = useState(() => {
-    const initial = new Set();
-    MOCK_TREE.forEach((cat) => {
-      if (cat.isFavorite) initial.add(cat.id);
-    });
-    return initial;
-  });
+  const [favoriteIds, setFavoriteIds] = useState(() => new Set());
   const [expanded, setExpanded] = useState({});
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1188,6 +751,7 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
 
   // ===== MAIN CONTENT =====
   const renderMainContent = () => {
+    if (treeLoading) return html`<div className="ct-loading">Loading categories…</div>`;
     if (searchResults) return renderSearchResults();
     if (viewMode === 'grid') return renderGridView();
     return renderTreeView();

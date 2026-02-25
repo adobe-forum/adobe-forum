@@ -1461,6 +1461,7 @@ function InlinePreview({
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
+  const [selectedCategoryNode, setSelectedCategoryNode] = useState(null);
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1502,6 +1503,7 @@ function CreatePost() {
   useEffect(() => {
     const handleSelect = (e) => {
       setCategory(e.detail.path);
+      setSelectedCategoryNode(e.detail.node);
     };
     document.addEventListener('category-explorer:select', handleSelect);
     return () => {
@@ -1550,6 +1552,24 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
+        const { post: createdPost } = result;
+        const node = selectedCategoryNode;
+        const isRoot = node && node.name && !node.title;
+        const smartPayload = {
+          title: title.trim(),
+          category: isRoot ? node.name : (node && node.category) || category.split(' / ')[0],
+          postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+          ...(!isRoot && node && { parentId: node.id }),
+        };
+        try {
+          await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(smartPayload),
+          });
+        } catch (sidebarErr) { // eslint-disable-line no-unused-vars
+          /* post was created; sidebar-add failed silently */
+        }
         window.location.href = '/';
       } else {
         showToast(result.error || 'Failed to create post', 'error');

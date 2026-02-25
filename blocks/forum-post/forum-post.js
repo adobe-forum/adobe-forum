@@ -90,7 +90,7 @@ const ContentBlock = ({ block }) => {
 
 const ArrowIcon = () => html`
   <svg
-    class="spectrum-Icon spectrum-Icon--sizeS spectrum-ActionButton-icon"
+    class="spectrum-action-button-icon"
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 18 18"
     aria-hidden="true"
@@ -102,7 +102,7 @@ const ArrowIcon = () => html`
 
 const BackIcon = () => html`
   <svg
-    class="spectrum-Icon spectrum-Icon--sizeS spectrum-ActionButton-icon"
+    class="spectrum-action-button-icon"
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     fill="none"
@@ -132,6 +132,7 @@ const ForumPost = () => {
 
   useEffect(() => {
     const handleLoadPost = async (event) => {
+      
       const { postId } = event.detail;
       // eslint-disable-next-line no-console
       console.log('🔵 load-forum-post event received with postId:', postId);
@@ -220,6 +221,7 @@ const ForumPost = () => {
   };
 
   // ── Back to cards ──────────────────────────────────────────────────
+  // Reverted back to your original, working event dispatcher
   const handleBack = () => {
     window.dispatchEvent(new CustomEvent('show-cards'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -230,12 +232,12 @@ const ForumPost = () => {
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
 
       <button
-        class="spectrum-ActionButton spectrum-ActionButton--sizeM spectrum-ActionButton--quiet forum-back-btn"
+        class="spectrum-action-button spectrum-action-button-size-m spectrum-action-button-quiet forum-back-btn"
         onClick=${handleBack}
         aria-label="Back to Posts"
       >
         <${BackIcon} />
-        <span class="spectrum-ActionButton-label">Back to Posts</span>
+        <span class="spectrum-action-button-label">Back to Posts</span>
       </button>
 
       <div class="tags-row">

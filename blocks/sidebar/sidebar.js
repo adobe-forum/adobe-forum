@@ -114,12 +114,21 @@ function TreeItem({
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
     if (isFolder) setIsExpanded((prev) => !prev);
+
+    // FIX 1: Safely extract postId or fallback to item._id
+    let targetPostId = null;
     if (item.postId) {
-      const postId = typeof item.postId === 'string'
+      targetPostId = typeof item.postId === 'string'
         ? item.postId
         // eslint-disable-next-line no-underscore-dangle
         : (item.postId._id || item.postId.id);
-      if (postId) onItemClick(itemId, postId);
+    } else {
+      // eslint-disable-next-line no-underscore-dangle
+      targetPostId = item._id || item.id;
+    }
+
+    if (targetPostId && !isFolder) {
+      onItemClick(itemId, targetPostId);
     }
   };
 
@@ -369,8 +378,27 @@ function Sidebar() {
   }, [isCreating]);
 
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
+    
     setActiveSubcategory(subcategoryId);
-    if (!postId) return;
+
+    // eslint-disable-next-line no-console
+    console.log('Sidebar clicked! Firing load-forum-post for ID:', postId);
+
+    if (!postId) {
+      // eslint-disable-next-line no-console
+      console.warn('Sidebar click failed: No postId available.');
+      return;
+    }
+
+    // FIX 2: Manually hide the Cards section and show the Post section
+    // NOTE: If your actual CSS class names for these sections are different,
+    // please update '.cards-wrapper' and '.forum-post-wrapper' to match your HTML!
+    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
+    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
+
+    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
+    postWrappers.forEach((el) => { el.style.display = 'block'; });
+
     window.dispatchEvent(new CustomEvent('load-forum-post', {
       detail: { postId, sidebarItemId: subcategoryId },
     }));

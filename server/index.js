@@ -27,7 +27,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const { MONGODB_URI } = process.env;
 
