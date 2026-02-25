@@ -142,10 +142,49 @@ app.post('/api/posts', async (req, res) => {
   }
 });
 
+// ============================================
+// Server-side pagination & searching (Posts)
+// ============================================
 app.get('/api/posts', async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
-    res.json({ success: true, posts });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const search = req.query.search || '';
+
+    let query = {};
+    
+    if (search) {
+      query = {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { body: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } },
+          { tags: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+
+    const skipIndex = (page - 1) * limit;
+
+    const [posts, totalPosts] = await Promise.all([
+      Post.find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(skipIndex)
+        // 👇 Here is the fix: telling Mongoose not to crash if 'author' is missing
+        .populate({ path: 'author', select: 'name username', strictPopulate: false }), 
+      
+      Post.countDocuments(query)
+    ]);
+
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    res.json({
+      success: true,
+      posts,
+      totalPages,
+      currentPage: page
+    });
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
@@ -290,15 +329,35 @@ app.get('/api/sidebar-items', async (req, res) => {
   }
 });
 
+// ============================================
+// UPDATED: Server-side pagination for Categories
+// ============================================
 app.get('/api/sidebar-items/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
-    const items = await SidebarItem.find({ category })
-      .populate('postId', '_id title body')
-      .sort({ order: 1 });
-    res.json({ success: true, items });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skipIndex = (page - 1) * limit;
+
+    const [items, totalItems] = await Promise.all([
+      SidebarItem.find({ category })
+        .populate('postId', '_id title body')
+        .sort({ order: 1 })
+        .skip(skipIndex)
+        .limit(limit),
+      SidebarItem.countDocuments({ category })
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({ 
+      success: true, 
+      items, 
+      totalPages,
+      currentPage: page
+    });
   } catch (error) {
-    console.error('Error fetching sidebar items:', error);
+    console.error('Error fetching sidebar items by category:', error);
     res.status(500).json({ error: 'Failed to fetch sidebar items' });
   }
 });
@@ -329,7 +388,6 @@ app.post('/api/sidebar-items', async (req, res) => {
       return res.status(400).json({ error: 'Category is required' });
     }
 
-    // postId is only required if it's not a folder
     if (!isFolder && postId) {
       const post = await Post.findById(postId);
       if (!post) {
@@ -361,8 +419,6 @@ app.post('/api/sidebar-items', async (req, res) => {
 
     let savedItem;
     if (isFolder) {
-      // Create folder directly with parentId — bypass createNestedStructure
-      // which doesn't support parentId
       const newFolder = new SidebarItem({
         title,
         category,
@@ -399,9 +455,6 @@ app.post('/api/sidebar-items', async (req, res) => {
   }
 });
 
-// ============================================
-// SMART-ADD: Handles duplicates & tree transformation
-// ============================================
 app.post('/api/sidebar-items/smart-add', async (req, res) => {
   try {
     const {
@@ -418,7 +471,6 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
     const normalizedCategory = category.trim();
     const normalizedTitle = title.trim();
 
-    // Convert postId string to ObjectId if provided
     let postIdObjectId = null;
     if (postId) {
       try {
@@ -431,7 +483,6 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       }
     }
 
-    // Find existing item with same title in same category and parent
     const existingItem = await SidebarItem.findOne({
       title: { $regex: new RegExp(`^${normalizedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
       category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
@@ -440,7 +491,6 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
 
     if (existingItem) {
       if (existingItem.isFolder) {
-        // Already a folder, just add new item as child
         const childCount = await SidebarItem.countDocuments({ parentId: existingItem._id });
         const newItem = new SidebarItem({
           title: normalizedTitle,
@@ -463,16 +513,13 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
         });
       }
 
-      // Transform existing file into a folder
       const originalPostId = existingItem.postId;
 
-      // Update existing item to be a folder
       existingItem.isFolder = true;
       existingItem.icon = '📁';
       existingItem.postId = null;
       await existingItem.save();
 
-      // Create child for the original file
       const originalChild = new SidebarItem({
         title: `${normalizedTitle} (1)`,
         category: existingItem.category,
@@ -484,7 +531,6 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       });
       await originalChild.save();
 
-      // Create child for the new file
       const newChild = new SidebarItem({
         title: `${normalizedTitle} (2)`,
         category: existingItem.category,
@@ -497,7 +543,6 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       await newChild.save();
       await newChild.populate('postId', '_id title body');
 
-      // Fetch updated parent with children
       const children = await SidebarItem.find({ parentId: existingItem._id })
         .populate('postId', '_id title body')
         .sort({ order: 1 });
@@ -510,7 +555,6 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       });
     }
 
-    // CASE: No duplicate - Create new item
     const itemCount = await SidebarItem.countDocuments({
       category: { $regex: new RegExp(`^${normalizedCategory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
       parentId: parentId || null,
@@ -540,17 +584,12 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
   }
 });
 
-// ============================================
-// GET: Fetch sidebar as categorized tree structure
-// ============================================
 app.get('/api/sidebar/categories', async (req, res) => {
   try {
-    // Fetch all sidebar items and populate post details (including _id)
     const items = await SidebarItem.find()
       .populate('postId', '_id title body category tags')
       .sort({ category: 1, order: 1, createdAt: 1 });
 
-    // Group by category
     const categoryMap = new Map();
 
     items.forEach((item) => {
@@ -564,7 +603,6 @@ app.get('/api/sidebar/categories', async (req, res) => {
       categoryMap.get(catName).push(item);
     });
 
-    // Build tree for each category
     const categories = [];
     categoryMap.forEach((categoryItems, categoryName) => {
       const tree = buildTree(categoryItems);
@@ -577,7 +615,6 @@ app.get('/api/sidebar/categories', async (req, res) => {
       });
     });
 
-    // Sort categories alphabetically
     categories.sort((a, b) => a.name.localeCompare(b.name));
 
     res.json({ 
@@ -628,12 +665,10 @@ app.put('/api/sidebar-items/:id', async (req, res) => {
   }
 });
 
-// Helper function to recursively delete sidebar items and their children
 const recursivelyDeleteSidebarItem = async (itemId) => {
   const item = await SidebarItem.findById(itemId);
   if (!item) return;
 
-  // If it's a folder, delete all children first
   if (item.isFolder) {
     const children = await SidebarItem.find({ parentId: itemId });
     for (const child of children) {
@@ -641,7 +676,6 @@ const recursivelyDeleteSidebarItem = async (itemId) => {
     }
   }
 
-  // Delete the item itself
   await SidebarItem.findByIdAndDelete(itemId);
 };
 
@@ -652,7 +686,6 @@ app.delete('/api/sidebar-items/:id', async (req, res) => {
       return res.status(404).json({ error: 'Sidebar item not found' });
     }
 
-    // Use recursive delete to handle cascading deletion of children
     await recursivelyDeleteSidebarItem(req.params.id);
 
     return res.json({
@@ -684,15 +717,10 @@ app.get('/api/sidebar-items/:id/post', async (req, res) => {
   }
 });
 
-// ============================================
-// DELETE: Remove an entire category and all its items
-// ============================================
 app.delete('/api/sidebar/categories/:categoryId', async (req, res) => {
   try {
     const { categoryId } = req.params;
 
-    // categoryId is the slug (e.g. "api-test"), find matching items by category name
-    // We need to find all items where category slug matches
     const allItems = await SidebarItem.find();
     const matchingItems = allItems.filter((item) => {
       const slug = item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -703,7 +731,6 @@ app.delete('/api/sidebar/categories/:categoryId', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    // Recursively delete all items in this category
     for (const item of matchingItems) {
       // eslint-disable-next-line no-await-in-loop
       await SidebarItem.findByIdAndDelete(item._id);
@@ -719,10 +746,6 @@ app.delete('/api/sidebar/categories/:categoryId', async (req, res) => {
   }
 });
 
-
-// ============================================
-// DELETE: Remove an entire category and all its items
-// ============================================
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
