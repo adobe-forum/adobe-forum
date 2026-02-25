@@ -1,7 +1,14 @@
+/* eslint-disable no-underscore-dangle */
+import { h, render } from '../../vendor/preact.js';
+import { useEffect, useState } from '../../vendor/preact-hooks.js';
+import htm from '../../vendor/htm.js';
+
+const html = htm.bind(h);
+
 const API_BASE_URL = 'http://localhost:5000/api';
 const PAGE_SIZE = 12;
 
-// ── Extract first image from post body HTML ───────────────────────────
+// ── Pure Helper Functions ─────────────────────────────────────────────
 function extractImage(body) {
   if (!body) return null;
   const doc = new DOMParser().parseFromString(body, 'text/html');
@@ -9,7 +16,6 @@ function extractImage(body) {
   return img ? img.src : null;
 }
 
-// ── Extract plain text excerpt ────────────────────────────────────────
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = new DOMParser().parseFromString(body, 'text/html');
@@ -17,7 +23,6 @@ function extractExcerpt(body, max = 100) {
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
-// ── Avatar initials ───────────────────────────────────────────────────
 function avatarInitials(name) {
   if (!name || name === 'Anonymous') return '?';
   const parts = name.trim().split(' ');
@@ -26,7 +31,6 @@ function avatarInitials(name) {
     : name[0].toUpperCase();
 }
 
-// ── Consistent avatar color from name ────────────────────────────────
 function avatarColor(name) {
   const colors = ['#DA1F26', '#0265DC', '#12805C', '#7B2D8B', '#E68619', '#1473E6'];
   let hash = 0;
@@ -37,22 +41,13 @@ function avatarColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-// ── Build card HTML ───────────────────────────────────────────────────
-function buildCard(post) {
-  /* eslint-disable no-underscore-dangle */
+// ── Preact Components ─────────────────────────────────────────────────
+
+function Card({ post, onClick }) {
   const id = post._id || post.id;
 
-  const tags = (post.tags || []).slice(0, 3)
-    .map((tag) => {
-      const clean = tag.startsWith('#') ? tag : `#${tag}`;
-      return `<span class="card-tag">${clean}</span>`;
-    }).join('');
-
+  const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
   const imgSrc = post.image || extractImage(post.body);
-  const image = imgSrc
-    ? `<img src="${imgSrc}" alt="${post.title}" class="card-img-box" loading="lazy" />`
-    : '<div class="card-img-box card-img--placeholder"></div>';
-
   const author = post.author?.name || post.author?.username || post.author
     || post.createdBy?.name || post.createdBy?.username || post.createdBy
     || post.userId?.name || post.userId?.username || 'Anonymous';
@@ -61,20 +56,22 @@ function buildCard(post) {
   const avColor = avatarColor(author);
   const excerpt = extractExcerpt(post.body || post.description || post.content || '');
 
-  return `
-    <article class="card" data-post-id="${id}">
+  return html`
+    <article class="card" onClick=${() => onClick(id)}>
       <div class="card-img-wrapper">
-        ${image}
-        ${post.category ? `<span class="card-category-badge">${post.category}</span>` : ''}
+        ${imgSrc
+    ? html`<img src="${imgSrc}" alt="${post.title}" class="card-img-box" loading="lazy" />`
+    : html`<div class="card-img-box card-img--placeholder"></div>`}
+        ${post.category ? html`<span class="card-category-badge">${post.category}</span>` : ''}
       </div>
       <div class="card-body">
-        ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+        ${tags.length > 0 ? html`<div class="card-tags">${tags.map((tag) => html`<span class="card-tag">${tag}</span>`)}</div>` : ''}
         <h3 class="card-title">${post.title}</h3>
         <p class="card-meta">
           <span class="card-avatar" style="background:${avColor}">${initials}</span>
           <span class="card-author">${author}</span>
         </p>
-        ${excerpt ? `<p class="card-desc">${excerpt}</p>` : ''}
+        ${excerpt ? html`<p class="card-desc">${excerpt}</p>` : ''}
       </div>
       <div class="card-read-more">
         Read more
@@ -85,105 +82,172 @@ function buildCard(post) {
       </div>
     </article>
   `;
-  /* eslint-enable no-underscore-dangle */
 }
 
-// ── Build pagination HTML ─────────────────────────────────────────────
-function buildPagination(currentPage, totalPages) {
-  if (totalPages <= 1) return '';
-
-  let pages = '';
-
-  pages += `<button class="page-btn page-prev" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-  </button>`;
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
 
   const delta = 2;
   const start = Math.max(1, currentPage - delta);
   const end = Math.min(totalPages, currentPage + delta);
 
+  const pages = [];
   if (start > 1) {
-    pages += '<button class="page-btn" data-page="1">1</button>';
-    if (start > 2) pages += '<span class="page-ellipsis">…</span>';
+    pages.push(html`<button class="page-btn" onClick=${() => onPageChange(1)}>1</button>`);
+    if (start > 2) pages.push(html`<span class="page-ellipsis">…</span>`);
   }
 
   for (let i = start; i <= end; i += 1) {
-    pages += `<button class="page-btn ${i === currentPage ? 'is-active' : ''}" data-page="${i}">${i}</button>`;
+    pages.push(html`
+      <button class="page-btn ${i === currentPage ? 'is-active' : ''}" onClick=${() => onPageChange(i)}>
+        ${i}
+      </button>
+    `);
   }
 
   if (end < totalPages) {
-    if (end < totalPages - 1) pages += '<span class="page-ellipsis">…</span>';
-    pages += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
+    if (end < totalPages - 1) pages.push(html`<span class="page-ellipsis">…</span>`);
+    pages.push(html`<button class="page-btn" onClick=${() => onPageChange(totalPages)}>${totalPages}</button>`);
   }
 
-  pages += `<button class="page-btn page-next" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-  </button>`;
-
-  return `<div class="cards-pagination">${pages}</div>`;
-}
-
-export default async function decorate(block) {
-  const rows = [...block.children];
-  const title = rows[0]?.children[0]?.textContent.trim() || '';
-  const subtitle = rows[0]?.children[1]?.textContent.trim() || '';
-
-  block.innerHTML = `
-    <div class="cards-header">
-      <h2 class="cards-title">${title}</h2>
-      ${subtitle ? `<p class="cards-subtitle">${subtitle}</p>` : ''}
-    </div>
-    <div class="cards-grid"></div>
-    <div class="cards-no-results" style="display:none;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <p>No posts found matching your search.</p>
-      <span>Try a different keyword or clear the search.</span>
-    </div>
-    <div class="cards-pagination-wrapper"></div>
-  `;
-
-  const grid = block.querySelector('.cards-grid');
-  const noResults = block.querySelector('.cards-no-results');
-  const pagWrapper = block.querySelector('.cards-pagination-wrapper');
-
-  grid.innerHTML = Array(6).fill(`
-    <div class="card card--skeleton">
-      <div class="card-img-box skeleton-box"></div>
-      <div class="card-body">
-        <div class="skeleton-line short"></div>
-        <div class="skeleton-line"></div>
-        <div class="skeleton-line medium"></div>
+  return html`
+    <div class="cards-pagination-wrapper">
+      <div class="cards-pagination">
+        <button class="page-btn page-prev" disabled=${currentPage === 1} onClick=${() => onPageChange(currentPage - 1)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        ${pages}
+        <button class="page-btn page-next" disabled=${currentPage === totalPages} onClick=${() => onPageChange(currentPage + 1)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
     </div>
-  `).join('');
+  `;
+}
 
-  // 1. Select ALL possible card wrappers that sidebar.js might have hidden
-  const getCardsWrappers = () => document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
-  const getForumWrapper = () => document.querySelector('.forum-post-wrapper');
-  const getSearchWrapper = () => document.querySelector('.search-bar-wrapper');
+function SkeletonLoaders() {
+  return html`
+    <div class="cards-grid">
+      ${Array(6).fill(null).map(() => html`
+        <div class="card card--skeleton">
+          <div class="card-img-box skeleton-box"></div>
+          <div class="card-body">
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line medium"></div>
+          </div>
+        </div>
+      `)}
+    </div>
+  `;
+}
 
-  const showCards = () => {
-    const cws = getCardsWrappers();
-    const fw = getForumWrapper();
-    const sw = getSearchWrapper();
+// ── Main Controller Component ─────────────────────────────────────────
 
-    // 2. Loop through and unhide all of them
-    cws.forEach((cw) => { if (cw) cw.style.display = ''; });
+function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [category, setCategory] = useState('');
+
+  let displayTitle = initialTitle;
+  if (category) displayTitle = `${category} Posts`;
+  else if (searchQuery) displayTitle = `Search Results: "${searchQuery}"`;
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        let url;
+        if (category) {
+          url = new URL(`${API_BASE_URL}/sidebar-items/category/${encodeURIComponent(category)}`);
+          url.searchParams.append('page', currentPage);
+          url.searchParams.append('limit', PAGE_SIZE);
+        } else {
+          url = new URL(`${API_BASE_URL}/posts`);
+          url.searchParams.append('page', currentPage);
+          url.searchParams.append('limit', PAGE_SIZE);
+          if (searchQuery) url.searchParams.append('search', searchQuery);
+        }
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        let fetchedPosts = [];
+        if (category) {
+          fetchedPosts = (data.items || []).map((item) => item.postId).filter(Boolean);
+        } else {
+          fetchedPosts = data.posts || data || [];
+        }
+
+        setPosts(fetchedPosts);
+        setTotalPages(data.totalPages || 1);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('cards-display: failed to fetch posts', err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [currentPage, searchQuery, category]);
+
+  useEffect(() => {
+    const handleSearch = (e) => {
+      setSearchQuery(e.detail.query.toLowerCase().trim());
+      setCategory('');
+      setCurrentPage(1);
+    };
+
+    const handleFilter = (e) => {
+      setCategory(e.detail.category);
+      setSearchQuery('');
+      setCurrentPage(1);
+    };
+
+    const handleShowCards = () => {
+      const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
+      const fw = document.querySelector('.forum-post-wrapper');
+      const sw = document.querySelector('.search-bar-wrapper');
+      cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = ''; } });
+      if (fw) fw.style.display = 'none';
+      if (sw) sw.style.display = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('search-posts', handleSearch);
+    window.addEventListener('filter-category', handleFilter);
+    window.addEventListener('show-cards', handleShowCards);
+
+    const fw = document.querySelector('.forum-post-wrapper');
     if (fw) fw.style.display = 'none';
-    if (sw) sw.style.display = '';
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return () => {
+      window.removeEventListener('search-posts', handleSearch);
+      window.removeEventListener('filter-category', handleFilter);
+      window.removeEventListener('show-cards', handleShowCards);
+    };
+  }, []);
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    if (blockElement) {
+      blockElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
-  const showPost = (postId) => {
-    const cws = getCardsWrappers();
-    const fw = getForumWrapper();
-    const sw = getSearchWrapper();
+  const handleCardClick = (postId) => {
+    const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
+    const fw = document.querySelector('.forum-post-wrapper');
+    const sw = document.querySelector('.search-bar-wrapper');
 
-    // 3. Loop through and hide all of them to remain consistent
-    cws.forEach((cw) => { if (cw) cw.style.display = 'none'; });
+    cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = 'none'; } });
     if (fw) fw.style.display = '';
     if (sw) sw.style.display = 'none';
 
@@ -191,92 +255,46 @@ export default async function decorate(block) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  window.addEventListener('show-cards', showCards);
+  return html`
+    <div class="cards-header">
+      <h2 class="cards-title">${displayTitle}</h2>
+      ${initialSubtitle && !searchQuery && !category ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
+    </div>
 
-  requestAnimationFrame(() => {
-    const fw = getForumWrapper();
-    if (fw) fw.style.display = 'none';
-  });
+    ${loading && html`<${SkeletonLoaders} />`}
+    
+    ${error && !loading && html`<p class="cards-error">Failed to load posts. Please try again.</p>`}
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/posts`);
-    const data = await res.json();
-    const allPosts = data.posts || data || [];
+    ${!loading && !error && posts.length === 0 && (searchQuery || category) && html`
+      <div class="cards-no-results">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <p>No posts found matching your criteria.</p>
+        <span>Try a different keyword or clear the search.</span>
+      </div>
+    `}
 
-    if (!allPosts.length) {
-      grid.innerHTML = '<p class="cards-empty">No posts found.</p>';
-      return;
-    }
+    ${!loading && !error && posts.length === 0 && !searchQuery && !category && html`
+      <p class="cards-empty">No posts found.</p>
+    `}
 
-    let currentPage = 1;
-    let filteredPosts = [...allPosts];
+    ${!loading && !error && posts.length > 0 && html`
+      <div class="cards-grid">
+        ${posts.map((post) => html`<${Card} post=${post} onClick=${handleCardClick} />`)}
+      </div>
+      <${Pagination} currentPage=${currentPage} totalPages=${totalPages} onPageChange=${handlePageChange} />
+    `}
+  `;
+}
 
-    const renderPage = (page) => {
-      currentPage = page;
-      const totalPages = Math.ceil(filteredPosts.length / PAGE_SIZE);
-      const start = (page - 1) * PAGE_SIZE;
-      const pagePosts = filteredPosts.slice(start, start + PAGE_SIZE);
+// ── Exported Decorator ────────────────────────────────────────────────
 
-      grid.innerHTML = pagePosts.map(buildCard).join('');
+export default async function decorate(block) {
+  const rows = [...block.children];
+  const title = rows[0]?.children[0]?.textContent.trim() || '';
+  const subtitle = rows[0]?.children[1]?.textContent.trim() || '';
 
-      grid.querySelectorAll('.card').forEach((card) => {
-        card.addEventListener('click', () => showPost(card.dataset.postId));
-      });
-
-      pagWrapper.innerHTML = buildPagination(currentPage, totalPages);
-
-      pagWrapper.querySelectorAll('.page-btn:not([disabled])').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          renderPage(Number(btn.dataset.page));
-          block.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      });
-    };
-
-    renderPage(1);
-
-    window.addEventListener('search-posts', (e) => {
-      const query = e.detail.query.toLowerCase().trim();
-
-      if (!query) {
-        filteredPosts = [...allPosts];
-        noResults.style.display = 'none';
-        grid.style.display = '';
-        pagWrapper.style.display = '';
-        renderPage(1);
-        return;
-      }
-
-      // Split query by spaces — each word is a separate term
-      // A card matches if it contains ANY of the words (OR logic)
-      const terms = query.split(/\s+/).filter(Boolean);
-
-      filteredPosts = allPosts.filter((post) => {
-        const searchable = [
-          post.title,
-          post.category,
-          post.description,
-          ...(post.tags || []),
-          extractExcerpt(post.body || ''),
-        ].join(' ').toLowerCase();
-        // Match if ANY term is found in the searchable text
-        return terms.some((term) => searchable.includes(term));
-      });
-
-      if (!filteredPosts.length) {
-        grid.style.display = 'none';
-        pagWrapper.style.display = 'none';
-        noResults.style.display = 'flex';
-      } else {
-        grid.style.display = '';
-        pagWrapper.style.display = '';
-        noResults.style.display = 'none';
-        renderPage(1);
-      }
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('cards-display: failed to fetch posts', err);
-    grid.innerHTML = '<p class="cards-error">Failed to load posts. Please try again.</p>';
-  }
+  block.innerHTML = '';
+  render(html`<${CardsDisplay} initialTitle=${title} initialSubtitle=${subtitle} blockElement=${block} />`, block);
 }
