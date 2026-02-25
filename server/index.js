@@ -129,10 +129,49 @@ app.post('/api/posts', async (req, res) => {
   }
 });
 
+// ============================================
+// Server-side pagination & searching (Posts)
+// ============================================
 app.get('/api/posts', async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
-    res.json({ success: true, posts });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const search = req.query.search || '';
+
+    let query = {};
+    
+    if (search) {
+      query = {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { body: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } },
+          { tags: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+
+    const skipIndex = (page - 1) * limit;
+
+    const [posts, totalPosts] = await Promise.all([
+      Post.find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(skipIndex)
+        // 👇 Here is the fix: telling Mongoose not to crash if 'author' is missing
+        .populate({ path: 'author', select: 'name username', strictPopulate: false }), 
+      
+      Post.countDocuments(query)
+    ]);
+
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    res.json({
+      success: true,
+      posts,
+      totalPages,
+      currentPage: page
+    });
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
@@ -271,15 +310,35 @@ app.get('/api/sidebar-items', async (req, res) => {
   }
 });
 
+// ============================================
+// UPDATED: Server-side pagination for Categories
+// ============================================
 app.get('/api/sidebar-items/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
-    const items = await SidebarItem.find({ category })
-      .populate('postId', '_id title') // OPTIMIZED
-      .sort({ order: 1 });
-    res.json({ success: true, items });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skipIndex = (page - 1) * limit;
+
+    const [items, totalItems] = await Promise.all([
+      SidebarItem.find({ category })
+        .populate('postId', '_id title body')
+        .sort({ order: 1 })
+        .skip(skipIndex)
+        .limit(limit),
+      SidebarItem.countDocuments({ category })
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({ 
+      success: true, 
+      items, 
+      totalPages,
+      currentPage: page
+    });
   } catch (error) {
-    console.error('Error fetching sidebar items:', error);
+    console.error('Error fetching sidebar items by category:', error);
     res.status(500).json({ error: 'Failed to fetch sidebar items' });
   }
 });
@@ -424,8 +483,16 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       await newChild.save();
       await newChild.populate('postId', '_id title'); // OPTIMIZED
 
-      const children = await SidebarItem.find({ parentId: existingItem._id }).populate('postId', '_id title').sort({ order: 1 }); // OPTIMIZED
-      return res.status(200).json({ success: true, action: 'transformed_to_folder', parent: { ...existingItem.toObject(), children }, newItem: newChild });
+      const children = await SidebarItem.find({ parentId: existingItem._id })
+        .populate('postId', '_id title body')
+        .sort({ order: 1 });
+
+      return res.status(200).json({
+        success: true,
+        action: 'transformed_to_folder',
+        parent: { ...existingItem.toObject(), children },
+        newItem: newChild,
+      });
     }
 
     const itemCount = await SidebarItem.countDocuments({
@@ -543,14 +610,16 @@ const recursivelyDeleteSidebarItem = async (itemId) => {
     }
   }
 
-  if (item.postId) await Post.findByIdAndDelete(item.postId);
   await SidebarItem.findByIdAndDelete(itemId);
 };
 
 app.delete('/api/sidebar-items/:id', async (req, res) => {
   try {
     const itemToDelete = await SidebarItem.findById(req.params.id);
-    if (!itemToDelete) return res.status(404).json({ error: 'Sidebar item not found' });
+    if (!itemToDelete) {
+      return res.status(404).json({ error: 'Sidebar item not found' });
+    }
+
     await recursivelyDeleteSidebarItem(req.params.id);
     return res.json({ success: true, message: 'Sidebar item and all children deleted successfully' });
   } catch (error) {
