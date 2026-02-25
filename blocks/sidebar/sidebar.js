@@ -378,7 +378,6 @@ function Sidebar() {
   }, [isCreating]);
 
   const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
-    
     setActiveSubcategory(subcategoryId);
 
     // eslint-disable-next-line no-console

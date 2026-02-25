@@ -66,7 +66,7 @@ const ForumPost = () => {
 
       const codeText = pre.textContent;
       const lines = codeText.split('\n');
-      
+
       // Remove trailing empty line if it exists
       if (lines[lines.length - 1] === '') lines.pop();
 

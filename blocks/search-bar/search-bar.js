@@ -1,8 +1,8 @@
 export default function decorate(block) {
-    // Read placeholder from da.live BEFORE clearing
-    const placeholder = block.querySelector('div')?.textContent.trim() || 'Search posts...';
-  
-    block.innerHTML = `
+  // Read placeholder from da.live BEFORE clearing
+  const placeholder = block.querySelector('div')?.textContent.trim() || 'Search posts...';
+
+  block.innerHTML = `
         <form class="search-form" action="#" novalidate>
           <div class="search-form-inner">
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" focusable="false" aria-hidden="true">
@@ -23,27 +23,27 @@ export default function decorate(block) {
           </div>
         </form>
       `;
-  
-    const form = block.querySelector('.search-form');
-    const input = block.querySelector('.search-input');
-    const clearBtn = block.querySelector('.search-clear');
-  
-    form.addEventListener('submit', (e) => e.preventDefault());
-  
-    input.addEventListener('input', () => {
-      // Send RAW value (no trim) so trailing space is preserved.
-      // This lets cards-display split "salman " correctly when user
-      // starts typing the next word e.g. "salman vishnu".
-      // cards-display does: query.split(/\s+/).filter(Boolean) — OR match.
-      const raw = input.value;
-      clearBtn.classList.toggle('is-visible', raw.length > 0);
-      window.dispatchEvent(new CustomEvent('search-posts', { detail: { query: raw } }));
-    });
-  
-    clearBtn.addEventListener('click', () => {
-      input.value = '';
-      clearBtn.classList.remove('is-visible');
-      window.dispatchEvent(new CustomEvent('search-posts', { detail: { query: '' } }));
-      input.focus();
-    });
-  }
+
+  const form = block.querySelector('.search-form');
+  const input = block.querySelector('.search-input');
+  const clearBtn = block.querySelector('.search-clear');
+
+  form.addEventListener('submit', (e) => e.preventDefault());
+
+  input.addEventListener('input', () => {
+    // Send RAW value (no trim) so trailing space is preserved.
+    // This lets cards-display split "salman " correctly when user
+    // starts typing the next word e.g. "salman vishnu".
+    // cards-display does: query.split(/\s+/).filter(Boolean) — OR match.
+    const raw = input.value;
+    clearBtn.classList.toggle('is-visible', raw.length > 0);
+    window.dispatchEvent(new CustomEvent('search-posts', { detail: { query: raw } }));
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    clearBtn.classList.remove('is-visible');
+    window.dispatchEvent(new CustomEvent('search-posts', { detail: { query: '' } }));
+    input.focus();
+  });
+}

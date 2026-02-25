@@ -44,14 +44,45 @@
   color: #fff;
 }
 
-.spectrum-action-button:hover { background-color: var(--spectrum-red-1000, #b22829); }
-.spectrum-action-button:active { background-color: var(--spectrum-red-1100, #8d1b1c); transform: scale(0.98); }
-.spectrum-action-button-quiet { background-color: var(--spectrum-red-900, #d7373f); color: #fff; }
-.spectrum-action-button-quiet:hover { background-color: var(--spectrum-red-1000, #b22829); }
-.spectrum-action-button-icon { flex-shrink: 0; width: 18px; height: 18px; }
-.spectrum-action-button-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.spectrum-action-button-size-m { height: 40px; padding: 0 20px; font-size: 0.9375rem; }
-.forum-back-btn { margin-bottom: 24px; }
+.spectrum-action-button:hover {
+  background-color: var(--spectrum-red-1000, #b22829);
+}
+
+.spectrum-action-button:active {
+  background-color: var(--spectrum-red-1100, #8d1b1c);
+  transform: scale(0.98);
+}
+
+.spectrum-action-button-quiet {
+  background-color: var(--spectrum-red-900, #d7373f);
+  color: #fff;
+}
+
+.spectrum-action-button-quiet:hover {
+  background-color: var(--spectrum-red-1000, #b22829);
+}
+
+.spectrum-action-button-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.spectrum-action-button-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spectrum-action-button-size-m {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 0.9375rem;
+}
+
+.forum-back-btn {
+  margin-bottom: 24px;
+}
 
 /* --- 3. Tags & Post Header --- */
 .tags-row {
@@ -88,8 +119,14 @@
   gap: 8px;
 }
 
-.author-name { font-weight: 700; color: var(--text-color); }
-.meta-separator { color: var(--spectrum-gray-300); }
+.author-name {
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.meta-separator {
+  color: var(--spectrum-gray-300);
+}
 
 /* --- 4. Raw Post Content Styles --- */
 .post-body-raw {
@@ -99,11 +136,27 @@
   line-height: 1.7;
 }
 
-.post-body-raw p { margin: 0 0 16px; }
-.post-body-raw strong, .post-body-raw b { font-weight: 700; }
-.post-body-raw em, .post-body-raw i { font-style: italic; }
-.post-body-raw u { text-decoration: underline; }
-.post-body-raw s { text-decoration: line-through; }
+.post-body-raw p {
+  margin: 0 0 16px;
+}
+
+.post-body-raw strong,
+.post-body-raw b {
+  font-weight: 700;
+}
+
+.post-body-raw em,
+.post-body-raw i {
+  font-style: italic;
+}
+
+.post-body-raw u {
+  text-decoration: underline;
+}
+
+.post-body-raw s {
+  text-decoration: line-through;
+}
 
 .post-body-raw code {
   background: var(--spectrum-gray-100, #f5f5f5);
@@ -114,8 +167,15 @@
   font-size: 0.9em;
 }
 
-.post-body-raw ul, .post-body-raw ol { margin: 16px 0; padding-left: 2em; }
-.post-body-raw li { margin: 8px 0; }
+.post-body-raw ul,
+.post-body-raw ol {
+  margin: 16px 0;
+  padding-left: 2em;
+}
+
+.post-body-raw li {
+  margin: 8px 0;
+}
 
 .post-body-raw blockquote {
   border-left: 4px solid var(--spectrum-blue-500, #1473e6);
@@ -125,18 +185,37 @@
   font-style: italic;
 }
 
-.post-body-raw a { color: var(--spectrum-blue-900, #0265dc); text-decoration: underline; }
-.post-body-raw a:hover { text-decoration: none; }
+.post-body-raw a {
+  color: var(--spectrum-blue-900, #0265dc);
+  text-decoration: underline;
+}
 
-.post-body-raw h1, .post-body-raw h2, .post-body-raw h3, .post-body-raw h4, .post-body-raw h5, .post-body-raw h6 {
+.post-body-raw a:hover {
+  text-decoration: none;
+}
+
+.post-body-raw h1,
+.post-body-raw h2,
+.post-body-raw h3,
+.post-body-raw h4,
+.post-body-raw h5,
+.post-body-raw h6 {
   font-weight: 700;
   margin: 24px 0 12px;
   line-height: 1.3;
 }
 
-.post-body-raw h1 { font-size: 2em; }
-.post-body-raw h2 { font-size: 1.5em; }
-.post-body-raw h3 { font-size: 1.25em; }
+.post-body-raw h1 {
+  font-size: 2em;
+}
+
+.post-body-raw h2 {
+  font-size: 1.5em;
+}
+
+.post-body-raw h3 {
+  font-size: 1.25em;
+}
 
 .post-body-raw table {
   border-collapse: collapse;
@@ -144,7 +223,8 @@
   margin: 16px 0;
 }
 
-.post-body-raw table td, .post-body-raw table th {
+.post-body-raw table td,
+.post-body-raw table th {
   border: 1px solid var(--spectrum-gray-300, #d3d3d3);
   padding: 8px 12px;
   text-align: left;
@@ -155,7 +235,9 @@
   font-weight: 700;
 }
 
-.post-body-raw table tr:nth-child(even) { background: var(--spectrum-gray-50, #fafafa); }
+.post-body-raw table tr:nth-child(even) {
+  background: var(--spectrum-gray-50, #fafafa);
+}
 
 .post-body-raw img {
   max-width: 80%;
@@ -217,8 +299,17 @@
   display: none;
 }
 
-.discussion-section { padding-top: 10px; display: none; }
-.discussion-header { font-size: 1.25rem; font-weight: 700; margin-bottom: 24px; color: var(--text-color); }
+.discussion-section {
+  padding-top: 10px;
+  display: none;
+}
+
+.discussion-header {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: var(--text-color);
+}
 
 .comments-list {
   display: flex;
@@ -229,12 +320,30 @@
   padding-right: 12px;
 }
 
-.comments-list::-webkit-scrollbar { width: 8px; }
-.comments-list::-webkit-scrollbar-track { background: var(--spectrum-gray-100); border-radius: var(--spectrum-border-radius-100); }
-.comments-list::-webkit-scrollbar-thumb { background: var(--spectrum-gray-300); border-radius: var(--spectrum-border-radius-100); }
-.comments-list::-webkit-scrollbar-thumb:hover { background: var(--spectrum-gray-400); }
+.comments-list::-webkit-scrollbar {
+  width: 8px;
+}
 
-.comment-row { display: flex; gap: 16px; align-items: flex-start; width: 100%; }
+.comments-list::-webkit-scrollbar-track {
+  background: var(--spectrum-gray-100);
+  border-radius: var(--spectrum-border-radius-100);
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: var(--spectrum-gray-300);
+  border-radius: var(--spectrum-border-radius-100);
+}
+
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: var(--spectrum-gray-400);
+}
+
+.comment-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
 
 .comment-avatar {
   width: 40px;
@@ -252,9 +361,26 @@
   margin-top: 2px;
 }
 
-.comment-body { display: flex; flex-direction: column; padding: 0; margin: 0; }
-.comment-user { font-weight: 700; font-size: 0.95rem; color: var(--text-color); margin-bottom: 4px; line-height: 1.2; }
-.comment-text { font-size: 1rem; color: var(--text-color); line-height: 1.5; }
+.comment-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+}
+
+.comment-user {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-color);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.comment-text {
+  font-size: 1rem;
+  color: var(--text-color);
+  line-height: 1.5;
+}
 
 /* --- 7. Comment Form --- */
 .comment-form-container {
@@ -306,7 +432,9 @@
   margin-right: 4px;
 }
 
-.send-btn:hover { background-color: var(--link-hover-color); }
+.send-btn:hover {
+  background-color: var(--link-hover-color);
+}
 
 /* --- 8. Loading Overlay --- */
 .loading-overlay {
