@@ -1,10 +1,25 @@
 import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
+import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 
 const html = htm.bind(h);
 
-// ============================================
+// Lazy-load category-explorer block via AEM infrastructure (once)
+let explorerReady = false;
+
+async function ensureCategoryExplorer() {
+  if (explorerReady) return;
+  const wrapper = document.createElement('div');
+  const block = document.createElement('div');
+  block.classList.add('category-explorer');
+  wrapper.appendChild(block);
+  document.body.appendChild(wrapper);
+  decorateBlock(block);
+  await loadBlock(block);
+  explorerReady = true;
+}
+
 // DOM TO JSON CONVERTER
 
 function domToJson(element) {
@@ -96,10 +111,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const activeCellRef = useRef(null);
   const resizeRef = useRef(null);
   const fileInputRef = useRef(null);
-  const [charCount, setCharCount] = useState(0);
   const [showTableTools, setShowTableTools] = useState(false);
   const [icons, setIcons] = useState(iconCache);
   const [activeFormats, setActiveFormats] = useState({});
+  const [charCount, setCharCount] = useState(0);
 
   // Load icons from /icons/ folder on mount
   useEffect(() => {
@@ -109,10 +124,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const emitChange = () => {
     const editor = editorRef.current;
     if (!editor) return;
-    const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
-    const jsonContent = domToJson(editor);
     const textLength = editor.textContent.replace(/\u200B/g, '').trim().length;
     setCharCount(textLength);
+    const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
+    const jsonContent = domToJson(editor);
     onChange(htmlContent, jsonContent);
   };
 
@@ -394,15 +409,38 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       if (!first) return;
       const tag = first.tagName;
       const needsLeading = tag === 'TABLE'
-        || /^H[1-6]$/.test(tag)
         || tag === 'PRE'
         || tag === 'BLOCKQUOTE';
-      if (needsLeading) {
-        const p = document.createElement('p');
-        p.innerHTML = '<br>';
-        editor.insertBefore(p, first);
-      }
+      if (!needsLeading) return;
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      editor.insertBefore(p, first);
     });
+  };
+
+  // Remove phantom extra-empty blocks that browsers silently inject into
+  // contenteditable divs. Only fires when there is no real user content.
+  const normalizeEmptyEditor = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const hasRealContent = editor.textContent.replace(/\u200B/g, '').trim().length > 0
+      || editor.querySelector('table, img, iframe, pre, blockquote');
+    if (hasRealContent) return;
+    // Already a single clean node — nothing to do
+    if (editor.children.length <= 1 && editor.childNodes.length <= 1) return;
+    editor.innerHTML = '<p><br></p>';
+    // Restore cursor inside the normalised paragraph
+    const p = editor.firstElementChild;
+    if (p) {
+      const r = document.createRange();
+      r.setStart(p, 0);
+      r.collapse(true);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    }
   };
 
   const updatePlaceholder = () => {
@@ -570,7 +608,71 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
 
   const handleBlockFormat = (tag) => {
     if (!BLOCK_FORMATS[tag]) return;
-    document.execCommand('formatBlock', false, tag);
+    const sel = window.getSelection();
+    const editor = editorRef.current;
+    if (!sel || !sel.rangeCount || !editor) return;
+
+    const range = sel.getRangeAt(0);
+
+    // Find the direct-child block of the editor
+    let block = sel.anchorNode;
+    while (block && block.parentNode !== editor) {
+      block = block.parentNode;
+    }
+
+    // Check if selection is partial (some text selected, but not the full block)
+    const isPartial = !range.collapsed && block
+      && range.toString().trim() !== block.textContent.trim();
+
+    if (!isPartial) {
+      // Full block or collapsed cursor: use native formatBlock
+      // First unwrap any inline heading spans in this block
+      if (block) {
+        block.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
+          span.replaceWith(...span.childNodes);
+        });
+      }
+      document.execCommand('formatBlock', false, tag);
+      return;
+    }
+
+    // --- Partial selection: inline heading span approach ---
+
+    // "Paragraph" selected → unwrap any inline heading span around cursor
+    if (tag === 'p') {
+      let nd = sel.anchorNode;
+      while (nd && nd !== editor) {
+        if (nd.nodeType === 1 && /^ce-inline-h[1-6]$/.test(nd.className)) {
+          nd.replaceWith(...nd.childNodes);
+          break;
+        }
+        nd = nd.parentNode;
+      }
+      return;
+    }
+
+    // If already inside an inline heading span, just change its class
+    let existing = sel.anchorNode;
+    while (existing && existing !== editor) {
+      if (existing.nodeType === 1 && /^ce-inline-h[1-6]$/.test(existing.className)) {
+        existing.className = `ce-inline-${tag}`;
+        return;
+      }
+      existing = existing.parentNode;
+    }
+
+    // Wrap the selected text in a new inline heading span
+    const span = document.createElement('span');
+    span.className = `ce-inline-${tag}`;
+    const contents = range.extractContents();
+    span.appendChild(contents);
+    range.insertNode(span);
+
+    // Restore selection around the new span
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
   };
 
   const handleImageFile = (e) => {
@@ -623,15 +725,30 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       node = node.parentNode;
     }
 
-    // Detect current block format (p, h1-h6)
-    let block = sel.anchorNode;
-    while (block && block.parentNode !== editor) {
-      block = block.parentNode;
+    // Detect inline heading spans (ce-inline-h1 etc.)
+    let inlineNode = sel.anchorNode;
+    while (inlineNode && inlineNode !== editor) {
+      if (inlineNode.nodeType === 1 && inlineNode.className) {
+        const hMatch = inlineNode.className.match(/^ce-inline-(h[1-6])$/);
+        if (hMatch) {
+          [, fmt.blockFormat] = hMatch;
+          break;
+        }
+      }
+      inlineNode = inlineNode.parentNode;
     }
-    if (block) {
-      const bn = block.nodeName.toLowerCase();
-      if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
-      else fmt.blockFormat = 'p';
+
+    // Detect current block format (p, h1-h6) — only if no inline heading was found
+    if (!fmt.blockFormat) {
+      let block = sel.anchorNode;
+      while (block && block.parentNode !== editor) {
+        block = block.parentNode;
+      }
+      if (block) {
+        const bn = block.nodeName.toLowerCase();
+        if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
+        else fmt.blockFormat = 'p';
+      }
     }
 
     setActiveFormats(fmt);
@@ -688,6 +805,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       case 'clean':
         document.execCommand('removeFormat', false, null);
         document.execCommand('unlink', false, null);
+        // Also strip inline heading spans
+        editor.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
+          span.replaceWith(...span.childNodes);
+        });
         break;
       default:
         break;
@@ -709,6 +830,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     } else if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
     }
+    normalizeEmptyEditor();
     updatePlaceholder();
 
     // Input handler
@@ -750,6 +872,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
           code.remove();
         }
       });
+      normalizeEmptyEditor();
       updatePlaceholder();
       clearImageResize();
       emitChange();
@@ -759,6 +882,9 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       updateActiveFormats();
     };
     editor.addEventListener('input', onInput);
+
+    const onFocus = () => { normalizeEmptyEditor(); };
+    editor.addEventListener('focus', onFocus);
 
     // Selection change
     const onSelectionChange = () => {
@@ -1024,14 +1150,13 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
 
     return () => {
       editor.removeEventListener('input', onInput);
+      editor.removeEventListener('focus', onFocus);
       editor.removeEventListener('click', onEditorClick);
       editor.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('selectionchange', onSelectionChange);
       document.removeEventListener('mousedown', onDocMouseDown);
     };
   }, []);
-
-  const isValid = charCount >= minChars;
 
   // Toolbar button helper
   const tbBtn = (cmd, title) => html`
@@ -1138,114 +1263,9 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
           </div>
         </div>
       `}
-      ${!isValid && html`
-        <div className=${`char-counter ${charCount > 0 ? 'warning' : ''}`}>
-          ${charCount} / ${minChars} characters minimum
-        </div>
-      `}
-    </div>
-  `;
-}
-
-// CATEGORY SEARCH
-function CategorySearch({ value, onChange, onSelect }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [filteredCategories, setFilteredCategories] = useState([]);
-  const [existingCategories, setExistingCategories] = useState([]);
-  const inputRef = useRef(null);
-  const wrapperRef = useRef(null);
-
-  // Fetch existing categories from backend
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/sidebar/categories');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.categories) {
-            // Extract category names
-            const categoryNames = data.categories.map((cat) => cat.name);
-            setExistingCategories(categoryNames);
-          }
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch categories:', err);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleInputChange = (e) => {
-    const searchValue = e.target.value;
-    onChange(searchValue);
-
-    if (searchValue.trim()) {
-      const filtered = existingCategories.filter(
-        (cat) => cat.toLowerCase().includes(
-          searchValue.toLowerCase(),
-        ),
-      );
-      setFilteredCategories(filtered);
-      setIsOpen(true);
-    } else {
-      setFilteredCategories([]);
-      setIsOpen(false);
-    }
-  };
-
-  const handleSelectCategory = (category) => {
-    onSelect(category);
-    onChange('');
-    setIsOpen(false);
-  };
-
-  const handleAddNewCategory = () => {
-    onSelect(value);
-    onChange('');
-    setIsOpen(false);
-  };
-
-  const showAddButton = value.trim()
-    && !existingCategories.some((cat) => cat.toLowerCase() === value.toLowerCase());
-
-  return html`
-    <div className="category-search-wrapper" ref=${wrapperRef}>
-      <input
-        ref=${inputRef}
-        type="text"
-        value=${value}
-        onInput=${handleInputChange}
-        onFocus=${() => value.trim() && setIsOpen(true)}
-        placeholder="Search for a category..."
-      />
-      ${isOpen && (filteredCategories.length > 0 || showAddButton) && html`
-        <div className="category-dropdown">
-          ${filteredCategories.map((category) => html`
-            <div
-              key=${category}
-              className="category-option"
-              onClick=${() => handleSelectCategory(category)}
-            >
-              ${category}
-            </div>
-          `)}
-          ${showAddButton && html`
-            <div className="add-category-btn" onClick=${handleAddNewCategory}>
-              Create "${value}"
-            </div>
-          `}
+      ${charCount > 0 && charCount < minChars && html`
+        <div className="char-counter warning">
+          ${charCount} / ${minChars} minimum
         </div>
       `}
     </div>
@@ -1311,9 +1331,11 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
+    if ((e.key === 'Enter' || e.key === ' ') && inputValue.trim()) {
       e.preventDefault();
-      addTag(inputValue.trim());
+      addTag(inputValue.trim().replace(/\s+/g, '-'));
+    } else if (e.key === ' ' && !inputValue.trim()) {
+      e.preventDefault();
     } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
       removeTag(tags[tags.length - 1]);
     }
@@ -1321,7 +1343,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
   const handleBlur = () => {
     if (inputValue.trim()) {
-      addTag(inputValue.trim());
+      addTag(inputValue.trim().replace(/\s+/g, '-'));
     }
   };
 
@@ -1439,7 +1461,8 @@ function InlinePreview({
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
+  const [selectedCategoryNode, setSelectedCategoryNode] = useState(null);
+  const [pendingCategoryFolders, setPendingCategoryFolders] = useState([]);
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1477,8 +1500,25 @@ function CreatePost() {
     /* eslint-enable no-console */
   }, [title, category, bodyJson, tags]);
 
+  // Listen for category-explorer custom events
+  useEffect(() => {
+    const handleSelect = (e) => {
+      setCategory(e.detail.path);
+      setSelectedCategoryNode(e.detail.node);
+      setPendingCategoryFolders(e.detail.pendingFolders || []);
+    };
+    document.addEventListener('category-explorer:select', handleSelect);
+    return () => {
+      document.removeEventListener('category-explorer:select', handleSelect);
+    };
+  }, []);
+
+  const openCategoryExplorer = () => ensureCategoryExplorer().then(() => {
+    document.dispatchEvent(new CustomEvent('category-explorer:open'));
+  });
+
   const missingFields = [];
-  if (title.length < 15) missingFields.push('Title (min 15 characters)');
+  if (title.trim().length < 15) missingFields.push('Title (min 15 characters)');
   if (!category) missingFields.push('Category');
   if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
   if (tags.length === 0) missingFields.push('Tags (at least 1)');
@@ -1495,10 +1535,11 @@ function CreatePost() {
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
     const postData = {
-      title,
+      title: title.trim(),
       category,
       body,
       tags: tagsWithHash,
+      created_at: new Date().toISOString(), // eslint-disable-line camelcase
     };
 
     try {
@@ -1513,24 +1554,82 @@ function CreatePost() {
       const result = await response.json();
 
       if (response.ok) {
-        // eslint-disable-next-line no-console
-        console.log('Post created successfully:', result);
+        const { post: createdPost } = result;
+        const node = selectedCategoryNode;
+        const isRoot = node && (node.isRoot || (node.name && !node.title));
 
-        showToast('Your question has been posted successfully!', 'success');
-        // Reset form
-        setTitle('');
-        setCategory('');
-        setBody('');
-        setBodyJson(null);
-        setTags([]);
+        // Create any temp folders sequentially (parent before child) before smart-add.
+        // Recursion avoids no-await-in-loop; each step depends on the previous real ID.
+        const createFoldersSeq = async (folders, idx, idMap) => {
+          if (idx >= folders.length) return idMap;
+          const folder = folders[idx];
+          let resolvedParentId = null;
+          if (folder.parentTempId) {
+            const isParentTemp = String(folder.parentTempId).startsWith('custom-');
+            resolvedParentId = isParentTemp
+              ? (idMap[folder.parentTempId] || null)
+              : folder.parentTempId;
+          }
+          try {
+            const res = await fetch('http://localhost:5000/api/sidebar-items', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: folder.title,
+                category: folder.category,
+                isFolder: true,
+                parentId: resolvedParentId,
+              }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.item && data.item._id) { // eslint-disable-line no-underscore-dangle
+                // eslint-disable-next-line no-underscore-dangle
+                const next = { ...idMap, [folder.tempId]: String(data.item._id) };
+                return createFoldersSeq(folders, idx + 1, next);
+              }
+            }
+          } catch (folderErr) { // eslint-disable-line no-unused-vars
+            /* folder creation failed; continue — post was already saved */
+          }
+          return createFoldersSeq(folders, idx + 1, idMap);
+        };
+
+        const idMap = await createFoldersSeq(pendingCategoryFolders, 0, {});
+
+        // Resolve the real parentId for smart-add (temp IDs → real MongoDB IDs)
+        let realParentId = null;
+        if (!isRoot && node) {
+          const nid = String(node.id || '');
+          realParentId = nid.startsWith('custom-') ? (idMap[nid] || null) : nid;
+        }
+
+        const catName = isRoot
+          ? node.name
+          : (node && node.category) || category.split(' / ')[0];
+
+        const smartPayload = {
+          title: title.trim(),
+          category: catName,
+          postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+          ...(realParentId && { parentId: realParentId }),
+        };
+        try {
+          await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(smartPayload),
+          });
+        } catch (sidebarErr) { // eslint-disable-line no-unused-vars
+          /* post was created; sidebar-add failed silently */
+        }
+        window.location.href = '/';
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }
     } catch (error) {
       showToast('Network error: Unable to connect to the server.', 'error');
     }
-
-    setShowPreview(false);
   };
 
   const handleCancel = () => {
@@ -1551,86 +1650,124 @@ function CreatePost() {
           onPost=${handlePost}
         />
       ` : html`
-        <h1>
-          Post your thoughts
-          <span className="required-text">Required fields *</span>
-        </h1>
+        <div className="cp-page-header">
+          <div className="cp-header-content">
+            <h1 className="cp-page-title">Post your thoughts</h1>
+            <p className="cp-page-subtitle">Ask a question and get helpful answers from the community!</p>
+            <div className="cp-header-divider"></div>
+          </div>
+          <div className="cp-required-badge">
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
+              <path d="M9 1a8 8 0 1 0 0 16A8 8 0 0 0 9 1zm1 12.5H8v-6h2v6zm0-8H8v-2h2v2z"/>
+            </svg>
+            <span><span className="required">*</span> Required fields</span>
+          </div>
+        </div>
 
         <form onSubmit=${handleSubmit}>
-          <div className="form-group">
-            <label>
-              Title<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Be specific and imagine you're asking a question to another person. Min 15 characters.
-            </p>
-            <input
-              type="text"
-              value=${title}
-              onInput=${(e) => setTitle(e.target.value)}
-              placeholder=""
-            />
-            ${title.length < 15 && html`
-              <div className=${`char-counter ${title.length > 0 ? 'warning' : ''}`}>
-                ${title.length} / 15 characters minimum
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M16.12 2.59a2 2 0 0 0-2.83 0L3 12.88V16h3.12L16.4 5.72a2 2 0 0 0-.28-3.13zM5.5 14.5H4.5v-1l7.88-7.88 1 1L5.5 14.5zm9.35-9.35-.65.65-1-1 .65-.65a.5.5 0 0 1 .71 0l.29.29a.5.5 0 0 1 0 .71z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Title<span className="required">*</span>
+              </label>
+              <p className="helper-text">Craft a clear, specific question (min. 15 characters)</p>
+              <div className="cp-input-wrapper">
+                <input
+                  type="text"
+                  value=${title}
+                  onInput=${(e) => setTitle(e.target.value)}
+                  placeholder="What would you like to ask?"
+                />
               </div>
-            `}
+              ${title.trim().length < 15 && title.trim().length > 0 && html`
+                <div className="char-counter warning">
+                  ${title.trim().length} / 15 minimum
+                </div>
+              `}
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>
-              Category<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Search for an existing category or create a new one.
-            </p>
-            ${category ? html`
-              <div className="category-chip">
-                <span>${category}</span>
-                <button
-                  type="button"
-                  className="category-remove"
-                  onClick=${() => setCategory('')}
-                  aria-label="Remove category"
-                >
-                  ×
-                </button>
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M9 1 .5 5.5l8.5 4.5 8.5-4.5L9 1zM.5 13l8.5 4.5L17.5 13l-1.3-.7L9 16.2l-7.2-3.9L.5 13zm0-3.5 8.5 4.5 8.5-4.5-1.3-.7L9 12.7 1.8 8.8.5 9.5z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Category<span className="required">*</span>
+              </label>
+              <p className="helper-text">Choose the most relevant category</p>
+              <div
+                className="category-selector"
+                onClick=${openCategoryExplorer}
+              >
+                <svg className="cp-category-icon" width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
+                  <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
+                </svg>
+                ${category ? html`
+                  <span className="category-selector-text">${category}</span>
+                  <button
+                    type="button"
+                    className="category-remove"
+                    onClick=${(e) => { e.stopPropagation(); setCategory(''); }}
+                    aria-label="Remove category"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                ` : html`
+                  <span className="category-selector-placeholder">Select a category</span>
+                  <svg className="cp-category-chevron" width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M4 7l5 5 5-5"/>
+                  </svg>
+                `}
               </div>
-            ` : html`
-              <${CategorySearch}
-                value=${categorySearch}
-                onChange=${setCategorySearch}
-                onSelect=${setCategory}
+            </div>
+          </div>
+
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M14 1H6L3 4v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 2.5V4H4.5L6 2.5zM13 15H5v-1h8v1zm0-3H5v-1h8v1zm0-3H5V8h8v1zm0-3H8V5h5v1z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Body<span className="required">*</span>
+              </label>
+              <p className="helper-text">Provide details to help others answer your question (min. 20 characters)</p>
+              <${RichTextEditor}
+                onChange=${handleBodyChange}
+                minChars=${20}
+                initialValue=${body}
               />
-            `}
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>
-              Body<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Include all the information someone would need to answer your question. Min 20 characters.
-            </p>
-            <${RichTextEditor}
-              onChange=${handleBodyChange}
-              minChars=${20}
-              initialValue=${body}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              Tags<span className="required">*</span>
-            </label>
-            <p className="helper-text">
-              Add up to 5 tags to describe what your question is about. Start typing to see suggestions.
-            </p>
-            <${TagsInput}
-              tags=${tags}
-              onTagsChange=${setTags}
-              maxTags=${5}
-            />
+          <div className="cp-form-section">
+            <div className="cp-section-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path d="M16.56 8.94 10.06 2.5H3v7.06l6.44 6.5a1.5 1.5 0 0 0 2.12 0l5-5a1.5 1.5 0 0 0 0-2.12zM5.5 7A1.5 1.5 0 1 1 7 5.5 1.5 1.5 0 0 1 5.5 7z"/>
+              </svg>
+            </div>
+            <div className="form-group">
+              <label>
+                Tags<span className="required">*</span>
+              </label>
+              <p className="helper-text">Add up to 5 tags to describe your question</p>
+              <${TagsInput}
+                tags=${tags}
+                onTagsChange=${setTags}
+                maxTags=${5}
+              />
+            </div>
           </div>
 
           <div className="submit-section">
