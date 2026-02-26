@@ -266,31 +266,6 @@ async function loadCSS(href) {
 }
 
 /**
- * Loads a non module JS file.
- * @param {string} src URL to the JS file
- * @param {Object} attrs additional optional attributes
- */
-async function loadScript(src, attrs) {
-  return new Promise((resolve, reject) => {
-    if (!document.querySelector(`head > script[src="${src}"]`)) {
-      const script = document.createElement('script');
-      script.src = src;
-      if (attrs) {
-        // eslint-disable-next-line no-restricted-syntax, guard-for-in
-        for (const attr in attrs) {
-          script.setAttribute(attr, attrs[attr]);
-        }
-      }
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.append(script);
-    } else {
-      resolve();
-    }
-  });
-}
-
-/**
  * Retrieves the content of metadata tags.
  * @param {string} name The metadata name (or property)
  * @param {Document} doc Document object to query for metadata. Defaults to the window's document
@@ -302,62 +277,6 @@ function getMetadata(name, doc = document) {
     .map((m) => m.content)
     .join(', ');
   return meta || '';
-}
-
-/**
- * Returns a picture element with webp and fallbacks
- * @param {string} src The image URL
- * @param {string} [alt] The image alternative text
- * @param {boolean} [eager] Set loading attribute to eager
- * @param {Array} [breakpoints] Breakpoints and corresponding params (eg. width)
- * @returns {Element} The picture element
- */
-function createOptimizedPicture(
-  src,
-  alt = '',
-  eager = false,
-  breakpoints = [{ media: '(min-width: 600px)', width: '2000' }, { width: '750' }],
-) {
-  const url = !src.startsWith('http') ? new URL(src, window.location.href) : new URL(src);
-  const picture = document.createElement('picture');
-  const { origin, pathname } = url;
-  const ext = pathname.split('.').pop();
-
-  // webp
-  breakpoints.forEach((br) => {
-    const source = document.createElement('source');
-    if (br.media) source.setAttribute('media', br.media);
-    source.setAttribute('type', 'image/webp');
-    source.setAttribute(
-      'srcset',
-      `${origin}${pathname}?width=${br.width}&format=webply&optimize=medium`,
-    );
-    picture.appendChild(source);
-  });
-
-  // fallback
-  breakpoints.forEach((br, i) => {
-    if (i < breakpoints.length - 1) {
-      const source = document.createElement('source');
-      if (br.media) source.setAttribute('media', br.media);
-      source.setAttribute(
-        'srcset',
-        `${origin}${pathname}?width=${br.width}&format=${ext}&optimize=medium`,
-      );
-      picture.appendChild(source);
-    } else {
-      const img = document.createElement('img');
-      img.setAttribute('loading', eager ? 'eager' : 'lazy');
-      img.setAttribute('alt', alt);
-      picture.appendChild(img);
-      img.setAttribute(
-        'src',
-        `${origin}${pathname}?width=${br.width}&format=${ext}&optimize=medium`,
-      );
-    }
-  });
-
-  return picture;
 }
 
 /**
@@ -700,43 +619,10 @@ async function loadSections(element) {
   }
 }
 
-/**
- * Checks if preact modules are present in the vendor folder
- * @returns {Promise<boolean>} True if all preact modules are available
- */
-async function checkPreactModules() {
-  const preactModules = [
-    './vendor/preact.js',
-    './vendor/preact-hooks.js',
-    './vendor/htm.js',
-    './vendor/htm-preact.js',
-  ];
-
-  const codeBasePath = window.hlx?.codeBasePath || '';
-
-  try {
-    const results = await Promise.allSettled(
-      preactModules.map(async (module) => {
-        const response = await fetch(`${codeBasePath}${module}`, { method: 'HEAD' });
-        return response.ok;
-      }),
-    );
-
-    const allPresent = results.every((result) => result.status === 'fulfilled' && result.value);
-    return allPresent;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error checking preact modules:', error);
-    return false;
-  }
-}
-
 init();
 
 export {
   buildBlock,
-  checkPreactModules,
-  createOptimizedPicture,
   decorateBlock,
   decorateBlocks,
   decorateButtons,
@@ -748,7 +634,6 @@ export {
   loadCSS,
   loadFooter,
   loadHeader,
-  loadScript,
   loadSection,
   loadSections,
   readBlockConfig,

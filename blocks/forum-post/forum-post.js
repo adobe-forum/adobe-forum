@@ -1,34 +1,6 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
-/**
- * 1. SYNCHRONOUS DUMMY DATA
- * Updated to act exactly like the real API (a single raw HTML string for the body).
- */
-const DUMMY_POST_DATA = {
-  id: '123',
-  title: 'Frontend Resources',
-  topic: 'JavaScript',
-  author: 'Sarah',
-  tags: ['#react', '#frontend', '#hooks'],
-  body: `
-    <p>React hooks have changed how we write components. Before we dive in, let’s look at the lifecycle.</p>
-    <img src="https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=800&q=80" alt="Post Image" />
-    <p>As you can see above, the ecosystem is vast. Here is a basic example of using <code>useState</code>:</p>
-    <pre>const [count, setCount] = useState(0);
-
-// Update state
-<button onClick={() => setCount(count + 1)}>
-  Count is {count}
-</button></pre>
-    <p>Keep practicing and you will master it in no time.</p>
-  `,
-  comments: [
-    { user: 'Guest', text: 'The code snippet is very helpful!' },
-    { user: 'DevMike', text: 'Thanks for sharing this.' },
-  ],
-};
-
 const ArrowIcon = () => html`
   <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
     <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
@@ -43,17 +15,16 @@ const BackIcon = () => html`
 `;
 
 const ForumPost = () => {
-  const [post, setPost] = useState(DUMMY_POST_DATA);
+  const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
-  // Auto-scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
-  }, [post.comments]);
+  }, [post ? post.comments : null]);
 
   // Transform raw <pre> tags into the locked two-column Flexbox layout
   useEffect(() => {
@@ -113,7 +84,7 @@ const ForumPost = () => {
               topic: fetchedPost.category,
               author: 'User',
               tags: fetchedPost.tags || [],
-              body: fetchedPost.body, // Load raw HTML string directly
+              body: fetchedPost.body,
               comments: [],
             };
             setPost(transformedPost);
@@ -133,10 +104,19 @@ const ForumPost = () => {
     };
   }, []);
 
+  if (!post) {
+    return html`
+      <div class="forum-post-wrapper">
+        <div class="loading-state">
+          ${loading ? 'Loading post...' : 'Select a post from the sidebar to view it.'}
+        </div>
+      </div>
+    `;
+  }
+
   const addComment = () => {
     if (!inputValue.trim()) return;
     const newComment = { user: 'You', text: inputValue };
-
     setPost({
       ...post,
       comments: [...post.comments, newComment],
@@ -172,9 +152,9 @@ const ForumPost = () => {
         <span class="topic-name">${post.topic}</span>
       </div>
 
-      <div 
-        class="post-body-raw" 
-        dangerouslySetInnerHTML=${{ __html: post.body }} 
+      <div
+        class="post-body-raw"
+        dangerouslySetInnerHTML=${{ __html: post.body }}
       />
 
       <hr class="post-divider" />
@@ -183,7 +163,7 @@ const ForumPost = () => {
         <h3 class="discussion-header">
           Discussion <span class="count">(${post.comments.length})</span>
         </h3>
-        
+
         <div class="comments-list" ref=${commentsListRef}>
           ${post.comments.map((c) => html`
             <div class="comment-row">
@@ -198,9 +178,9 @@ const ForumPost = () => {
 
         <div class="comment-form-container">
           <div class="comment-input-wrapper">
-            <input 
-              type="text" 
-              placeholder="Add a comment..." 
+            <input
+              type="text"
+              placeholder="Add a comment..."
               class="comment-input"
               value=${inputValue}
               onInput=${(e) => setInputValue(e.target.value)}
