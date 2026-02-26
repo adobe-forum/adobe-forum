@@ -90,20 +90,25 @@ body {
   background-color: var(--background-color);
   color: var(--text-color);
   min-height: 100vh;
+  
+  /* --- FIX APPLIED HERE --- */
   width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   display: grid;
+  
   grid-template: 
       "header" var(--header-height) 
       "content" 1fr 
       "footer" auto 
-      / 1fr;
+      / minmax(0, 1fr); /* Switched from 1fr */
 
   @media (width >= 768px) {
     grid-template: 
         "header header" var(--header-height) 
         "sidebar content" 1fr 
         "footer footer" auto 
-        / var(--nav-width) 1fr;
+        / var(--nav-width) minmax(0, 1fr); /* Switched from 1fr */
   }
 }
 
@@ -133,12 +138,17 @@ main {
   background-color: var(--background-color);
   padding: 20px;
   position: relative;
-  overflow: auto hidden;
+  
+  /* --- FIX APPLIED HERE --- */
+  width: 100%;
   max-width: 100%;
-  min-width: 0; /* Prevent grid blowout */
+  min-width: 0; 
+  overflow-x: hidden;
+  box-sizing: border-box;
 
   @media (width >= 768px) {
     padding: 40px;
+    max-width: calc(100vw - var(--nav-width)); /* Hard cap width */
   }
 }
 

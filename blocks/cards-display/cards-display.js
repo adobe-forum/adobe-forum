@@ -5,20 +5,31 @@ import htm from '../../vendor/htm.js';
 
 const html = htm.bind(h);
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// ── Environment & Config ──────────────────────────────────────────────
+// Dynamically set the API URL based on the environment
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = isLocalhost
+  ? 'http://localhost:5000/api'
+  : 'https://api.yourproductiondomain.com/api'; // TODO: Update with your production API URL
+
 const PAGE_SIZE = 12;
+
+// ── Shared Instances ──────────────────────────────────────────────────
+// Create DOMParser once to prevent memory leaks and performance drops
+const domParser = new DOMParser();
 
 // ── Pure Helper Functions ─────────────────────────────────────────────
 function extractImage(body) {
   if (!body) return null;
-  const doc = new DOMParser().parseFromString(body, 'text/html');
+  const doc = domParser.parseFromString(body, 'text/html');
   const img = doc.querySelector('img');
-  return img ? img.src : null;
+  // Security check: ensure the src isn't a malicious javascript: URI
+  return (img && img.src && !img.src.startsWith('javascript:')) ? img.src : null;
 }
 
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
-  const doc = new DOMParser().parseFromString(body, 'text/html');
+  const doc = domParser.parseFromString(body, 'text/html');
   const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
@@ -41,6 +52,28 @@ function avatarColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+function normalizeApiData(data, category) {
+  // Abstracts API inconsistencies to keep state management clean
+  if (category) {
+    return (data.items || []).map((item) => item.postId).filter(Boolean);
+  }
+  return data.posts || data || [];
+}
+
+// Helper to manage DOM layout shifts outside of Preact
+function toggleViews(showCards) {
+  const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
+  const fw = document.querySelector('.forum-post-wrapper');
+  const sw = document.querySelector('.search-bar-wrapper');
+
+  cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = showCards ? '' : 'none'; } });
+  if (fw) fw.style.display = showCards ? 'none' : '';
+  if (sw) sw.style.display = showCards ? '' : 'none';
+  
+  // Adds a state class to body for better CSS control
+  document.body.classList.toggle('is-viewing-post', !showCards);
+}
+
 // ── Preact Components ─────────────────────────────────────────────────
 
 function Card({ post, onClick }) {
@@ -55,29 +88,46 @@ function Card({ post, onClick }) {
   const initials = avatarInitials(author);
   const avColor = avatarColor(author);
   const excerpt = extractExcerpt(post.body || post.description || post.content || '');
+  
+  // Display the deepest category
+  const displayCategory = post.category ? post.category.split('/').pop().trim() : '';
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick(id);
+    }
+  };
 
   return html`
-    <article class="card" onClick=${() => onClick(id)}>
+    <article 
+      class="card" 
+      role="button" 
+      tabIndex="0" 
+      onClick=${() => onClick(id)}
+      onKeyDown=${handleKeyDown}
+      aria-label="Read post: ${post.title}"
+    >
       <div class="card-img-wrapper">
         ${imgSrc
-    ? html`<img src="${imgSrc}" alt="${post.title}" class="card-img-box" loading="lazy" />`
+    ? html`<img src="${imgSrc}" alt="" class="card-img-box" loading="lazy" />`
     : html`<div class="card-img-box card-img--placeholder"></div>`}
-        ${post.category ? html`<span class="card-category-badge">${post.category}</span>` : ''}
+        ${displayCategory ? html`<span class="card-category-badge">${displayCategory}</span>` : ''}
       </div>
       <div class="card-body">
         ${tags.length > 0 ? html`<div class="card-tags">${tags.map((tag) => html`<span class="card-tag">${tag}</span>`)}</div>` : ''}
         <h3 class="card-title">${post.title}</h3>
         <p class="card-meta">
-          <span class="card-avatar" style="background:${avColor}">${initials}</span>
+          <span class="spectrum-Avatar" style="background-color: ${avColor}" aria-hidden="true">
+            <span class="spectrum-Avatar-initials">${initials}</span>
+          </span>
           <span class="card-author">${author}</span>
         </p>
         ${excerpt ? html`<p class="card-desc">${excerpt}</p>` : ''}
       </div>
-      <div class="card-read-more">
-        Read more
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="5" y1="12" x2="19" y2="12"/>
-          <polyline points="12 5 19 12 12 19"/>
+      <div class="card-read-more" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6"/>
         </svg>
       </div>
     </article>
@@ -93,41 +143,46 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 
   const pages = [];
   if (start > 1) {
-    pages.push(html`<button class="page-btn" onClick=${() => onPageChange(1)}>1</button>`);
-    if (start > 2) pages.push(html`<span class="page-ellipsis">…</span>`);
+    pages.push(html`<button class="page-btn" aria-label="Page 1" onClick=${() => onPageChange(1)}>1</button>`);
+    if (start > 2) pages.push(html`<span class="page-ellipsis" aria-hidden="true">…</span>`);
   }
 
   for (let i = start; i <= end; i += 1) {
     pages.push(html`
-      <button class="page-btn ${i === currentPage ? 'is-active' : ''}" onClick=${() => onPageChange(i)}>
+      <button 
+        class="page-btn ${i === currentPage ? 'is-active' : ''}" 
+        aria-label="Page ${i}"
+        aria-current=${i === currentPage ? 'page' : 'false'}
+        onClick=${() => onPageChange(i)}
+      >
         ${i}
       </button>
     `);
   }
 
   if (end < totalPages) {
-    if (end < totalPages - 1) pages.push(html`<span class="page-ellipsis">…</span>`);
-    pages.push(html`<button class="page-btn" onClick=${() => onPageChange(totalPages)}>${totalPages}</button>`);
+    if (end < totalPages - 1) pages.push(html`<span class="page-ellipsis" aria-hidden="true">…</span>`);
+    pages.push(html`<button class="page-btn" aria-label="Page ${totalPages}" onClick=${() => onPageChange(totalPages)}>${totalPages}</button>`);
   }
 
   return html`
     <div class="cards-pagination-wrapper">
-      <div class="cards-pagination">
-        <button class="page-btn page-prev" disabled=${currentPage === 1} onClick=${() => onPageChange(currentPage - 1)}>
+      <nav class="cards-pagination" aria-label="Pagination Navigation">
+        <button class="page-btn page-prev" aria-label="Previous Page" disabled=${currentPage === 1} onClick=${() => onPageChange(currentPage - 1)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         ${pages}
-        <button class="page-btn page-next" disabled=${currentPage === totalPages} onClick=${() => onPageChange(currentPage + 1)}>
+        <button class="page-btn page-next" aria-label="Next Page" disabled=${currentPage === totalPages} onClick=${() => onPageChange(currentPage + 1)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-      </div>
+      </nav>
     </div>
   `;
 }
 
 function SkeletonLoaders() {
   return html`
-    <div class="cards-grid">
+    <div class="cards-grid" aria-busy="true" aria-label="Loading posts">
       ${Array(6).fill(null).map(() => html`
         <div class="card card--skeleton">
           <div class="card-img-box skeleton-box"></div>
@@ -158,6 +213,10 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   else if (searchQuery) displayTitle = `Search Results: "${searchQuery}"`;
 
   useEffect(() => {
+    // 1. Create the AbortController at the start of the effect
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const fetchPosts = async () => {
       setLoading(true);
       setError(false);
@@ -174,28 +233,36 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           if (searchQuery) url.searchParams.append('search', searchQuery);
         }
 
-        const res = await fetch(url);
+        // 2. Pass the signal to the fetch request
+        const res = await fetch(url, { signal });
+        if (!res.ok) throw new Error('Network response was not ok');
         const data = await res.json();
 
-        let fetchedPosts = [];
-        if (category) {
-          fetchedPosts = (data.items || []).map((item) => item.postId).filter(Boolean);
-        } else {
-          fetchedPosts = data.posts || data || [];
-        }
-
-        setPosts(fetchedPosts);
+        setPosts(normalizeApiData(data, category));
         setTotalPages(data.totalPages || 1);
       } catch (err) {
+        // 3. Ignore the error if it was an intentional abort
+        if (err.name === 'AbortError') {
+          return;
+        }
         // eslint-disable-next-line no-console
         console.error('cards-display: failed to fetch posts', err);
         setError(true);
       } finally {
-        setLoading(false);
+        // 4. Only clear the loading state if the request wasn't aborted
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPosts();
+
+    // 5. Cleanup function: Abort the fetch if the component unmounts 
+    // or if the user clicks a new page before this fetch finishes.
+    return () => {
+      controller.abort();
+    };
   }, [currentPage, searchQuery, category]);
 
   useEffect(() => {
@@ -212,12 +279,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     };
 
     const handleShowCards = () => {
-      const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
-      const fw = document.querySelector('.forum-post-wrapper');
-      const sw = document.querySelector('.search-bar-wrapper');
-      cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = ''; } });
-      if (fw) fw.style.display = 'none';
-      if (sw) sw.style.display = '';
+      toggleViews(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -225,8 +287,8 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     window.addEventListener('filter-category', handleFilter);
     window.addEventListener('show-cards', handleShowCards);
 
-    const fw = document.querySelector('.forum-post-wrapper');
-    if (fw) fw.style.display = 'none';
+    // Initial setup for the view
+    toggleViews(true);
 
     return () => {
       window.removeEventListener('search-posts', handleSearch);
@@ -243,16 +305,25 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const handleCardClick = (postId) => {
-    const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
-    const fw = document.querySelector('.forum-post-wrapper');
-    const sw = document.querySelector('.search-bar-wrapper');
-
-    cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = 'none'; } });
-    if (fw) fw.style.display = '';
-    if (sw) sw.style.display = 'none';
-
+    toggleViews(false);
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Generate the UI string
+  const getEmptyStateContent = () => {
+    if (searchQuery || category) {
+      return html`
+        <div class="cards-no-results">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <p>No posts found matching your criteria.</p>
+          <span>Try a different keyword or clear the search.</span>
+        </div>
+      `;
+    }
+    return html`<p class="cards-empty">No posts found.</p>`;
   };
 
   return html`
@@ -263,24 +334,12 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     ${loading && html`<${SkeletonLoaders} />`}
     
-    ${error && !loading && html`<p class="cards-error">Failed to load posts. Please try again.</p>`}
+    ${error && !loading && html`<p class="cards-error" role="alert">Failed to load posts. Please try again.</p>`}
 
-    ${!loading && !error && posts.length === 0 && (searchQuery || category) && html`
-      <div class="cards-no-results">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <p>No posts found matching your criteria.</p>
-        <span>Try a different keyword or clear the search.</span>
-      </div>
-    `}
-
-    ${!loading && !error && posts.length === 0 && !searchQuery && !category && html`
-      <p class="cards-empty">No posts found.</p>
-    `}
+    ${!loading && !error && posts.length === 0 && getEmptyStateContent()}
 
     ${!loading && !error && posts.length > 0 && html`
-      <div class="cards-grid">
+      <div class="cards-grid" role="list">
         ${posts.map((post) => html`<${Card} post=${post} onClick=${handleCardClick} />`)}
       </div>
       <${Pagination} currentPage=${currentPage} totalPages=${totalPages} onPageChange=${handlePageChange} />
