@@ -397,23 +397,10 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
   const handleConfirm = () => {
     if (!selectedNode) return;
     const path = buildPath(selectedNode);
-
-    // Collect only the temp folders that are ancestors-of (or are) the selected node.
-    // Root selections never need folder SidebarItems — the root emerges from its items.
-    let pendingFolders = [];
-    const selId = String(selectedNode.id || '');
-    if (!selectedNode.isRoot && selId.startsWith('custom-')) {
-      const buildChain = (tid) => {
-        if (!String(tid).startsWith('custom-')) return []; // real DB id — no chain needed
-        const f = sessionFolders.find((sf) => sf.tempId === tid);
-        if (!f) return [];
-        const parentChain = f.parentTempId ? buildChain(f.parentTempId) : [];
-        return [...parentChain, f];
-      };
-      pendingFolders = buildChain(selId);
-    }
-
-    onSelect(path, selectedNode, pendingFolders);
+    // Pass ALL session folders — topological order guaranteed (parents always created before
+    // children). createFoldersSeq builds the full tempId→realId map so ALL sibling branches
+    // persist to DB, not just the ancestor chain of the selected node.
+    onSelect(path, selectedNode, sessionFolders);
     onClose();
   };
 
@@ -476,9 +463,11 @@ function CategoryTreePopup({ isOpen, onClose, onSelect }) {
       }]);
     }
 
-    // Optimistic local update so the UI responds instantly
+    // Optimistic local update so the UI responds instantly.
+    // category must be carried on the node so that when this temp node is later used
+    // as selectedNode, catName = selectedNode.category resolves correctly for sub-items.
     const newNode = {
-      id: tempId, title: trimmedName, isFolder: true, children: [],
+      id: tempId, title: trimmedName, isFolder: true, children: [], category: catName,
     };
     setTreeData((prev) => {
       const clone = JSON.parse(JSON.stringify(prev));
