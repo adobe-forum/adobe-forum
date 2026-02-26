@@ -68,18 +68,24 @@
   src: local('Arial');
 }
 
-* {
+/* ── Global box-sizing — every element respects its own boundaries ── */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+/* ── Kill horizontal scroll at the root ── */
+html {
+  overflow-x: hidden;        /* FIX: prevents page-level horizontal scroll */
+  max-width: 100%;
+  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;  /* IE/Edge */
 }
 
 /* Hide scrollbar but keep functionality */
 ::-webkit-scrollbar {
   display: none;
-}
-
-html {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
 }
 
 body {
@@ -193,6 +199,7 @@ pre {
   background-color: var(--light-color);
   overflow-x: auto;
   white-space: pre;
+  max-width: 100%;           /* FIX: code blocks can't blow out their container */
 }
 
 a {
@@ -263,16 +270,20 @@ main img {
 }
 
 main > .section {
-  max-width: none;
+  max-width: 100%;           /* FIX: never wider than main */
   margin: 0;
   padding: 0;
   background-color: var(--light-color);
+  overflow: hidden;          /* FIX: clips any block child that tries to overflow */
 }
 
 main > .section > div {
   max-width: 1200px;
+  width: 100%;               /* FIX: explicit width */
   margin: auto;
   padding: 0 24px;
+  box-sizing: border-box;    /* FIX: padding doesn't add to width */
+  overflow: hidden;          /* FIX: clips rogue content inside blocks */
 }
 
 main > .section:first-of-type {
@@ -281,6 +292,8 @@ main > .section:first-of-type {
 
 main .block {
   margin: 0;
+  max-width: 100%;           /* FIX: blocks can never be wider than their container */
+  overflow-x: hidden;        /* FIX: block-level safety net */
 }
 
 footer {

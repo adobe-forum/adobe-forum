@@ -21,7 +21,7 @@
   color: var(--spectrum-gray-600);
 }
 
-/* --- 2. Back Button — matches site-wide primary "Add Post" button --- */
+/* --- 2. Back Button --- */
 .spectrum-action-button {
   display: inline-flex;
   align-items: center;
@@ -128,37 +128,37 @@
   color: var(--spectrum-gray-300);
 }
 
-/* --- 4. Post Content --- */
-.post-content-area {
+/* --- 4. Raw Post Content Styles --- */
+.post-body-raw {
   font-size: 1.125rem;
   color: var(--text-color);
   margin-bottom: 40px;
+  line-height: 1.7;
 }
 
-.block-text {
-  margin-bottom: 24px;
-}
-
-.block-text p {
+.post-body-raw p {
   margin: 0 0 16px;
 }
 
-/* Rich text formatting from Quill editor */
-.block-text strong,
-.block-text b {
+.post-body-raw strong,
+.post-body-raw b {
   font-weight: 700;
 }
 
-.block-text em,
-.block-text i {
+.post-body-raw em,
+.post-body-raw i {
   font-style: italic;
 }
 
-.block-text u { text-decoration: underline; }
+.post-body-raw u {
+  text-decoration: underline;
+}
 
-.block-text s { text-decoration: line-through; }
+.post-body-raw s {
+  text-decoration: line-through;
+}
 
-.block-text code {
+.post-body-raw code {
   background: var(--spectrum-gray-100, #f5f5f5);
   color: var(--spectrum-red-900, #c9252d);
   padding: 2px 6px;
@@ -167,17 +167,17 @@
   font-size: 0.9em;
 }
 
-.block-text ul,
-.block-text ol {
+.post-body-raw ul,
+.post-body-raw ol {
   margin: 16px 0;
   padding-left: 2em;
 }
 
-.block-text li {
+.post-body-raw li {
   margin: 8px 0;
 }
 
-.block-text blockquote {
+.post-body-raw blockquote {
   border-left: 4px solid var(--spectrum-blue-500, #1473e6);
   padding: 12px 20px;
   margin: 16px 0;
@@ -185,125 +185,123 @@
   font-style: italic;
 }
 
-.block-text a {
+.post-body-raw a {
   color: var(--spectrum-blue-900, #0265dc);
   text-decoration: underline;
 }
 
-.block-text a:hover {
+.post-body-raw a:hover {
   text-decoration: none;
 }
 
-.block-text h1,
-.block-text h2,
-.block-text h3,
-.block-text h4,
-.block-text h5,
-.block-text h6 {
+.post-body-raw h1,
+.post-body-raw h2,
+.post-body-raw h3,
+.post-body-raw h4,
+.post-body-raw h5,
+.post-body-raw h6 {
   font-weight: 700;
   margin: 24px 0 12px;
   line-height: 1.3;
 }
 
-.block-text h1 { font-size: 2em; }
+.post-body-raw h1 {
+  font-size: 2em;
+}
 
-.block-text h2 { font-size: 1.5em; }
+.post-body-raw h2 {
+  font-size: 1.5em;
+}
 
-.block-text h3 { font-size: 1.25em; }
+.post-body-raw h3 {
+  font-size: 1.25em;
+}
 
-.block-text .ql-align-center  { text-align: center; }
+/* Quill editor alignment & indent classes */
+.post-body-raw .ql-align-center { text-align: center; }
 
-.block-text .ql-align-right   { text-align: right; }
+.post-body-raw .ql-align-right { text-align: right; }
 
-.block-text .ql-align-justify { text-align: justify; }
+.post-body-raw .ql-align-justify { text-align: justify; }
 
-.block-text .ql-indent-1 { padding-left: 3em; }
+.post-body-raw .ql-indent-1 { padding-left: 3em; }
 
-.block-text .ql-indent-2 { padding-left: 6em; }
+.post-body-raw .ql-indent-2 { padding-left: 6em; }
 
-.block-text .ql-indent-3 { padding-left: 9em; }
+.post-body-raw .ql-indent-3 { padding-left: 9em; }
 
-/* Table support from Quill */
-.block-text table {
+.post-body-raw table {
   border-collapse: collapse;
   width: 100%;
   margin: 16px 0;
 }
 
-.block-text table td,
-.block-text table th {
+.post-body-raw table td,
+.post-body-raw table th {
   border: 1px solid var(--spectrum-gray-300, #d3d3d3);
   padding: 8px 12px;
   text-align: left;
 }
 
-.block-text table th {
+.post-body-raw table th {
   background: var(--spectrum-gray-100, #f5f5f5);
   font-weight: 700;
 }
 
-.block-text table tr:nth-child(even) {
+.post-body-raw table tr:nth-child(even) {
   background: var(--spectrum-gray-50, #fafafa);
 }
 
-.block-image {
-  margin: 32px 0;
-  text-align: center;
-}
-
-.block-image img {
+.post-body-raw img {
   max-width: 80%;
   height: auto;
-  border-radius: var(--spectrum-border-radius-200);
+  border-radius: var(--spectrum-border-radius-200, 8px);
   border: 1px solid var(--spectrum-gray-200);
+  margin: 32px 0;
+  display: block;
 }
 
-/* --- 5. Code Block --- */
-.block-code {
+/* --- 5. Code Block (Two-Column Flexbox) --- */
+.post-body-raw pre.formatted-code-block {
+  display: flex;
+  background: var(--post-code-bg);
+  border-radius: 6px;
   margin: 24px 0;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+}
 
-  pre {
-    position: relative;
-    background: #1e1e1e;
+/* Column 1: Locked Line Numbers */
+.code-gutter {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 8px 16px 16px;
+  text-align: right;
+  color: var(--post-line-nums);
+  border-right: 1px solid var(--post-line-nums-border);
+  user-select: none;
+  background: var(--post-code-bg);
+}
 
-    /* matches --cp-code-bg */
-    color: #d4d4d4;
+/* Column 2: Independent Scrolling Code */
+.code-content {
+  flex-grow: 1;
+  padding: 16px;
+  color: var(--post-code-text);
+  overflow-x: auto;
+  white-space: pre;
+  background: var(--post-code-bg);
+}
 
-    /* matches --cp-code-text */
-    border-radius: 6px;
-    margin: 0;
-    padding: 16px 16px 16px 3.5em;
-
-    /* Space for line numbers */
-    overflow-x: auto;
-    font-family: monospace;
-
-    /* Match create-post preview-body-content defaults */
-    font-size: 14px;
-    line-height: 1.6;
-    min-width: 2.5em;
-    flex-shrink: 0;
-
-    span { display: block; }
-  }
-
-  .code-content {
-    flex: 1;
-    margin: 0;
-    padding: 16px;
-    color: var(--post-code-text);
-    font-family: monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    background: transparent;
-    overflow-x: visible;
-    white-space: pre;
-  }
-
-  code {
-    color: inherit;
-    background: transparent;
-  }
+/* Remove inline code styles inside pre */
+.post-body-raw pre.formatted-code-block code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
 }
 
 /* --- 6. Discussion & Comments --- */
@@ -311,11 +309,7 @@
   border: none;
   border-top: 1px solid var(--spectrum-gray-200);
   margin: 0;
-
-  /* Margin reset to remove whitespace */
   display: none;
-
-  /* Hidden because discussions are disabled */
 }
 
 .discussion-section {
@@ -330,19 +324,18 @@
   color: var(--text-color);
 }
 
-/* The Comment Container (Scrollable) */
 .comments-list {
   display: flex;
   flex-direction: column;
   gap: 24px;
   max-height: 250px;
-
-  /* Reduced from 400px so it scrolls much sooner */
   overflow-y: auto;
   padding-right: 12px;
 }
 
-.comments-list::-webkit-scrollbar { width: 8px; }
+.comments-list::-webkit-scrollbar {
+  width: 8px;
+}
 
 .comments-list::-webkit-scrollbar-track {
   background: var(--spectrum-gray-100);
@@ -354,9 +347,10 @@
   border-radius: var(--spectrum-border-radius-100);
 }
 
-.comments-list::-webkit-scrollbar-thumb:hover { background: var(--spectrum-gray-400); }
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: var(--spectrum-gray-400);
+}
 
-/* INDIVIDUAL COMMENT ROW */
 .comment-row {
   display: flex;
   gap: 16px;
@@ -364,7 +358,6 @@
   width: 100%;
 }
 
-/* Avatar Styling */
 .comment-avatar {
   width: 40px;
   height: 40px;
@@ -381,7 +374,6 @@
   margin-top: 2px;
 }
 
-/* Comment Body */
 .comment-body {
   display: flex;
   flex-direction: column;
@@ -410,7 +402,6 @@
   border-top: 1px solid var(--spectrum-gray-200);
 }
 
-/* This wrapper acts as the visual "input box" */
 .comment-input-wrapper {
   display: flex;
   align-items: center;
@@ -421,13 +412,11 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Highlight the whole wrapper when typing */
 .comment-input-wrapper:focus-within {
   border-color: var(--link-color);
   box-shadow: 0 0 0 1px var(--link-color);
 }
 
-/* The actual text field is now invisible */
 .comment-input {
   flex: 1;
   border: none;
@@ -437,8 +426,6 @@
   color: var(--text-color);
   font-family: var(--body-font-family);
   padding: 8px 0 8px 8px;
-
-  /* Added left padding */
 }
 
 .send-btn {
@@ -446,8 +433,6 @@
   color: var(--spectrum-gray-50);
   border: none;
   border-radius: 50%;
-
-  /* Circle shape since it's just an icon */
   width: 32px;
   height: 32px;
   padding: 0;
@@ -458,11 +443,11 @@
   font-family: var(--body-font-family);
   margin-left: 4px;
   margin-right: 4px;
-
-  /* Added right margin */
 }
 
-.send-btn:hover { background-color: var(--link-hover-color); }
+.send-btn:hover {
+  background-color: var(--link-hover-color);
+}
 
 /* --- 8. Loading Overlay --- */
 .loading-overlay {

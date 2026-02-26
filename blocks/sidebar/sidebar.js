@@ -282,7 +282,7 @@ function CategoryItem({
                   key=${item._id /* eslint-disable-line no-underscore-dangle */}
                   item=${item}
                   activeItem=${activeSubcategory}
-                  onItemClick=${(itemId, postId) => onSubcategoryClick(category.id, itemId, postId)}
+                  onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onAddSubfolder=${(parentId, name) => onAddFolder(category.name, parentId, name)}
                   onDelete=${(itemId) => onDeleteCategory(category.id, itemId)}
                   level=${0}
@@ -301,7 +301,9 @@ function CategoryItem({
 // ============================================
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(window.innerWidth >= 768);
+  // FIX: Use a lazy initializer so window is only accessed after mount,
+  // preventing crashes if the script loads before the window is ready.
+  const [isOpen, setIsOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -377,7 +379,7 @@ function Sidebar() {
     if (isCreating && inputRef.current) inputRef.current.focus();
   }, [isCreating]);
 
-  const handleSubcategoryClick = (categoryId, subcategoryId, postId) => {
+  const handleSubcategoryClick = (subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
 
     // eslint-disable-next-line no-console
@@ -413,7 +415,6 @@ function Sidebar() {
           category: categoryId,
           parentId: parentId || null,
           isFolder: true,
-          icon: '📁',
         }),
       });
       const data = await response.json();
@@ -453,10 +454,12 @@ function Sidebar() {
     const exists = categories.some((c) => c.name.toLowerCase() === trimmedName.toLowerCase());
     if (exists) { setCreationError('Category already exists'); return; }
     try {
-      const response = await fetch(`${API_BASE}/sidebar-items/smart-add`, {
+      const response = await fetch(`${API_BASE}/sidebar-items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Getting Started', category: trimmedName, postId: null }),
+        body: JSON.stringify({
+          title: trimmedName, category: trimmedName, isFolder: true, parentId: null,
+        }),
       });
       const data = await response.json();
       if (data.success) { await fetchCategories(); cancelCreating(); } else setCreationError(data.error || 'Failed to create category');
