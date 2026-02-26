@@ -272,21 +272,24 @@ const buildTree = (items) => {
   const itemMap = new Map();
   const rootItems = [];
 
+  // Pass 1: build map — convert every doc to a plain object with a
+  // normalised string _id, and coerce parentId to null if it is the
+  // string "null", empty, or undefined (guards against bad saves).
   items.forEach((item) => {
-    const itemObj = item.toObject ? item.toObject() : item;
+    const itemObj = item.toObject ? item.toObject() : { ...item };
+    itemObj._id = itemObj._id ? itemObj._id.toString() : String(itemObj._id);
+    const raw = itemObj.parentId;
+    itemObj.parentId = (raw && raw.toString() !== 'null' && raw.toString() !== '')
+      ? raw.toString()
+      : null;
     itemObj.children = [];
-    itemMap.set(itemObj._id.toString(), itemObj);
+    itemMap.set(itemObj._id, itemObj);
   });
 
-  items.forEach((item) => {
-    const itemObj = itemMap.get(item._id.toString());
-    if (item.parentId) {
-      const parent = itemMap.get(item.parentId.toString());
-      if (parent) {
-        parent.children.push(itemObj);
-      } else {
-        rootItems.push(itemObj);
-      }
+  // Pass 2: wire children to parents using the normalised map
+  itemMap.forEach((itemObj) => {
+    if (itemObj.parentId && itemMap.has(itemObj.parentId)) {
+      itemMap.get(itemObj.parentId).children.push(itemObj);
     } else {
       rootItems.push(itemObj);
     }
@@ -525,23 +528,26 @@ app.get('/api/sidebar/categories', async (req, res) => {
       .populate('postId', '_id title category tags') // OPTIMIZED
       .sort({ category: 1, order: 1, createdAt: 1 });
 
-    const categoryMap = new Map();
+    // Build the tree across ALL items together so parentId lookups
+    // work even when a child's .category field differs from its parent's
+    // (e.g. items created via smart-add with a sub-category name).
+    const fullTree = buildTree(items);
 
-    items.forEach((item) => {
-      const catName = item.category;
+    // Group only the ROOT nodes by their .category value
+    const categoryMap = new Map();
+    fullTree.forEach((rootNode) => {
+      const catName = rootNode.category;
       if (!categoryMap.has(catName)) categoryMap.set(catName, []);
-      if (!item.postId && !item.isFolder) console.warn(`Warning: Item "${item.title}" has no postId`);
-      categoryMap.get(catName).push(item);
+      categoryMap.get(catName).push(rootNode);
     });
 
     const categories = [];
-    categoryMap.forEach((categoryItems, categoryName) => {
-      const tree = buildTree(categoryItems);
+    categoryMap.forEach((rootItems, categoryName) => {
       categories.push({
         id: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         name: categoryName,
         icon: '',
-        items: tree,
+        items: rootItems,
       });
     });
 
