@@ -1434,7 +1434,7 @@ function InlinePreview({
               <span key=${tag} className="preview-tag">#${tag}</span>
             `)}
           </div>
-        </div>
+        `}
         <div className="preview-modal-footer">
           <button type="button" className="btn btn-cancel" onClick=${onBack}>
             Back to Edit
@@ -1526,7 +1526,7 @@ function CreatePost() {
     setShowPreview(true);
   };
 
-  const handlePost = async () => {
+    const handlePost = async () => {
     // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
@@ -1812,3 +1812,4 @@ export default function decorate(block) {
   const app = html`<${CreatePost} />`;
   render(app, block);
 }
+  
