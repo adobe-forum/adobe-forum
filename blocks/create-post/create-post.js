@@ -5,19 +5,19 @@ import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 
 const html = htm.bind(h);
 
-// Lazy-load category-explorer block via AEM infrastructure (once)
-let explorerReady = false;
+// Lazy-load folder block via AEM infrastructure (once)
+let folderReady = false;
 
-async function ensureCategoryExplorer() {
-  if (explorerReady) return;
+async function ensureFolder() {
+  if (folderReady) return;
   const wrapper = document.createElement('div');
   const block = document.createElement('div');
-  block.classList.add('category-explorer');
+  block.classList.add('folder');
   wrapper.appendChild(block);
   document.body.appendChild(wrapper);
   decorateBlock(block);
   await loadBlock(block);
-  explorerReady = true;
+  folderReady = true;
 }
 
 // DOM TO JSON CONVERTER
@@ -110,7 +110,7 @@ const BLOCK_FORMATS = {
 // RICH TEXT EDITOR COMPONENT
 // ============================================
 
-function RichTextEditor({ onChange, minChars = 20 }) {
+function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const activeCellRef = useRef(null);
@@ -1455,8 +1455,6 @@ function InlinePreview({
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
-  const [selectedCategoryNode, setSelectedCategoryNode] = useState(null);
-  const [pendingCategoryFolders, setPendingCategoryFolders] = useState([]);
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1487,7 +1485,6 @@ function CreatePost() {
       category,
       body: bodyJson,
       tags,
-      sidebarPath,
       created_at: new Date().toISOString(), // eslint-disable-line camelcase
     };
     /* eslint-disable no-console */
@@ -1496,22 +1493,20 @@ function CreatePost() {
     /* eslint-enable no-console */
   }, [title, category, bodyJson, tags]);
 
-  // Listen for category-explorer custom events
+  // Listen for folder selection via custom event (no page navigation needed)
   useEffect(() => {
-    const handleSelect = (e) => {
-      setCategory(e.detail.path);
-      setSelectedCategoryNode(e.detail.node);
-      setPendingCategoryFolders(e.detail.pendingFolders || []);
+    const onSelected = (e) => {
+      const { path, name } = e.detail || {};
+      setCategory(path || name || '');
     };
-    document.addEventListener('category-explorer:select', handleSelect);
-    return () => {
-      document.removeEventListener('category-explorer:select', handleSelect);
-    };
+    window.addEventListener('folder:selected', onSelected);
+    return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
-  const openCategoryExplorer = () => ensureCategoryExplorer().then(() => {
-    document.dispatchEvent(new CustomEvent('category-explorer:open'));
-  });
+  const openFolder = async () => {
+    await ensureFolder();
+    window.dispatchEvent(new CustomEvent('folder:open'));
+  };
 
   const missingFields = [];
   if (title.trim().length < 15) missingFields.push('Title (min 15 characters)');
@@ -1551,64 +1546,12 @@ function CreatePost() {
 
       if (response.ok) {
         const { post: createdPost } = result;
-        const node = selectedCategoryNode;
-        const isRoot = node && (node.isRoot || (node.name && !node.title));
-
-        // Create any temp folders sequentially (parent before child) before smart-add.
-        // Recursion avoids no-await-in-loop; each step depends on the previous real ID.
-        const createFoldersSeq = async (folders, idx, idMap) => {
-          if (idx >= folders.length) return idMap;
-          const folder = folders[idx];
-          let resolvedParentId = null;
-          if (folder.parentTempId) {
-            const isParentTemp = String(folder.parentTempId).startsWith('custom-');
-            resolvedParentId = isParentTemp
-              ? (idMap[folder.parentTempId] || null)
-              : folder.parentTempId;
-          }
-          try {
-            const res = await fetch('http://localhost:5000/api/sidebar-items', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: folder.title,
-                category: folder.category,
-                isFolder: true,
-                parentId: resolvedParentId,
-              }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.item && data.item._id) { // eslint-disable-line no-underscore-dangle
-                // eslint-disable-next-line no-underscore-dangle
-                const next = { ...idMap, [folder.tempId]: String(data.item._id) };
-                return createFoldersSeq(folders, idx + 1, next);
-              }
-            }
-          } catch (folderErr) { // eslint-disable-line no-unused-vars
-            /* folder creation failed; continue — post was already saved */
-          }
-          return createFoldersSeq(folders, idx + 1, idMap);
-        };
-
-        const idMap = await createFoldersSeq(pendingCategoryFolders, 0, {});
-
-        // Resolve the real parentId for smart-add (temp IDs → real MongoDB IDs)
-        let realParentId = null;
-        if (!isRoot && node) {
-          const nid = String(node.id || '');
-          realParentId = nid.startsWith('custom-') ? (idMap[nid] || null) : nid;
-        }
-
-        const catName = isRoot
-          ? node.name
-          : (node && node.category) || category.split(' / ')[0];
+        const catName = category.split(' > ')[0];
 
         const smartPayload = {
           title: title.trim(),
           category: catName,
           postId: createdPost._id, // eslint-disable-line no-underscore-dangle
-          ...(realParentId && { parentId: realParentId }),
         };
         try {
           await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
@@ -1688,31 +1631,31 @@ function CreatePost() {
                 Category<span className="required">*</span>
               </label>
               <p className="helper-text">Choose the most relevant category</p>
-              <div
-                className="category-selector"
-                onClick=${openCategoryExplorer}
-              >
-                <svg className="cp-category-icon" width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
-                  <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
-                </svg>
+              <div className="cp-category-field">
                 ${category ? html`
-                  <span className="category-selector-text">${category}</span>
-                  <button
-                    type="button"
-                    className="category-remove"
-                    onClick=${(e) => { e.stopPropagation(); setCategory(''); }}
-                    aria-label="Remove category"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                  <div className="cp-category-selected">
+                    <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0;color:#6b6b6b">
+                      <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                     </svg>
-                  </button>
-                ` : html`
-                  <span className="category-selector-placeholder">Select a category</span>
-                  <svg className="cp-category-chevron" width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <path d="M4 7l5 5 5-5"/>
+                    <span className="cp-category-value">${category}</span>
+                    <button
+                      type="button"
+                      className="cp-category-clear"
+                      onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); setCategory(''); }}
+                      aria-label="Clear category"
+                    >×</button>
+                  </div>
+                ` : ''}
+                <button
+                  type="button"
+                  className="cp-folder-btn"
+                  onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); openFolder(); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
+                    <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                   </svg>
-                `}
+                  ${category ? 'Change Folder' : 'Browse Folders'}
+                </button>
               </div>
             </div>
           </div>
@@ -1791,4 +1734,3 @@ export default function decorate(block) {
   const app = html`<${CreatePost} />`;
   render(app, block);
 }
-  
