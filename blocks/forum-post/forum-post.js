@@ -14,17 +14,17 @@ const BackIcon = () => html`
   </svg>
 `;
 
-const ForumPost = () => {
+const ForumPost = ({ blockEl }) => {
   const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
   useEffect(() => {
-    if (commentsListRef.current) {
+    if (commentsListRef.current && post) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
-  }, [post ? post.comments : null]);
+  }, [post?.comments]);
 
   // Transform raw <pre> tags into the locked two-column Flexbox layout
   useEffect(() => {
@@ -32,16 +32,12 @@ const ForumPost = () => {
 
     const preTags = document.querySelectorAll('.post-body-raw pre');
     preTags.forEach((pre) => {
-      // Prevent double processing if the component re-renders
       if (pre.classList.contains('formatted-code-block')) return;
 
       const codeText = pre.textContent;
       const lines = codeText.split('\n');
-
-      // Remove trailing empty line if it exists
       if (lines[lines.length - 1] === '') lines.pop();
 
-      // Column 1: The Gutter
       const gutter = document.createElement('div');
       gutter.className = 'code-gutter';
       lines.forEach((_, i) => {
@@ -50,12 +46,10 @@ const ForumPost = () => {
         gutter.appendChild(span);
       });
 
-      // Column 2: The Code Content
       const content = document.createElement('div');
       content.className = 'code-content';
       content.textContent = codeText;
 
-      // Clear the original <pre> and inject the new columns
       pre.innerHTML = '';
       pre.classList.add('formatted-code-block');
       pre.appendChild(gutter);
@@ -70,6 +64,12 @@ const ForumPost = () => {
       if (!postId) return;
 
       setLoading(true);
+
+      // Show this block, hide cards
+      if (blockEl) blockEl.style.display = 'block';
+      const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
+      cardsWrappers.forEach((el) => { el.style.display = 'none'; });
+
       try {
         const url = `http://localhost:5000/api/posts/${postId}`;
         const response = await fetch(url);
@@ -98,17 +98,27 @@ const ForumPost = () => {
       }
     };
 
+    // Listen for back-to-cards event
+    const handleShowCards = () => {
+      setPost(null);
+      if (blockEl) blockEl.style.display = 'none';
+      const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
+      cardsWrappers.forEach((el) => { el.style.display = ''; });
+    };
+
     window.addEventListener('load-forum-post', handleLoadPost);
+    window.addEventListener('show-cards', handleShowCards);
     return () => {
       window.removeEventListener('load-forum-post', handleLoadPost);
+      window.removeEventListener('show-cards', handleShowCards);
     };
-  }, []);
+  }, [blockEl]);
 
   if (!post) {
     return html`
       <div class="forum-post-wrapper">
         <div class="loading-state">
-          ${loading ? 'Loading post...' : 'Select a post from the sidebar to view it.'}
+          ${loading ? 'Loading post...' : ''}
         </div>
       </div>
     `;
@@ -197,6 +207,8 @@ const ForumPost = () => {
 };
 
 export default function decorate(block) {
+  // Hide the block initially — it only shows when a post is loaded
+  block.style.display = 'none';
   block.innerHTML = '';
-  render(html`<${ForumPost} />`, block);
+  render(html`<${ForumPost} blockEl=${block} />`, block);
 }

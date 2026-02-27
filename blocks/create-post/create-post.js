@@ -5,19 +5,19 @@ import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 
 const html = htm.bind(h);
 
-// Lazy-load category-explorer block via AEM infrastructure (once)
-let explorerReady = false;
+// Lazy-load folder block via AEM infrastructure (once)
+let folderReady = false;
 
-async function ensureCategoryExplorer() {
-  if (explorerReady) return;
+async function ensureFolder() {
+  if (folderReady) return;
   const wrapper = document.createElement('div');
   const block = document.createElement('div');
-  block.classList.add('category-explorer');
+  block.classList.add('folder');
   wrapper.appendChild(block);
   document.body.appendChild(wrapper);
   decorateBlock(block);
   await loadBlock(block);
-  explorerReady = true;
+  folderReady = true;
 }
 
 // DOM TO JSON CONVERTER
@@ -105,6 +105,8 @@ const BLOCK_FORMATS = {
 };
 
 // RICH TEXT EDITOR COMPONENT
+// ============================================
+
 function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -1333,6 +1335,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && inputValue.trim()) {
       e.preventDefault();
+      e.stopPropagation();
       addTag(inputValue.trim().replace(/\s+/g, '-'));
     } else if (e.key === ' ' && !inputValue.trim()) {
       e.preventDefault();
@@ -1408,50 +1411,71 @@ function InlinePreview({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (!bodyRef.current) return;
+    // Add line numbers to code blocks
     bodyRef.current.querySelectorAll('pre').forEach((pre) => {
-      const lineArr = pre.textContent.split('\n');
-      if (lineArr[lineArr.length - 1] === '') lineArr.pop();
-      const lineCount = lineArr.length || 1;
-      const nums = Array.from(
-        { length: lineCount },
-        (_, i) => i + 1,
-      ).join('\\a ');
-      pre.style.setProperty('--line-nums', `"${nums}"`);
+      if (pre.classList.contains('formatted-code-block')) return;
+      const codeText = pre.textContent;
+      const lines = codeText.split('\n');
+      if (lines[lines.length - 1] === '') lines.pop();
+      const gutter = document.createElement('div');
+      gutter.className = 'code-gutter';
+      lines.forEach((_, i) => {
+        const span = document.createElement('span');
+        span.textContent = i + 1;
+        gutter.appendChild(span);
+      });
+      const codeContent = document.createElement('div');
+      codeContent.className = 'code-content';
+      codeContent.textContent = codeText;
+      pre.innerHTML = '';
+      pre.classList.add('formatted-code-block');
+      pre.appendChild(gutter);
+      pre.appendChild(codeContent);
     });
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [body]);
 
   return html`
     <div className="preview-inline">
-      <h1 className="preview-heading">Preview your page before posting</h1>
-      <div className="preview-post">
+
+      <div className="preview-forum-post">
+
+        <div className="preview-action-bar">
+          <button type="button" className="preview-back-btn" onClick=${onBack}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Back to Edit
+          </button>
+          <button type="button" className="btn btn-submit btn-ready preview-post-btn" onClick=${onPost}>
+            Post
+          </button>
+        </div>
+
         ${tags.length > 0 && html`
-          <div className="preview-tags">
+          <div className="tags-row">
             ${tags.map((tag) => html`
-              <span key=${tag} className="preview-tag">#${tag}</span>
+              <span key=${tag} className="tag-pill">${tag.startsWith('#') ? tag : `#${tag}`}</span>
             `)}
           </div>
         `}
-        <h1 className="preview-title">${title}</h1>
-        <div className="preview-meta">
-          <span className="preview-author">You</span>
-          ${category && html`
-            <span className="preview-meta-sep">\u00B7</span>
-            <span className="preview-category">${category}</span>
-          `}
+
+        <h1 className="post-title">${title}</h1>
+
+        <div className="post-meta">
+          <span className="author-name">You</span>
+          <span className="meta-separator">•</span>
+          <span className="topic-name">${category}</span>
         </div>
+
         <div
+          className="post-body-raw"
           ref=${bodyRef}
-          className="preview-body-content"
           dangerouslySetInnerHTML=${{ __html: body }}
         />
-      </div>
-      <div className="preview-inline-footer">
-        <button type="button" className="btn btn-cancel" onClick=${onBack}>
-          Back to Edit
-        </button>
-        <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
-          Post
-        </button>
+
       </div>
     </div>
   `;
@@ -1461,8 +1485,6 @@ function InlinePreview({
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
-  const [selectedCategoryNode, setSelectedCategoryNode] = useState(null);
-  const [pendingCategoryFolders, setPendingCategoryFolders] = useState([]);
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1493,6 +1515,7 @@ function CreatePost() {
       category,
       body: bodyJson,
       tags,
+      created_at: new Date().toISOString(), // eslint-disable-line camelcase
     };
     /* eslint-disable no-console */
     console.clear();
@@ -1500,25 +1523,23 @@ function CreatePost() {
     /* eslint-enable no-console */
   }, [title, category, bodyJson, tags]);
 
-  // Listen for category-explorer custom events
+  // Listen for folder selection via custom event (no page navigation needed)
   useEffect(() => {
-    const handleSelect = (e) => {
-      setCategory(e.detail.path);
-      setSelectedCategoryNode(e.detail.node);
-      setPendingCategoryFolders(e.detail.pendingFolders || []);
+    const onSelected = (e) => {
+      const { path, name } = e.detail || {};
+      setCategory(path || name || '');
     };
-    document.addEventListener('category-explorer:select', handleSelect);
-    return () => {
-      document.removeEventListener('category-explorer:select', handleSelect);
-    };
+    window.addEventListener('folder:selected', onSelected);
+    return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
-  const openCategoryExplorer = () => ensureCategoryExplorer().then(() => {
-    document.dispatchEvent(new CustomEvent('category-explorer:open'));
-  });
+  const openFolder = async () => {
+    await ensureFolder();
+    window.dispatchEvent(new CustomEvent('folder:open'));
+  };
 
   const missingFields = [];
-  if (title.trim().length < 15) missingFields.push('Title (min 15 characters)');
+  if (title.trim().length > 150) missingFields.push('Title (max 150 characters)');
   if (!category) missingFields.push('Category');
   if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
   if (tags.length === 0) missingFields.push('Tags (at least 1)');
@@ -1555,64 +1576,12 @@ function CreatePost() {
 
       if (response.ok) {
         const { post: createdPost } = result;
-        const node = selectedCategoryNode;
-        const isRoot = node && (node.isRoot || (node.name && !node.title));
-
-        // Create any temp folders sequentially (parent before child) before smart-add.
-        // Recursion avoids no-await-in-loop; each step depends on the previous real ID.
-        const createFoldersSeq = async (folders, idx, idMap) => {
-          if (idx >= folders.length) return idMap;
-          const folder = folders[idx];
-          let resolvedParentId = null;
-          if (folder.parentTempId) {
-            const isParentTemp = String(folder.parentTempId).startsWith('custom-');
-            resolvedParentId = isParentTemp
-              ? (idMap[folder.parentTempId] || null)
-              : folder.parentTempId;
-          }
-          try {
-            const res = await fetch('http://localhost:5000/api/sidebar-items', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: folder.title,
-                category: folder.category,
-                isFolder: true,
-                parentId: resolvedParentId,
-              }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.item && data.item._id) { // eslint-disable-line no-underscore-dangle
-                // eslint-disable-next-line no-underscore-dangle
-                const next = { ...idMap, [folder.tempId]: String(data.item._id) };
-                return createFoldersSeq(folders, idx + 1, next);
-              }
-            }
-          } catch (folderErr) { // eslint-disable-line no-unused-vars
-            /* folder creation failed; continue — post was already saved */
-          }
-          return createFoldersSeq(folders, idx + 1, idMap);
-        };
-
-        const idMap = await createFoldersSeq(pendingCategoryFolders, 0, {});
-
-        // Resolve the real parentId for smart-add (temp IDs → real MongoDB IDs)
-        let realParentId = null;
-        if (!isRoot && node) {
-          const nid = String(node.id || '');
-          realParentId = nid.startsWith('custom-') ? (idMap[nid] || null) : nid;
-        }
-
-        const catName = isRoot
-          ? node.name
-          : (node && node.category) || category.split(' / ')[0];
+        const catName = category.split(' > ')[0];
 
         const smartPayload = {
           title: title.trim(),
           category: catName,
           postId: createdPost._id, // eslint-disable-line no-underscore-dangle
-          ...(realParentId && { parentId: realParentId }),
         };
         try {
           await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
@@ -1654,7 +1623,6 @@ function CreatePost() {
           <div className="cp-header-content">
             <h1 className="cp-page-title">Post your thoughts</h1>
             <p className="cp-page-subtitle">Ask a question and get helpful answers from the community!</p>
-            <div className="cp-header-divider"></div>
           </div>
           <div className="cp-required-badge">
             <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
@@ -1666,78 +1634,63 @@ function CreatePost() {
 
         <form onSubmit=${handleSubmit}>
           <div className="cp-form-section">
-            <div className="cp-section-icon">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path d="M16.12 2.59a2 2 0 0 0-2.83 0L3 12.88V16h3.12L16.4 5.72a2 2 0 0 0-.28-3.13zM5.5 14.5H4.5v-1l7.88-7.88 1 1L5.5 14.5zm9.35-9.35-.65.65-1-1 .65-.65a.5.5 0 0 1 .71 0l.29.29a.5.5 0 0 1 0 .71z"/>
-              </svg>
-            </div>
             <div className="form-group">
               <label>
                 Title<span className="required">*</span>
               </label>
-              <p className="helper-text">Craft a clear, specific question (min. 15 characters)</p>
+              <p className="helper-text">Craft a clear, specific question (max. 150 characters)</p>
               <div className="cp-input-wrapper">
                 <input
                   type="text"
                   value=${title}
                   onInput=${(e) => setTitle(e.target.value)}
-                  placeholder="What would you like to ask?"
+                  placeholder="What would you like to ask?" maxLength=${150}
                 />
               </div>
-              ${title.trim().length < 15 && title.trim().length > 0 && html`
-                <div className="char-counter warning">
-                  ${title.trim().length} / 15 minimum
+              ${title.trim().length > 0 && html`
+                <div className=${title.trim().length > 150 ? 'char-counter warning' : 'char-counter'}>
+                  ${title.trim().length} / 150
                 </div>
               `}
             </div>
           </div>
 
           <div className="cp-form-section">
-            <div className="cp-section-icon">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path d="M9 1 .5 5.5l8.5 4.5 8.5-4.5L9 1zM.5 13l8.5 4.5L17.5 13l-1.3-.7L9 16.2l-7.2-3.9L.5 13zm0-3.5 8.5 4.5 8.5-4.5-1.3-.7L9 12.7 1.8 8.8.5 9.5z"/>
-              </svg>
-            </div>
             <div className="form-group">
               <label>
                 Category<span className="required">*</span>
               </label>
               <p className="helper-text">Choose the most relevant category</p>
-              <div
-                className="category-selector"
-                onClick=${openCategoryExplorer}
-              >
-                <svg className="cp-category-icon" width="16" height="16" viewBox="0 0 18 18" fill="currentColor">
-                  <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
-                </svg>
+              <div className="cp-category-field">
                 ${category ? html`
-                  <span className="category-selector-text">${category}</span>
-                  <button
-                    type="button"
-                    className="category-remove"
-                    onClick=${(e) => { e.stopPropagation(); setCategory(''); }}
-                    aria-label="Remove category"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                  <div className="cp-category-selected">
+                    <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0;color:#6b6b6b">
+                      <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                     </svg>
-                  </button>
-                ` : html`
-                  <span className="category-selector-placeholder">Select a category</span>
-                  <svg className="cp-category-chevron" width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <path d="M4 7l5 5 5-5"/>
+                    <span className="cp-category-value">${category}</span>
+                    <button
+                      type="button"
+                      className="cp-category-clear"
+                      onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); setCategory(''); }}
+                      aria-label="Clear category"
+                    >×</button>
+                  </div>
+                ` : ''}
+                <button
+                  type="button"
+                  className="cp-folder-btn"
+                  onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); openFolder(); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
+                    <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                   </svg>
-                `}
+                  ${category ? 'Change Folder' : 'Browse Folders'}
+                </button>
               </div>
             </div>
           </div>
 
           <div className="cp-form-section">
-            <div className="cp-section-icon">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path d="M14 1H6L3 4v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 2.5V4H4.5L6 2.5zM13 15H5v-1h8v1zm0-3H5v-1h8v1zm0-3H5V8h8v1zm0-3H8V5h5v1z"/>
-              </svg>
-            </div>
             <div className="form-group">
               <label>
                 Body<span className="required">*</span>
@@ -1752,11 +1705,6 @@ function CreatePost() {
           </div>
 
           <div className="cp-form-section">
-            <div className="cp-section-icon">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path d="M16.56 8.94 10.06 2.5H3v7.06l6.44 6.5a1.5 1.5 0 0 0 2.12 0l5-5a1.5 1.5 0 0 0 0-2.12zM5.5 7A1.5 1.5 0 1 1 7 5.5 1.5 1.5 0 0 1 5.5 7z"/>
-              </svg>
-            </div>
             <div className="form-group">
               <label>
                 Tags<span className="required">*</span>
