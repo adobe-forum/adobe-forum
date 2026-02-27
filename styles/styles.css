@@ -96,12 +96,11 @@ body {
   background-color: var(--background-color);
   color: var(--text-color);
   min-height: 100vh;
-  
+
   /* --- FIX APPLIED HERE --- */
   width: 100%;
   overflow-x: hidden;        /* FIX: belt-and-suspenders at body level too */
   display: grid;
-  
   grid-template: 
       "header" var(--header-height) 
       "content" 1fr 

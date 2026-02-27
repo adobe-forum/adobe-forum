@@ -180,7 +180,6 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: break-word;
-    word-break: break-word;
     min-height: 2.6em; 
   }
   
@@ -196,6 +195,7 @@
   }
   
   /* Adobe Spectrum Avatar - Strict Spec (Size 200 equivalent) */
+  /* stylelint-disable-next-line selector-class-pattern */
   .spectrum-Avatar {
     display: inline-flex;
     align-items: center;
@@ -209,8 +209,9 @@
     user-select: none;
   }
   
+  /* stylelint-disable-next-line selector-class-pattern */
   .spectrum-Avatar-initials {
-    color: #ffffff;
+    color: #fff;
     font-family: var(--body-font-family);
     font-size: 12px;
     font-weight: 700;
@@ -252,7 +253,6 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: break-word;
-    word-break: break-word;
   }
   
   /* Hover Arrow Fix */
