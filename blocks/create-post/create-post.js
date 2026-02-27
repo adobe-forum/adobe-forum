@@ -1458,7 +1458,7 @@ function InlinePreview({
         ${tags.length > 0 && html`
           <div className="tags-row">
             ${tags.map((tag) => html`
-              <span key=${tag} className="tag-pill">${tag.startsWith('#') ? tag : '#' + tag}</span>
+              <span key=${tag} className="tag-pill">${tag.startsWith('#') ? tag : `#${tag}`}</span>
             `)}
           </div>
         `}

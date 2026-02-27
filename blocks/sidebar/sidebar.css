@@ -533,7 +533,6 @@
      ============================================= */
   
   @media (width >=768px) {
-  
     main,
     .content-wrapper {
       transition: margin-left var(--sidebar-transition);
