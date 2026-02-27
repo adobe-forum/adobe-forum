@@ -412,13 +412,6 @@ function SignupPanel({ active }) {
       <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
         Create account
       <//>
-
-      <p class="auth-form-legal">
-        By creating an account you agree to Adobe's${' '}
-        <a href="#" target="_blank" rel="noopener">Terms of Use</a>
-        ${' '}and${' '}
-        <a href="#" target="_blank" rel="noopener">Privacy Policy</a>.
-      </p>
     </div>`;
 }
 
