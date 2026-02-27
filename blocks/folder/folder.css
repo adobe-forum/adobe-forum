@@ -603,6 +603,33 @@
   padding: 4px 2px;
 }
 
+/* ── Three-dot button on tiles ───────────────────────────────────────────────── */
+.fm-tile-dots {
+  all: unset;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  color: #aaa;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+
+  &:hover {
+    background: #e4e4e4;
+    color: #333;
+  }
+
+  &:active {
+    background: #d8d8d8;
+  }
+}
+
 .fm-tile {
   display: flex;
   flex-direction: row;
@@ -829,32 +856,5 @@
 
   &:hover {
     opacity: 1;
-  }
-}
-
-/* ── Three-dot button on tiles ───────────────────────────────────────────────── */
-.fm-tile-dots {
-  all: unset;
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  color: #aaa;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s, background 0.12s, color 0.12s;
-
-  &:hover {
-    background: #e4e4e4;
-    color: #333;
-  }
-
-  &:active {
-    background: #d8d8d8;
   }
 }
