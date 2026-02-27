@@ -20,11 +20,12 @@ const ForumPost = () => {
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
+  // Auto-scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
-  }, [post ? post.comments : null]);
+  }, [post.comments]);
 
   // Transform raw <pre> tags into the locked two-column Flexbox layout
   useEffect(() => {
@@ -82,7 +83,7 @@ const ForumPost = () => {
               id: fetchedPost._id, // eslint-disable-line no-underscore-dangle
               title: fetchedPost.title,
               topic: fetchedPost.category,
-              author: 'User',
+              author: 'User', // Default author since it's not in the schema
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
               comments: [],
@@ -117,6 +118,7 @@ const ForumPost = () => {
   const addComment = () => {
     if (!inputValue.trim()) return;
     const newComment = { user: 'You', text: inputValue };
+
     setPost({
       ...post,
       comments: [...post.comments, newComment],
@@ -191,6 +193,7 @@ const ForumPost = () => {
             </button>
           </div>
         </div>
+        
       </div>
     </div>
   `;
