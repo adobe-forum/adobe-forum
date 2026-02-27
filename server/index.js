@@ -89,8 +89,11 @@ app.post('/api/posts', async (req, res) => {
   try {
     const { title, category, body, tags } = req.body;
 
-    if (!title || title.length < 15)
-      return res.status(400).json({ error: 'Title too short' });
+    if (!title || !title.trim())
+      return res.status(400).json({ error: 'Title is required' });
+
+    if (title.length > 150)
+      return res.status(400).json({ error: 'Title too long' });
 
     if (!category || !Array.isArray(tags) || !tags.length)
       return res.status(400).json({ error: 'Invalid payload' });
@@ -214,6 +217,70 @@ app.post('/api/sidebar-items', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Sidebar item creation failed' });
+  }
+});
+
+
+/* -------------------- SIDEBAR — SMART ADD -------------------- */
+
+/**
+ * POST /api/sidebar-items/smart-add
+ * Called after a post is created. Ensures the category anchor exists,
+ * then creates a leaf SidebarItem linking the post into the sidebar.
+ */
+app.post('/api/sidebar-items/smart-add', async (req, res) => {
+  try {
+    const { title, category, postId } = req.body;
+
+    if (!title || !category || !postId)
+      return res.status(400).json({ error: 'Invalid payload' });
+
+    const categoryName = category.trim();
+
+    // Ensure the root category anchor exists
+    const anchorExists = await SidebarItem.findOne({
+      category: categoryName,
+      parentId: null,
+      isFolder: true,
+      title: categoryName,
+    });
+
+    if (!anchorExists) {
+      const anchorOrder = await SidebarItem.countDocuments({ parentId: null });
+      await SidebarItem.create({
+        title: categoryName,
+        category: categoryName,
+        parentId: null,
+        postId: null,
+        isFolder: true,
+        order: anchorOrder,
+      });
+    }
+
+    // Avoid duplicate post links
+    const existing = await SidebarItem.findOne({
+      postId: new mongoose.Types.ObjectId(postId),
+      category: categoryName,
+    });
+    if (existing) {
+      return res.status(200).json({ success: true, item: existing, duplicate: true });
+    }
+
+    // Create the leaf item at root level of category
+    const order = await SidebarItem.countDocuments({ parentId: null, category: categoryName });
+    const item = await SidebarItem.create({
+      title: title.trim(),
+      category: categoryName,
+      parentId: null,
+      postId: new mongoose.Types.ObjectId(postId),
+      isFolder: false,
+      order,
+    });
+
+    return res.status(201).json({ success: true, item });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Smart-add failed' });
   }
 });
 
@@ -388,7 +455,7 @@ app.patch('/api/sidebar-items/:id', async (req, res) => {
  */
 app.delete('/api/sidebar-items/:id', async (req, res) => {
   try {
-    const ids = await SidebarItem.aggregate([
+    const result = await SidebarItem.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
       {
         $graphLookup: {
@@ -401,15 +468,35 @@ app.delete('/api/sidebar-items/:id', async (req, res) => {
       },
       {
         $project: {
-          // Merge the root item's _id with all descendant _ids into one array
           ids: { $concatArrays: [['$_id'], '$descendants._id'] },
+          // Collect all postIds from root + descendants (filter out nulls)
+          postIds: {
+            $filter: {
+              input: { $concatArrays: [
+                [{ $ifNull: ['$postId', null] }],
+                '$descendants.postId',
+              ]},
+              as: 'pid',
+              cond: { $ne: ['$$pid', null] },
+            },
+          },
         },
       },
     ]);
 
-    await SidebarItem.deleteMany({ _id: { $in: ids[0].ids } });
+    if (!result.length) return res.status(404).json({ error: 'Item not found' });
 
-    res.json({ success: true });
+    const { ids, postIds } = result[0];
+
+    // Delete all sidebar items in the subtree
+    await SidebarItem.deleteMany({ _id: { $in: ids } });
+
+    // Delete all linked posts
+    if (postIds && postIds.length > 0) {
+      await Post.deleteMany({ _id: { $in: postIds } });
+    }
+
+    res.json({ success: true, deletedPosts: postIds?.length || 0 });
 
   } catch (err) {
     console.error(err);

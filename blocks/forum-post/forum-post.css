@@ -108,6 +108,8 @@
   color: var(--text-color);
   line-height: 1.1;
   font-family: var(--heading-font-family);
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .post-meta {
@@ -134,6 +136,8 @@
   color: var(--text-color);
   margin-bottom: 40px;
   line-height: 1.7;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .post-body-raw p {

@@ -1338,6 +1338,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && inputValue.trim()) {
       e.preventDefault();
+      e.stopPropagation();
       addTag(inputValue.trim().replace(/\s+/g, '-'));
     } else if (e.key === ' ' && !inputValue.trim()) {
       e.preventDefault();
@@ -1405,44 +1406,77 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
 // INLINE PREVIEW
 function InlinePreview({
-  body, tags, onBack, onPost,
+  title, category, body, tags, onBack, onPost,
 }) {
   const bodyRef = useRef(null);
 
-  // Scroll to top and add line numbers to code blocks on mount
   useEffect(() => {
     if (!bodyRef.current) return;
+    // Add line numbers to code blocks
     bodyRef.current.querySelectorAll('pre').forEach((pre) => {
-      const lineArr = pre.textContent.split('\n');
-      if (lineArr[lineArr.length - 1] === '') lineArr.pop();
-      const lineCount = lineArr.length || 1;
-      const nums = Array.from(
-        { length: lineCount },
-        (_, i) => i + 1,
-      ).join('\\a ');
-      pre.style.setProperty('--line-nums', `"${nums}"`);
+      if (pre.classList.contains('formatted-code-block')) return;
+      const codeText = pre.textContent;
+      const lines = codeText.split('\n');
+      if (lines[lines.length - 1] === '') lines.pop();
+      const gutter = document.createElement('div');
+      gutter.className = 'code-gutter';
+      lines.forEach((_, i) => {
+        const span = document.createElement('span');
+        span.textContent = i + 1;
+        gutter.appendChild(span);
+      });
+      const codeContent = document.createElement('div');
+      codeContent.className = 'code-content';
+      codeContent.textContent = codeText;
+      pre.innerHTML = '';
+      pre.classList.add('formatted-code-block');
+      pre.appendChild(gutter);
+      pre.appendChild(codeContent);
     });
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [body]);
 
   return html`
     <div className="preview-inline">
-      <h1 className="preview-heading">Preview your page before posting</h1>
-      <div className="preview-post">
-        ${tags.length > 0 && html`
-          <div className="preview-tags">
-            ${tags.map((tag) => html`
-              <span key=${tag} className="preview-tag">#${tag}</span>
-            `)}
-          </div>
-        `}
-        <div className="preview-modal-footer">
-          <button type="button" className="btn btn-cancel" onClick=${onBack}>
+
+      <div className="preview-forum-post">
+
+        <div className="preview-action-bar">
+          <button type="button" className="preview-back-btn" onClick=${onBack}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
             Back to Edit
           </button>
-          <button type="button" className="btn btn-submit btn-ready" onClick=${onPost}>
+          <button type="button" className="btn btn-submit btn-ready preview-post-btn" onClick=${onPost}>
             Post
           </button>
         </div>
+
+        ${tags.length > 0 && html`
+          <div className="tags-row">
+            ${tags.map((tag) => html`
+              <span key=${tag} className="tag-pill">${tag.startsWith('#') ? tag : '#' + tag}</span>
+            `)}
+          </div>
+        `}
+
+        <h1 className="post-title">${title}</h1>
+
+        <div className="post-meta">
+          <span className="author-name">You</span>
+          <span className="meta-separator">•</span>
+          <span className="topic-name">${category}</span>
+        </div>
+
+        <div
+          className="post-body-raw"
+          ref=${bodyRef}
+          dangerouslySetInnerHTML=${{ __html: body }}
+        />
+
       </div>
     </div>
   `;
@@ -1509,7 +1543,7 @@ function CreatePost() {
   };
 
   const missingFields = [];
-  if (title.trim().length < 15) missingFields.push('Title (min 15 characters)');
+  if (title.trim().length > 150) missingFields.push('Title (max 150 characters)');
   if (!category) missingFields.push('Category');
   if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
   if (tags.length === 0) missingFields.push('Tags (at least 1)');
@@ -1608,18 +1642,18 @@ function CreatePost() {
               <label>
                 Title<span className="required">*</span>
               </label>
-              <p className="helper-text">Craft a clear, specific question (min. 15 characters)</p>
+              <p className="helper-text">Craft a clear, specific question (max. 150 characters)</p>
               <div className="cp-input-wrapper">
                 <input
                   type="text"
                   value=${title}
                   onInput=${(e) => setTitle(e.target.value)}
-                  placeholder="What would you like to ask?"
+                  placeholder="What would you like to ask?" maxLength=${150}
                 />
               </div>
-              ${title.trim().length < 15 && title.trim().length > 0 && html`
-                <div className="char-counter warning">
-                  ${title.trim().length} / 15 minimum
+              ${title.trim().length > 0 && html`
+                <div className=${title.trim().length > 150 ? 'char-counter warning' : 'char-counter'}>
+                  ${title.trim().length} / 150
                 </div>
               `}
             </div>
