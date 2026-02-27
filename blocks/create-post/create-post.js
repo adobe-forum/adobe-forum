@@ -1489,6 +1489,7 @@ function InlinePreview({
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
+  const [folderId, setFolderId] = useState(null);
   const [body, setBody] = useState('');
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
@@ -1530,8 +1531,10 @@ function CreatePost() {
   // Listen for folder selection via custom event (no page navigation needed)
   useEffect(() => {
     const onSelected = (e) => {
-      const { path, name } = e.detail || {};
+      const { path, name, folderId: fi } = e.detail || {};
       setCategory(path || name || '');
+      // fi is the MongoDB ObjectId of the selected subfolder, or null for a root category
+      setFolderId(fi || null);
     };
     window.addEventListener('folder:selected', onSelected);
     return () => window.removeEventListener('folder:selected', onSelected);
@@ -1586,6 +1589,7 @@ function CreatePost() {
           title: title.trim(),
           category: catName,
           postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+          parentId: folderId || null, // place inside the selected subfolder
         };
         try {
           await fetch('http://localhost:5000/api/sidebar-items/smart-add', {

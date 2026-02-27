@@ -14,7 +14,9 @@ function normalizeItems(items) {
       ...item,
       // eslint-disable-next-line no-underscore-dangle
       id: String(item._id || item.id || ''),
-      isFolder: item.isFolder || children.length > 0,
+      // Trust the server's isFolder field — do NOT upgrade files to folders
+      // just because they happen to have children in a corrupt-data edge case
+      isFolder: Boolean(item.isFolder),
       children,
     };
   });
@@ -170,7 +172,7 @@ function TreeItem({
   const isFolder = item.isFolder || hasChildren;
   const itemId = item.id;
   // Cap indentation at 80px so deeply-nested labels always stay visible
-  const paddingLeft = Math.min(12 + level * 20, 80);
+  const paddingLeft = Math.min(12 + level * 20, 100);
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
@@ -205,13 +207,13 @@ function TreeItem({
         title=${item.title}>
         <span class="tree-chevron">
           ${isFolder
-    ? html`<${ChevronIcon} expanded=${isExpanded} />`
-    : html`<span class="tree-chevron-spacer"/>`}
+      ? html`<${ChevronIcon} expanded=${isExpanded} />`
+      : html`<span class="tree-chevron-spacer"/>`}
         </span>
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
-    ? html`<${FolderIcon} expanded=${isExpanded} />`
-    : html`<${FileIcon} />`}
+      ? html`<${FolderIcon} expanded=${isExpanded} />`
+      : html`<${FileIcon} />`}
         </span>
         <span class="tree-label">${item.title}</span>
         ${isHovered && html`
@@ -229,13 +231,13 @@ function TreeItem({
           </span>
         `}
       </div>
-      ${(isExpanded || isAddingChild) && html`
+      ${isExpanded && html`
         <ul class="tree-children">
           ${isAddingChild && html`
             <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
               onConfirm=${(name) => { onAddSubfolder(itemId, name); setIsAddingChild(false); }}
               onCancel=${() => setIsAddingChild(false)} />`
-}
+      }
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               onItemClick=${onItemClick} onAddSubfolder=${onAddSubfolder}
@@ -267,6 +269,7 @@ function CategoryItem({
 
   const handleDeleteCategory = (e) => {
     e.stopPropagation();
+    // isItemDelete defaults to false — this deletes the whole category
     onDeleteCategory(category.id, category.name);
   };
 
@@ -296,17 +299,17 @@ function CategoryItem({
             <${InlineInput} placeholder="Folder name…" paddingLeft=${24}
               onConfirm=${(name) => { onAddFolder(category.name, null, name); setIsAddingFolder(false); }}
               onCancel=${() => setIsAddingFolder(false)} />`
-}
+      }
           ${hasItems
-    ? category.items.map((item) => html`
+        ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onAddSubfolder=${(parentId, name) => onAddFolder(category.name, parentId, name)}
-                  onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle)}
+                  onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
                   level=${0} />
               `)
-    : !isAddingFolder && html`<div class="no-items">No items yet</div>`
-}
+        : !isAddingFolder && html`<div class="no-items">No items yet</div>`
+      }
         </ul>
       `}
     </li>
@@ -429,12 +432,11 @@ function Sidebar() {
     }
   };
 
-  const handleDelete = (categoryId, itemIdOrName, itemTitle) => {
-    const isItemDelete = itemTitle !== undefined;
+  const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
     setDeleteDialog({
       categoryId,
-      itemId: isItemDelete ? itemIdOrName : null,
-      name: isItemDelete ? itemTitle : itemIdOrName,
+      itemId: isItemDelete ? itemId : null,
+      name: isItemDelete ? itemTitle : itemId, // when !isItemDelete, itemId arg holds the category name
     });
   };
 
@@ -484,8 +486,9 @@ function Sidebar() {
     const matches = item.title.toLowerCase().includes(term);
     const filteredChildren = item.children ? filterItems(item.children, term) : [];
     if (matches || filteredChildren.length > 0) {
-      const mergedChildren = filteredChildren.length > 0 ? filteredChildren : item.children;
-      acc.push({ ...item, children: mergedChildren });
+      // Always use filteredChildren — never fall back to the raw children list,
+      // which would show unrelated items when only the parent name matches
+      acc.push({ ...item, children: filteredChildren });
     }
     return acc;
   }, []);
@@ -540,7 +543,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
+        ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -550,8 +553,8 @@ function Sidebar() {
                     onDeleteCategory=${handleDelete}
                   />
                 `)
-    : html`<div class="no-results">No categories found</div>`
-}
+        : html`<div class="no-results">No categories found</div>`
+      }
           </ul>
         `}
       </div>

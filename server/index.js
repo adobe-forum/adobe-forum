@@ -28,11 +28,11 @@ app.use(express.json({ limit: '5mb' }));
 mongoose.connect(process.env.MONGODB_URI, {
   serverSelectionTimeoutMS: 15000,
 })
-.then(() => console.log('MongoDB connected'))
-.catch(err => {
-  console.error('MongoDB connection failed:', err.message);
-  process.exit(1);
-});
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
 
 /* -------------------- HELPERS -------------------- */
 
@@ -230,9 +230,12 @@ app.post('/api/sidebar-items', async (req, res) => {
  */
 app.post('/api/sidebar-items/smart-add', async (req, res) => {
   try {
-    const { title, category, postId } = req.body;
+    const { title, category, postId, parentId = null } = req.body;
 
     if (!title || !category || !postId)
+      return res.status(400).json({ error: 'Invalid payload' });
+
+    if (parentId !== null && !mongoose.Types.ObjectId.isValid(parentId))
       return res.status(400).json({ error: 'Invalid payload' });
 
     const categoryName = category.trim();
@@ -266,12 +269,13 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       return res.status(200).json({ success: true, item: existing, duplicate: true });
     }
 
-    // Create the leaf item at root level of category
-    const order = await SidebarItem.countDocuments({ parentId: null, category: categoryName });
+    // Create the leaf item — inside a subfolder if parentId was supplied
+    const resolvedParentId = parentId ? new mongoose.Types.ObjectId(parentId) : null;
+    const order = await SidebarItem.countDocuments({ parentId: resolvedParentId, category: categoryName });
     const item = await SidebarItem.create({
       title: title.trim(),
       category: categoryName,
-      parentId: null,
+      parentId: resolvedParentId,
       postId: new mongoose.Types.ObjectId(postId),
       isFolder: false,
       order,
@@ -472,10 +476,12 @@ app.delete('/api/sidebar-items/:id', async (req, res) => {
           // Collect all postIds from root + descendants (filter out nulls)
           postIds: {
             $filter: {
-              input: { $concatArrays: [
-                [{ $ifNull: ['$postId', null] }],
-                '$descendants.postId',
-              ]},
+              input: {
+                $concatArrays: [
+                  [{ $ifNull: ['$postId', null] }],
+                  '$descendants.postId',
+                ]
+              },
               as: 'pid',
               cond: { $ne: ['$$pid', null] },
             },
