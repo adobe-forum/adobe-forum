@@ -32,7 +32,7 @@ const UserIcon = () => html`
 `;
 
 // ============================================
-// HEADER COMPONENT
+// HEADER COMPONENT (Same as before)
 // ============================================
 
 function HeaderComponent() {
