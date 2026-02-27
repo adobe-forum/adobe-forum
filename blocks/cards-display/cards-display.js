@@ -24,6 +24,7 @@ function extractImage(body) {
   const doc = domParser.parseFromString(body, 'text/html');
   const img = doc.querySelector('img');
   // Security check: ensure the src isn't a malicious javascript: URI
+  // eslint-disable-next-line no-script-url
   return (img && img.src && !img.src.startsWith('javascript:')) ? img.src : null;
 }
 
@@ -69,7 +70,7 @@ function toggleViews(showCards) {
   cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = showCards ? '' : 'none'; } });
   if (fw) fw.style.display = showCards ? 'none' : '';
   if (sw) sw.style.display = showCards ? '' : 'none';
-  
+
   // Adds a state class to body for better CSS control
   document.body.classList.toggle('is-viewing-post', !showCards);
 }
@@ -88,7 +89,7 @@ function Card({ post, onClick }) {
   const initials = avatarInitials(author);
   const avColor = avatarColor(author);
   const excerpt = extractExcerpt(post.body || post.description || post.content || '');
-  
+
   // Display the deepest category
   const displayCategory = post.category ? post.category.split('/').pop().trim() : '';
 
@@ -258,7 +259,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     fetchPosts();
 
-    // 5. Cleanup function: Abort the fetch if the component unmounts 
+    // 5. Cleanup function: Abort the fetch if the component unmounts
     // or if the user clicks a new page before this fetch finishes.
     return () => {
       controller.abort();
