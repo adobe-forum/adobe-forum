@@ -614,18 +614,27 @@
   background: #fafafa;
   cursor: pointer;
   user-select: none;
+  position: relative;
   transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
   box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
 
   &:hover {
     background: #f5f5f5;
     box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+
+    & .fm-tile-dots {
+      opacity: 1;
+    }
   }
 
   &.fm-tile--sel {
     background: #f0f0f0;
     border-color: #bbb;
     box-shadow: 0 0 0 2px rgb(0 0 0 / 8%);
+
+    & .fm-tile-dots {
+      opacity: 1;
+    }
   }
 
   &.fm-tile--drag {
@@ -824,10 +833,6 @@
 }
 
 /* ── Three-dot button on tiles ───────────────────────────────────────────────── */
-.fm-tile {
-  position: relative;
-}
-
 .fm-tile-dots {
   all: unset;
   position: absolute;
@@ -852,9 +857,4 @@
   &:active {
     background: #d8d8d8;
   }
-}
-
-.fm-tile:hover .fm-tile-dots,
-.fm-tile--sel .fm-tile-dots {
-  opacity: 1;
 }

@@ -85,7 +85,9 @@ const IcoEmptyBox = () => html`
   </svg>`;
 
 // Inline name input
-function NameInput({ initial = '', placeholder, onCommit, onCancel }) {
+function NameInput({
+  initial = '', placeholder, onCommit, onCancel,
+}) {
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current) { ref.current.focus(); if (initial) ref.current.select(); }
@@ -105,7 +107,9 @@ function NameInput({ initial = '', placeholder, onCommit, onCancel }) {
 }
 
 // Context menu
-function CtxMenu({ x, y, node, onRename, onDelete, onAddSub, onClose }) {
+function CtxMenu({
+  x, y, node, onRename, onDelete, onAddSub, onClose,
+}) {
   const ref = useRef(null);
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
@@ -254,8 +258,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       const data = await res.json();
       if (data.success && data.categories) setTree(buildFolderTree(data.categories));
       else throw new Error(data.error || 'Failed to load');
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -289,7 +292,9 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const selectedNode = selected ? findNode(tree, selected) : null;
   const showSelectedCrumb = !isSearching && selected && selectedNode;
   const searchResults = isSearching
-    ? flattenTree(tree).filter(({ node }) => node.name.toLowerCase().includes(searchQ.trim().toLowerCase()))
+    ? flattenTree(tree).filter(
+      ({ node }) => node.name.toLowerCase().includes(searchQ.trim().toLowerCase()),
+    )
     : [];
 
   const nav = (newStack) => { setStack(newStack); setSelected(null); setSearchQ(''); setAdding(false); setRenamingId(null); };
@@ -322,7 +327,9 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         res = await fetch(`${API_BASE}/sidebar-items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: name, category, parentId: mongoParentId, isFolder: true }),
+          body: JSON.stringify({
+            title: name, category, parentId: mongoParentId, isFolder: true,
+          }),
         });
       }
       if (!res.ok) {
@@ -335,7 +342,10 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       }
       await fetchFolders();
       window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-    } catch (err) { /* eslint-disable-next-line no-console */ console.error('Add folder failed:', err); }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Add folder failed:', err);
+    }
   };
 
   const handleCommitRename = async (node, name) => {
@@ -349,7 +359,10 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       });
       await fetchFolders();
       window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-    } catch (err) { /* eslint-disable-next-line no-console */ console.error('Rename failed:', err); }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Rename failed:', err);
+    }
   };
 
   const handleDelete = async (node) => {
@@ -364,7 +377,10 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
       await fetchFolders();
       window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-    } catch (err) { /* eslint-disable-next-line no-console */ console.error('Delete failed:', err); }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Delete failed:', err);
+    }
   };
 
   // goInto calls nav() which resets `adding` to false, so we defer setAdding

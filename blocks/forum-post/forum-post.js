@@ -15,7 +15,7 @@ const BackIcon = () => html`
 `;
 
 const ForumPost = () => {
-  const [post, setPost] = useState(DUMMY_POST_DATA);
+  const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);

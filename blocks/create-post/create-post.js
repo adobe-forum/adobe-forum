@@ -1405,7 +1405,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
 // INLINE PREVIEW
 function InlinePreview({
-  title, category, body, tags, onBack, onPost,
+  body, tags, onBack, onPost,
 }) {
   const bodyRef = useRef(null);
 
@@ -1521,7 +1521,7 @@ function CreatePost() {
     setShowPreview(true);
   };
 
-    const handlePost = async () => {
+  const handlePost = async () => {
     // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
