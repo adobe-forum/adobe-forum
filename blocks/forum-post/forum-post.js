@@ -20,7 +20,6 @@ const ForumPost = ({ blockEl }) => {
   const [loading, setLoading] = useState(false);
   const commentsListRef = useRef(null);
 
-  // Auto-scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current && post) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;

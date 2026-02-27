@@ -96,6 +96,8 @@ body {
   background-color: var(--background-color);
   color: var(--text-color);
   min-height: 100vh;
+
+  /* --- FIX APPLIED HERE --- */
   width: 100%;
   overflow-x: hidden;        /* FIX: belt-and-suspenders at body level too */
   display: grid;
@@ -103,14 +105,14 @@ body {
       "header" var(--header-height) 
       "content" 1fr 
       "footer" auto 
-      / 1fr;
+      / minmax(0, 1fr); /* Switched from 1fr */
 
   @media (width >= 768px) {
     grid-template: 
         "header header" var(--header-height) 
         "sidebar content" 1fr 
         "footer footer" auto 
-        / var(--nav-width) 1fr;
+        / var(--nav-width) minmax(0, 1fr); /* Switched from 1fr */
   }
 }
 
@@ -146,6 +148,7 @@ main {
 
   @media (width >= 768px) {
     padding: 40px;
+    max-width: calc(100vw - var(--nav-width)); /* Hard cap width */
   }
 }
 

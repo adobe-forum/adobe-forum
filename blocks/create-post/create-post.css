@@ -989,7 +989,7 @@
 
 /* stylelint-enable no-descending-specificity */
 
-.preview-modal-footer {
+.preview-inline-footer {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1000,7 +1000,6 @@
   @media (width >= 768px) {
     flex-direction: row;
     justify-content: space-between;
-    padding: 16px 32px;
   }
 }
 
