@@ -11,6 +11,7 @@
 import { h, render } from '../../vendor/preact.js';
 import { useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
+import { loginUser, registerUser, forgotPassword } from './auth-api.js';
 
 const html = htm.bind(h);
 
@@ -262,12 +263,14 @@ function LoginPanel({ onForgot, active }) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1100); });
-    setLoading(false);
-    // TODO: replace with real Adobe IMS auth call
-    // TODO: replace with real Adobe IMS auth call — remove console.log in production
-    // eslint-disable-next-line no-console
-    console.log('✓ Sign-in submitted — wire to your Adobe IMS endpoint.');
+    try {
+      await loginUser({ email, password });
+      window.location.href = '/';
+    } catch (err) {
+      setErrors({ email: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
@@ -362,12 +365,14 @@ function SignupPanel({ active }) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1100); });
-    setLoading(false);
-    // TODO: replace with real registration endpoint
-    // TODO: replace with real registration endpoint — remove console.log in production
-    // eslint-disable-next-line no-console
-    console.log('✓ Account created — wire to your registration endpoint.');
+    try {
+      await registerUser(f);
+      window.location.href = '/auth-form';
+    } catch (err) {
+      setErrors({ email: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
@@ -436,9 +441,14 @@ function ForgotPanel({ onBack, active }) {
     const err = emailValidator(email);
     if (err) { setError(err); return; }
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1000); });
-    setLoading(false);
-    setSent(true);
+    try {
+      await forgotPassword({ email });
+      setSent(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
