@@ -77,7 +77,9 @@ function getStrength(value) {
 }
 
 /* ── 4. Password field component ────────────────────────────────────────── */
-function PasswordField({ id, label, placeholder, autocomplete, value, error, onChange, onBlur, showStrength = false }) {
+function PasswordField({
+  id, label, placeholder, autocomplete, value, error, onChange, onBlur, showStrength = false,
+}) {
   const [showPw, setShowPw] = useState(false);
   const isInvalid = !!error;
   const strength = showStrength ? getStrength(value || '') : null;
@@ -201,6 +203,63 @@ function ResetPassword() {
     }
   };
 
+  const renderContent = () => {
+    if (success) {
+      return html` 
+      <div class="auth-form-success is-visible" aria-live="polite">
+        <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
+        <p class="auth-form-success-title">Password updated!</p>
+        <p class="auth-form-success-desc">
+          Your password has been reset successfully.
+          Redirecting you to sign in…
+        </p>
+      </div>`;
+    }
+
+    if (globalError) {
+      return html`
+      <div class="rp-global-error" role="alert">
+        <${IconAlertCircle}/>
+        <span>${globalError}</span>
+      </div>
+      <a href="/auth-form" class="auth-form-back" style="margin-top:24px">
+        ← Back to sign in
+      </a>`;
+    }
+
+    return html`
+      <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
+
+        <${PasswordField}
+          id="rp-password"
+          label="New password"
+          placeholder="Min. 8 characters"
+          autocomplete="new-password"
+          showStrength=${true}
+          value=${password}
+          error=${errors.password}
+          onChange=${(v) => { setPassword(v); setErrors((e) => ({ ...e, password: undefined })); }}
+          onBlur=${(v) => setErrors((e) => ({ ...e, password: validatePassword(v) || undefined }))}
+        />
+
+        <${PasswordField}
+          id="rp-confirm"
+          label="Confirm new password"
+          placeholder="Repeat password"
+          autocomplete="new-password"
+          value=${confirm}
+          error=${errors.confirm}
+          onChange=${(v) => { setConfirm(v); setErrors((e) => ({ ...e, confirm: undefined })); }}
+          onBlur=${(v) => setErrors((e) => ({ ...e, confirm: validateConfirm(v) || undefined }))}
+        />
+
+        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+          Reset password
+        <//>
+
+      </form>`;
+  };
+
   return html`
     <div class="auth-form-overlay">
       <div class="auth-form-card">
@@ -224,55 +283,7 @@ function ResetPassword() {
         <h1 class="auth-form-heading">Set new password</h1>
         <p class="auth-form-body">Enter and confirm your new password below.</p>
 
-        ${success ? html`
-          <div class="auth-form-success is-visible" aria-live="polite">
-            <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
-            <p class="auth-form-success-title">Password updated!</p>
-            <p class="auth-form-success-desc">
-              Your password has been reset successfully.
-              Redirecting you to sign in…
-            </p>
-          </div>
-        ` : globalError ? html`
-          <div class="rp-global-error" role="alert">
-            <${IconAlertCircle}/>
-            <span>${globalError}</span>
-          </div>
-          <a href="/auth-form" class="auth-form-back" style="margin-top:24px">
-            ← Back to sign in
-          </a>
-        ` : html`
-          <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
-
-            <${PasswordField}
-              id="rp-password"
-              label="New password"
-              placeholder="Min. 8 characters"
-              autocomplete="new-password"
-              showStrength=${true}
-              value=${password}
-              error=${errors.password}
-              onChange=${(v) => { setPassword(v); setErrors((e) => ({ ...e, password: undefined })); }}
-              onBlur=${(v) => setErrors((e) => ({ ...e, password: validatePassword(v) || undefined }))}
-            />
-
-            <${PasswordField}
-              id="rp-confirm"
-              label="Confirm new password"
-              placeholder="Repeat password"
-              autocomplete="new-password"
-              value=${confirm}
-              error=${errors.confirm}
-              onChange=${(v) => { setConfirm(v); setErrors((e) => ({ ...e, confirm: undefined })); }}
-              onBlur=${(v) => setErrors((e) => ({ ...e, confirm: validateConfirm(v) || undefined }))}
-            />
-
-            <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
-              Reset password
-            <//>
-
-          </form>
-        `}
+        ${renderContent()}
 
       </div>
     </div>`;

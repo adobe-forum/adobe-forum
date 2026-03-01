@@ -444,8 +444,8 @@ function ForgotPanel({ onBack, active }) {
     try {
       await forgotPassword({ email });
       setSent(true);
-    } catch (err) {
-      setError(err.message);
+    } catch (fpErr) {
+      setError(fpErr.message);
     } finally {
       setLoading(false);
     }

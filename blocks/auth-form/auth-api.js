@@ -3,7 +3,6 @@
  * Mirrors the same BASE_URL pattern used by the rest of the frontend.
  */
 
-
 const BASE_URL = 'http://localhost:5000/api/auth';
 
 /**
@@ -28,12 +27,16 @@ export async function loginUser({ email, password }) {
  * @param {{ first: string, last: string, email: string, pass: string }} payload
  * @returns {Promise<{ success: boolean, user: object }>}
  */
-export async function registerUser({ first, last, email, pass }) {
+export async function registerUser({
+  first, last, email, pass,
+}) {
   const res = await fetch(`${BASE_URL}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ firstName: first, lastName: last, email, password: pass }),
+    body: JSON.stringify({
+      firstName: first, lastName: last, email, password: pass,
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Registration failed.');
