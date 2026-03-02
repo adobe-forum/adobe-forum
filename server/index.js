@@ -7,6 +7,7 @@ import User from './models/user.js';
 import authMiddleware from './middleware/authMiddleware.js';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
+import User from './models/user.js';
 
 dotenv.config();
 
