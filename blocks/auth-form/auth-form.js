@@ -264,7 +264,8 @@ function LoginPanel({ onForgot, active }) {
 
     setLoading(true);
     try {
-      await loginUser({ email, password });
+      const loginData = await loginUser({ email, password });
+      localStorage.setItem('af_user', JSON.stringify(loginData.user));
       window.location.href = '/';
     } catch (err) {
       setErrors({ email: err.message });
@@ -366,7 +367,8 @@ function SignupPanel({ active }) {
 
     setLoading(true);
     try {
-      await registerUser(f);
+      const regData = await registerUser(f);
+      localStorage.setItem('af_user', JSON.stringify(regData.user));
       window.location.href = '/auth-form';
     } catch (err) {
       setErrors({ email: err.message });
