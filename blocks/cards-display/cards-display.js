@@ -351,6 +351,12 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 // ── Exported Decorator ────────────────────────────────────────────────
 
 export default async function decorate(block) {
+  // Auth guard — redirect to sign in if not logged in
+  if (!localStorage.getItem('af_user')) {
+    window.location.replace('/auth-form');
+    return;
+  }
+
   const rows = [...block.children];
   const title = rows[0]?.children[0]?.textContent.trim() || '';
   const subtitle = rows[0]?.children[1]?.textContent.trim() || '';

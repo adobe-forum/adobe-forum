@@ -267,3 +267,537 @@
     color: var(--spectrum-gray-800);
     transition: margin-left 0.25s ease;
   }
+
+/* =============================================
+   PROFILE AVATAR BUTTON (in header)
+   ============================================= */
+
+.profile-avatar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #da1f26;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: -0.3px;
+  font-family: adobe-clean, 'Source Sans Pro', sans-serif;
+  transition: opacity 0.15s;
+  border: none;
+  padding: 0;
+  outline: none;
+}
+
+.profile-avatar-btn:hover {
+  opacity: 0.85;
+}
+
+.profile-avatar-btn:focus-visible {
+  outline: 2px solid #1473e6;
+  outline-offset: 2px;
+}
+
+/* =============================================
+   PROFILE POPUP — OVERLAY & MODAL
+   ============================================= */
+
+.pp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: pp-fade 0.18s ease;
+}
+
+@keyframes pp-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.pp-modal {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow: hidden auto;
+  box-shadow: 0 8px 40px rgb(0 0 0 / 20%);
+  animation: pp-slide 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pp-slide {
+  from {
+    transform: translateY(-16px) scale(0.97);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* =============================================
+   CLOSE BUTTON
+   ============================================= */
+
+.pp-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #d5d5d5;
+  color: #6e6e6e;
+  background: #fff;
+  transition: background 0.15s, color 0.15s;
+  z-index: 10;
+  padding: 0;
+  outline: none;
+}
+
+.pp-close:hover {
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+/* =============================================
+   BODY & AVATAR ROW
+   ============================================= */
+
+.pp-body {
+  padding: 32px 36px 36px;
+}
+
+.pp-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pp-avatar-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #da1f26;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: adobe-clean, 'Source Sans Pro', sans-serif;
+}
+
+.pp-avatar-name {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.pp-avatar-email {
+  margin: 0;
+  font-size: 13px;
+  color: #6e6e6e;
+}
+
+.pp-divider {
+  height: 1px;
+  background: #e8e8e8;
+  margin: 20px 0;
+  border: none;
+}
+
+.pp-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px;
+  letter-spacing: -0.2px;
+}
+
+/* =============================================
+   FIELDS — matching auth-form Spectrum exactly
+   ============================================= */
+
+.pp-field {
+  margin-bottom: 20px;
+}
+
+.pp-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.pp-label::after {
+  content: " *";
+  color: #d7373f;
+  font-size: 14px;
+}
+
+/* Email field — no asterisk since read-only */
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-field--no-req .pp-label::after {
+  content: none;
+}
+
+.pp-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pp-input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1.5px solid #c0c0c0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  appearance: none;
+}
+
+.pp-input::placeholder {
+  color: #999;
+}
+
+.pp-input:focus {
+  border-color: #1473e6;
+  box-shadow: 0 0 0 3px rgb(20 115 230 / 20%);
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-input.pp-input--icon {
+  padding-right: 44px;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-input.pp-input--disabled {
+  background: #f5f5f5;
+  color: #767676;
+  border-color: #e0e0e0;
+  cursor: default;
+  pointer-events: none;
+}
+
+.is-invalid .pp-input {
+  border-color: #d7373f;
+  box-shadow: 0 0 0 3px rgb(215 55 63 / 15%);
+}
+
+.pp-pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #767676;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: none;
+  border: none;
+  outline: none;
+  line-height: 0;
+  transition: color 0.15s;
+}
+
+.pp-pw-toggle:hover {
+  color: #1a1a1a;
+}
+
+.pp-field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #d7373f;
+  line-height: 1.4;
+}
+
+.pp-field-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #767676;
+}
+
+/* =============================================
+   MESSAGES
+   ============================================= */
+
+.pp-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-msg--error {
+  background: rgb(215 55 63 / 8%);
+  border: 1px solid rgb(215 55 63 / 30%);
+  color: #d7373f;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-msg--success {
+  background: rgb(38 142 108 / 10%);
+  border: 1px solid rgb(38 142 108 / 30%);
+  color: #268e6c;
+}
+
+/* =============================================
+   ACTION BUTTONS
+   ============================================= */
+
+.pp-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.pp-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: inherit;
+  text-decoration: none;
+  outline: none;
+  appearance: none;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-btn.pp-btn--primary {
+  background: #0d66d0 !important;
+  color: #fff !important;
+  border: 1.5px solid transparent !important;
+  transition: background 0.15s !important;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-btn.pp-btn--primary:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-btn.pp-btn--primary:hover:not(:disabled) {
+  background: #095aba !important;
+  color: #fff !important;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-btn.pp-btn--ghost {
+  background: transparent !important;
+  color: #1a1a1a !important;
+  border: 1.5px solid #c0c0c0 !important;
+  transition: background 0.15s !important;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-btn.pp-btn--ghost:hover {
+  background: #f5f5f5 !important;
+  color: #1a1a1a !important;
+}
+
+.pp-spinner {
+  display: none;
+  position: absolute;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 30%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pp-spin 0.65s linear infinite;
+  transform: translateX(-50%);
+}
+
+.pp-btn.is-loading .pp-btn-label {
+  opacity: 0;
+}
+
+.pp-btn.is-loading .pp-spinner {
+  display: block;
+}
+
+@keyframes pp-spin {
+  to {
+    transform: translateX(-50%) rotate(360deg);
+  }
+}
+
+/* =============================================
+   TEXT BUTTONS (Change Password / Sign Out)
+   ============================================= */
+
+.pp-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent !important;
+  text-decoration: none;
+  outline: none;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-text-btn--blue {
+  color: #0d66d0 !important;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-text-btn--blue:hover {
+  background: rgb(13 102 208 / 8%) !important;
+  color: #0d66d0 !important;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-text-btn--red {
+  color: #d7373f !important;
+  background: transparent !important;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.pp-text-btn--red:hover {
+  background: transparent !important;
+  color: #b02a30 !important;
+  text-decoration: underline;
+}
+
+/* =============================================
+   BACK LINK
+   ============================================= */
+
+.pp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0d66d0 !important;
+  cursor: pointer;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent !important;
+  padding: 4px 0;
+  font-family: inherit;
+  outline: none;
+  text-decoration: none !important;
+}
+
+.pp-back:hover {
+  text-decoration: underline !important;
+  color: #0d66d0 !important;
+  background: transparent !important;
+}
+
+/* =============================================
+   PASSWORD SUCCESS VIEW
+   ============================================= */
+
+.pp-success-view {
+  text-align: center;
+  padding: 48px 32px;
+}
+
+.pp-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgb(38 142 108 / 12%);
+  color: #268e6c;
+  margin: 0 auto 16px;
+}
+
+.pp-success-desc {
+  font-size: 14px;
+  color: #6e6e6e;
+  margin: 0 0 24px;
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (width <= 480px) {
+  .pp-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .pp-body {
+    padding: 24px 20px 28px;
+  }
+
+  .pp-actions {
+    flex-direction: column;
+  }
+}
