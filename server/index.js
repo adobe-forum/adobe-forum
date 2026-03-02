@@ -85,7 +85,7 @@ const requireAuth = async (req, res, next) => {
       .select('-password -resetToken -resetTokenExpiry');
 
     if (!user) {
-      req.session.destroy(() => {});
+      req.session.destroy(() => { });
       return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
 
@@ -303,6 +303,74 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
+
+/* -------------------- AUTH — UPDATE PROFILE -------------------- */
+
+/**
+ * PATCH /api/auth/profile
+ * Updates firstName and lastName for the logged-in user.
+ */
+app.patch('/api/auth/profile', async (req, res) => {
+  try {
+    const { userId, firstName, lastName } = req.body;
+
+    if (!userId)
+      return res.status(400).json({ error: 'User ID is required.' });
+
+    if (!firstName || !firstName.trim())
+      return res.status(400).json({ error: 'First name is required.' });
+
+    if (!lastName || !lastName.trim())
+      return res.status(400).json({ error: 'Last name is required.' });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { firstName: firstName.trim(), lastName: lastName.trim(), updatedAt: Date.now() },
+      { new: true },
+    );
+
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    return res.json({ success: true, user: safeUser });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Profile update failed.' });
+  }
+});
+
+/**
+ * PATCH /api/auth/change-password
+ * Verifies the current password then updates to the new one.
+ */
+app.patch('/api/auth/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword)
+      return res.status(400).json({ error: 'All fields are required.' });
+
+    if (newPassword.length < 8)
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const match = await user.comparePassword(currentPassword);
+    if (!match) return res.status(401).json({ error: 'Current password is incorrect.' });
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Password change failed.' });
+  }
+});
+
 /* -------------------- POSTS -------------------- */
 
 /**
@@ -357,7 +425,7 @@ app.get('/api/posts', async (req, res) => {
     } : {};
 
     const [posts, total] = await Promise.all([
-      Post.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Post.find(query).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
       Post.countDocuments(query),
     ]);
 
@@ -373,7 +441,7 @@ app.get('/api/posts', async (req, res) => {
  */
 app.get('/api/posts/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
     if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });
   } catch (err) {

@@ -34,34 +34,27 @@ const EditIcon = () => html`
 // ============================================
 
 /**
- * Calls GET /api/auth/me and returns the user object, or null if not logged in.
+ * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
+ * Returns null if not logged in.
  */
-async function fetchCurrentUser() {
-  try {
-    const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.user || null;
-  } catch {
-    return null;
-  }
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
 }
 
 /**
- * Dispatch edit-post:open — the create-post block listens for this and
- * switches into edit mode, pre-filling all fields and calling PATCH on save.
+ * Opens /create-post in edit mode by stashing the post data in sessionStorage
+ * and navigating — avoids URL length limits (body can be large HTML).
  */
 function openEditForm(post) {
-  const categoryName = post.topic || '';
-  window.dispatchEvent(new CustomEvent('edit-post:open', {
-    detail: {
-      id: post.id,
-      title: post.title,
-      body: post.body,
-      tags: (post.tags || []).map((t) => t.replace(/^#/, '')), // strip leading #
-      category: categoryName,
-    },
-  }));
+  const editData = {
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    tags: (post.tags || []).map((t) => t.replace(/^#/, '')),
+    category: post.topic || '',
+  };
+  sessionStorage.setItem('edit-post-draft', JSON.stringify(editData));
+  window.location.href = '/create-post';
 }
 
 /**
@@ -69,6 +62,7 @@ function openEditForm(post) {
  */
 function isOwner(post, currentUser) {
   if (!currentUser || !post?.createdBy) return false;
+  // eslint-disable-next-line no-underscore-dangle
   return String(post.createdBy) === String(currentUser._id);
 }
 
@@ -90,10 +84,10 @@ const ForumPost = ({ blockEl }) => {
     }
   }, [post?.comments]);
 
-  // Fetch current user on mount + re-fetch when auth state changes
+  // Load current user on mount + re-load when auth state changes
   useEffect(() => {
-    fetchCurrentUser().then(setCurrentUser);
-    const onAuthChanged = () => fetchCurrentUser().then(setCurrentUser);
+    setCurrentUser(getCurrentUser());
+    const onAuthChanged = () => setCurrentUser(getCurrentUser());
     window.addEventListener('forum-auth-changed', onAuthChanged);
     return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
   }, []);
@@ -160,17 +154,20 @@ const ForumPost = ({ blockEl }) => {
           const data = await response.json();
           if (data.success && data.post) {
             const fetchedPost = data.post;
+            const cb = fetchedPost.createdBy;
+            // Build author name from populated createdBy or fall back
+            const authorName = (cb?.firstName)
+              ? `${cb.firstName} ${cb.lastName || ''}`.trim()
+              : (fetchedPost.author || 'Anonymous');
             const transformedPost = {
               // eslint-disable-next-line no-underscore-dangle
               id: fetchedPost._id,
               title: fetchedPost.title,
               topic: fetchedPost.category,
-              author: fetchedPost.author || 'User',
-              // Store createdBy so we can check ownership
+              author: authorName,
+              // Store createdBy id so we can check ownership
               // eslint-disable-next-line no-underscore-dangle
-              createdBy: fetchedPost.createdBy
-                ? String(fetchedPost.createdBy._id || fetchedPost.createdBy)
-                : null,
+              createdBy: cb ? String(cb._id || cb) : null,
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
               comments: [],

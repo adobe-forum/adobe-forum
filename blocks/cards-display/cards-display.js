@@ -83,7 +83,8 @@ function Card({ post, onClick }) {
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
   const imgSrc = post.image || extractImage(post.body);
   const author = post.author?.name || post.author?.username || post.author
-    || post.createdBy?.name || post.createdBy?.username || post.createdBy
+    || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
+    || post.createdBy?.name || post.createdBy?.username
     || post.userId?.name || post.userId?.username || 'Anonymous';
 
   const initials = avatarInitials(author);
@@ -351,6 +352,12 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 // ── Exported Decorator ────────────────────────────────────────────────
 
 export default async function decorate(block) {
+  // Auth guard — redirect to sign in if not logged in
+  if (!localStorage.getItem('af_user')) {
+    window.location.replace('/auth-form');
+    return;
+  }
+
   const rows = [...block.children];
   const title = rows[0]?.children[0]?.textContent.trim() || '';
   const subtitle = rows[0]?.children[1]?.textContent.trim() || '';

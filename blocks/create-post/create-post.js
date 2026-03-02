@@ -1491,6 +1491,7 @@ function CreatePost() {
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
+  const [editId, setEditId] = useState(null); // non-null = edit mode
 
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
@@ -1536,6 +1537,21 @@ function CreatePost() {
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
+  // On mount: check sessionStorage for an edit draft (set by forum-post when Edit is clicked)
+  useEffect(() => {
+    const raw = sessionStorage.getItem('edit-post-draft');
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw);
+      sessionStorage.removeItem('edit-post-draft'); // clear so refresh doesn't re-trigger
+      setEditId(draft.id || null);
+      setTitle(draft.title || '');
+      setBody(draft.body || '');
+      setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
+      setCategory(draft.category || '');
+    } catch { /* ignore corrupted draft */ }
+  }, []);
+
   const openFolder = async () => {
     await ensureFolder();
     window.dispatchEvent(new CustomEvent('folder:open'));
@@ -1558,6 +1574,35 @@ function CreatePost() {
     // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
+    // ── EDIT MODE (PATCH) ──────────────────────────────────────────────
+    if (editId) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/posts/${editId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ title: title.trim(), body, tags: tagsWithHash }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          // Notify forum-post to refresh its view
+          window.dispatchEvent(new CustomEvent('edit-post:saved', {
+            detail: {
+              id: editId, title: title.trim(), body, tags: tagsWithHash,
+            },
+          }));
+          // Return to the post view
+          window.history.back();
+        } else {
+          showToast(result.error || 'Failed to update post', 'error');
+        }
+      } catch {
+        showToast('Network error: Unable to connect to the server.', 'error');
+      }
+      return;
+    }
+
+    // ── CREATE MODE (POST) ────────────────────────────────────────────
     const postData = {
       title: title.trim(),
       category,
@@ -1627,8 +1672,8 @@ function CreatePost() {
       ` : html`
         <div className="cp-page-header">
           <div className="cp-header-content">
-            <h1 className="cp-page-title">Post your thoughts</h1>
-            <p className="cp-page-subtitle">Ask a question and get helpful answers from the community!</p>
+            <h1 className="cp-page-title">${editId ? 'Edit Post' : 'Post your thoughts'}</h1>
+            <p className="cp-page-subtitle">${editId ? 'Update your post below.' : 'Ask a question and get helpful answers from the community!'}</p>
           </div>
           <div className="cp-required-badge">
             <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
@@ -1703,6 +1748,7 @@ function CreatePost() {
               </label>
               <p className="helper-text">Provide details to help others answer your question (min. 20 characters)</p>
               <${RichTextEditor}
+                key=${editId || 'new'}
                 onChange=${handleBodyChange}
                 minChars=${20}
                 initialValue=${body}

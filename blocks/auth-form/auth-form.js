@@ -135,7 +135,12 @@ function Field({
 }) {
   const [showPw, setShowPw] = useState(false);
 
-  const inputType = type === 'password' ? (showPw ? 'text' : 'password') : type;
+  let inputType;
+  if (type === 'password') {
+    inputType = showPw ? 'text' : 'password';
+  } else {
+    inputType = type;
+  }
   const isInvalid = !!error;
   const strength = showStrength ? getStrength(value || '') : null;
 
@@ -235,22 +240,6 @@ function SubmitBtn({ loading, onClick, children }) {
     </button>`;
 }
 
-/* ── 7. Shared post-auth helper ─────────────────────────────────────────── */
-/**
- * Called after a successful login or registration.
- * The server has already set an httpOnly session cookie — we don't
- * touch localStorage. We just notify other blocks and close the overlay.
- *
- * @param {object} user — safe user object returned by the API
- */
-function onAuthSuccess(user) {
-  // Broadcast so header/sidebar can update their UI without a page reload
-  window.dispatchEvent(new CustomEvent('forum-auth-changed', { detail: { user } }));
-  // Remove the overlay mount node to close the modal
-  const overlay = document.querySelector('.auth-form-overlay');
-  if (overlay && overlay.parentNode) overlay.parentNode.remove();
-}
-
 /* ── 8. Login panel ─────────────────────────────────────────────────────── */
 function LoginPanel({ onForgot, active }) {
   const [email, setEmail] = useState('');
@@ -278,9 +267,9 @@ function LoginPanel({ onForgot, active }) {
 
     setLoading(true);
     try {
-      // loginUser() uses credentials:'include' so the server cookie is saved
-      const { user } = await loginUser({ email, password });
-      onAuthSuccess(user);
+      const data = await loginUser({ email, password });
+      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
+      window.location.href = '/';
     } catch (err) {
       setErrors({ password: err.message });
     } finally {
@@ -380,10 +369,9 @@ function SignupPanel({ active }) {
 
     setLoading(true);
     try {
-      // registerUser() sends firstName + lastName separately (not a combined username)
-      // The server logs the user in and sets the session cookie automatically
-      const { user } = await registerUser(f);
-      onAuthSuccess(user);
+      const data = await registerUser(f);
+      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
+      window.location.href = '/';
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
@@ -472,7 +460,7 @@ function ForgotPanel({ onBack, active }) {
     <div id="auth-forgot" class=${`auth-panel${active ? ' is-active' : ''}`} role="tabpanel">
 
       ${sent
-        ? html`
+    ? html`
           <div class="auth-form-success is-visible" aria-live="polite">
             <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
             <p class="auth-form-success-title">Check your inbox</p>
@@ -481,7 +469,7 @@ function ForgotPanel({ onBack, active }) {
               The link expires in 30${'\u00a0'}minutes.
             </p>
           </div>`
-        : html`
+    : html`
           <button type="button" class="auth-form-back" onClick=${onBack}>
             <${IconArrowLeft}/>${' '}Back to sign in
           </button>

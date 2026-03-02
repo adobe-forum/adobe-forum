@@ -7,9 +7,8 @@
  *   2. Falls back to http://localhost:5000/api/auth for local dev
  */
 
-const BASE_URL =
-  (typeof window !== 'undefined' && window.AUTH_API_BASE) ||
-  'http://localhost:5000/api/auth';
+const BASE_URL = (typeof window !== 'undefined' && window.AUTH_API_BASE)
+  || 'http://localhost:5000/api/auth';
 
 /**
  * POST /api/auth/login

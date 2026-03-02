@@ -178,6 +178,7 @@ function InlineInput({
 function isOwner(item, currentUser) {
   if (!currentUser) return false;
   if (!item.createdBy) return false;
+  // eslint-disable-next-line no-underscore-dangle
   return item.createdBy === String(currentUser._id);
 }
 
@@ -240,7 +241,7 @@ function TreeItem({
   return html`
     <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}">
       ${isRenaming
-        ? html`
+    ? html`
           <${InlineInput}
             placeholder="Rename…"
             initialValue=${item.title}
@@ -248,20 +249,20 @@ function TreeItem({
             onConfirm=${handleRenameConfirm}
             onCancel=${() => setIsRenaming(false)}
           />`
-        : html`
+    : html`
           <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
             style="padding-left: ${paddingLeft}px" onClick=${handleClick}
             onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
             title=${item.title}>
             <span class="tree-chevron">
               ${isFolder
-                ? html`<${ChevronIcon} expanded=${isExpanded} />`
-                : html`<span class="tree-chevron-spacer"/>`}
+    ? html`<${ChevronIcon} expanded=${isExpanded} />`
+    : html`<span class="tree-chevron-spacer"/>`}
             </span>
             <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
               ${isFolder
-                ? html`<${FolderIcon} expanded=${isExpanded} />`
-                : html`<${FileIcon} />`}
+    ? html`<${FolderIcon} expanded=${isExpanded} />`
+    : html`<${FileIcon} />`}
             </span>
             <span class="tree-label">${item.title}</span>
 
@@ -292,7 +293,7 @@ function TreeItem({
             <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
               onConfirm=${(name) => { onAddSubfolder(itemId, name); setIsAddingChild(false); }}
               onCancel=${() => setIsAddingChild(false)} />`
-          }
+}
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
@@ -361,9 +362,9 @@ function CategoryItem({
             <${InlineInput} placeholder="Folder name…" paddingLeft=${24}
               onConfirm=${(name) => { onAddFolder(category.name, null, name); setIsAddingFolder(false); }}
               onCancel=${() => setIsAddingFolder(false)} />`
-          }
+}
           ${hasItems
-            ? category.items.map((item) => html`
+    ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
@@ -372,8 +373,8 @@ function CategoryItem({
                   onRename=${onRenameItem}
                   level=${0} />
               `)
-            : !isAddingFolder && html`<div class="no-items">No items yet</div>`
-          }
+    : !isAddingFolder && html`<div class="no-items">No items yet</div>`
+}
         </ul>
       `}
     </li>
@@ -601,8 +602,7 @@ function Sidebar() {
         body: JSON.stringify({ name: trimmedName }),
       });
       const data = await response.json();
-      if (data.success) { await fetchCategories(); cancelCreating(); }
-      else setCreationError(data.error || 'Failed to create category');
+      if (data.success) { await fetchCategories(); cancelCreating(); } else setCreationError(data.error || 'Failed to create category');
     } catch { setCreationError('Network error'); }
   };
 
@@ -671,7 +671,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-              ? filteredCategories.map((category) => html`
+    ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -683,8 +683,8 @@ function Sidebar() {
                     onRenameItem=${handleRenameItem}
                   />
                 `)
-              : html`<div class="no-results">No categories found</div>`
-            }
+    : html`<div class="no-results">No categories found</div>`
+}
           </ul>
         `}
       </div>
