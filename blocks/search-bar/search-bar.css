@@ -14,6 +14,7 @@
     padding: var(--spectrum-spacing-200) 0;  /* 8px — tight, no big gap */
     margin: 0;
     width: 100%;
+    box-sizing: border-box;
   }
   
   /* Reset AEM child div styles */
@@ -21,6 +22,7 @@
     all: unset;
     display: block;
     width: 100%;
+    box-sizing: border-box;
   }
   
   /* Form */
@@ -29,12 +31,13 @@
     width: 100%;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
   }
   
   /*
-     Input row — width matches forum-post block
-     styles.css: main > .section > div { max-width: 1200px; padding: 0 24px / 0 32px }
-     Both sections use the same container so width auto-matches
+       Input row — width matches forum-post block
+       styles.css: main > .section > div { max-width: 1200px; padding: 0 24px / 0 32px }
+       Both sections use the same container so width auto-matches
   */
   .search-form-inner {
     display: flex;

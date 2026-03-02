@@ -2,8 +2,11 @@
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
+import User from './models/User.js';
 
 dotenv.config();
 
@@ -76,6 +79,189 @@ const buildTree = (items) => {
 
   return roots;
 };
+
+/* -------------------- AUTH -------------------- */
+
+/**
+ * POST /api/auth/register
+ * Creates a new user account.
+ * Validates Adobe-domain email, name lengths, and password minimum.
+ */
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { firstName, lastName, email, password } = req.body;
+
+    if (!firstName || !firstName.trim())
+      return res.status(400).json({ error: 'First name is required.' });
+
+    if (!lastName || !lastName.trim())
+      return res.status(400).json({ error: 'Last name is required.' });
+
+    if (!email || !email.trim())
+      return res.status(400).json({ error: 'Email address is required.' });
+
+    if (!password || password.length < 8)
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    // Adobe-domain check — mirrors auth-form.js emailValidator
+    const ADOBE_DOMAINS = ['adobe.com', 'adobetest.com', 'adobeforums.com', 'adobecorp.com'];
+    const domain = email.trim().toLowerCase().split('@')[1] || '';
+    const isAdobe = ADOBE_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`));
+    if (!isAdobe)
+      return res.status(400).json({ error: 'Only Adobe corporate email addresses are allowed.' });
+
+    // Guard against duplicate accounts
+    const existing = await User.findOne({ email: email.trim().toLowerCase() });
+    if (existing)
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+
+    const user = await User.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    // Return the user without the password hash
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    return res.status(201).json({ success: true, user: safeUser });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Registration failed.' });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Validates credentials and returns the user object on success.
+ * Intentionally vague error messages to prevent user enumeration.
+ */
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password)
+      return res.status(400).json({ error: 'Email and password are required.' });
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user)
+      return res.status(401).json({ error: 'Invalid email or password.' });
+
+    const match = await user.comparePassword(password);
+    if (!match)
+      return res.status(401).json({ error: 'Invalid email or password.' });
+
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    return res.json({ success: true, user: safeUser });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Sign-in failed.' });
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Generates a reset token and stores it on the user document.
+ * In production, send the token via email — here it is returned in the
+ * response so you can wire it to your email provider (e.g. SendGrid).
+ *
+ * Token expires in 30 minutes, matching the UI message.
+ */
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim())
+      return res.status(400).json({ error: 'Email address is required.' });
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    // Always respond with success to prevent user enumeration
+    if (!user)
+      return res.json({ success: true });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetToken = token;
+    user.resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    await user.save();
+
+    // Send reset link via Gmail
+    const resetLink = `${process.env.CLIENT_ORIGIN || 'http://localhost:3000'}/reset-password?token=${token}`;
+    // Create transporter here so it always reads the latest env values
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Adobe Forum" <${process.env.GMAIL_USER}>`,
+      to: user.email,
+      subject: 'Reset your Adobe Forum password',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:auto">
+          <h2>Reset your password</h2>
+          <p>Hi ${user.firstName},</p>
+          <p>Click the button below to reset your password. This link expires in <strong>30 minutes</strong>.</p>
+          <a href="${resetLink}" style="display:inline-block;padding:12px 24px;background:#1473e6;color:#fff;text-decoration:none;border-radius:4px;margin:16px 0">
+            Reset Password
+          </a>
+          <p>If you did not request this, ignore this email.</p>
+        </div>
+      `,
+    });
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Could not send reset link.' });
+  }
+});
+
+
+/* -------------------- AUTH — RESET PASSWORD -------------------- */
+
+/**
+ * POST /api/auth/reset-password
+ * Verifies the reset token and updates the user's password.
+ * Token must exist and not be expired (30-minute window).
+ */
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password)
+      return res.status(400).json({ error: 'Token and password are required.' });
+
+    if (password.length < 8)
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() }, // token must not be expired
+    });
+
+    if (!user)
+      return res.status(400).json({ error: 'Reset link is invalid or has expired. Please request a new one.' });
+
+    // Update password and clear the token
+    user.password = password;
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    return res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Password reset failed.' });
+  }
+});
 
 /* -------------------- POSTS -------------------- */
 

@@ -21,7 +21,6 @@ async function ensureFolder() {
 }
 
 // DOM TO JSON CONVERTER
-// ============================================
 
 function domToJson(element) {
   if (!element || element.nodeType !== 1) {
@@ -54,7 +53,6 @@ function domToJson(element) {
   return obj;
 }
 
-// ============================================
 // TOOLBAR ICONS (loaded from /icons/ folder)
 // Map toolbar commands to icon filenames
 const ICON_FILES = {
@@ -106,7 +104,6 @@ const BLOCK_FORMATS = {
   h6: 'h6',
 };
 
-// ============================================
 // RICH TEXT EDITOR COMPONENT
 // ============================================
 
@@ -1410,7 +1407,9 @@ function InlinePreview({
 }) {
   const bodyRef = useRef(null);
 
+  // Scroll to top and add line numbers to code blocks on mount
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (!bodyRef.current) return;
     // Add line numbers to code blocks
     bodyRef.current.querySelectorAll('pre').forEach((pre) => {
@@ -1482,10 +1481,7 @@ function InlinePreview({
   `;
 }
 
-// ============================================
 // CREATE POST
-// ============================================
-
 function CreatePost() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
