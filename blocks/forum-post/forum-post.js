@@ -1,6 +1,12 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
+const API_BASE = 'http://localhost:5000/api';
+
+// ============================================
+// ICONS
+// ============================================
+
 const ArrowIcon = () => html`
   <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
     <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
@@ -14,17 +20,83 @@ const BackIcon = () => html`
   </svg>
 `;
 
+const EditIcon = () => html`
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    style="display:block;flex-shrink:0;">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+`;
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Calls GET /api/auth/me and returns the user object, or null if not logged in.
+ */
+async function fetchCurrentUser() {
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.user || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Dispatch edit-post:open — the create-post block listens for this and
+ * switches into edit mode, pre-filling all fields and calling PATCH on save.
+ */
+function openEditForm(post) {
+  const categoryName = post.topic || '';
+  window.dispatchEvent(new CustomEvent('edit-post:open', {
+    detail: {
+      id: post.id,
+      title: post.title,
+      body: post.body,
+      tags: (post.tags || []).map((t) => t.replace(/^#/, '')), // strip leading #
+      category: categoryName,
+    },
+  }));
+}
+
+/**
+ * Returns true if currentUser is the creator of this post.
+ */
+function isOwner(post, currentUser) {
+  if (!currentUser || !post?.createdBy) return false;
+  return String(post.createdBy) === String(currentUser._id);
+}
+
+// ============================================
+// FORUM POST
+// ============================================
+
 const ForumPost = ({ blockEl }) => {
   const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const commentsListRef = useRef(null);
 
+  // Scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current && post) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
   }, [post?.comments]);
+
+  // Fetch current user on mount + re-fetch when auth state changes
+  useEffect(() => {
+    fetchCurrentUser().then(setCurrentUser);
+    const onAuthChanged = () => fetchCurrentUser().then(setCurrentUser);
+    window.addEventListener('forum-auth-changed', onAuthChanged);
+    return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
+  }, []);
 
   // Transform raw <pre> tags into the locked two-column Flexbox layout
   useEffect(() => {
@@ -57,7 +129,17 @@ const ForumPost = ({ blockEl }) => {
     });
   }, [post]);
 
-  // Listen for sidebar click events
+  // Also listen for edit-post:saved so we can refresh the view after a save
+  useEffect(() => {
+    const handlePostSaved = (e) => {
+      const updated = e.detail;
+      if (!updated || !post || updated.id !== post.id) return;
+      setPost((prev) => (prev ? { ...prev, ...updated } : prev));
+    };
+    window.addEventListener('edit-post:saved', handlePostSaved);
+    return () => window.removeEventListener('edit-post:saved', handlePostSaved);
+  }, [post]);
+
   useEffect(() => {
     const handleLoadPost = async (event) => {
       const { postId } = event.detail;
@@ -71,7 +153,7 @@ const ForumPost = ({ blockEl }) => {
       cardsWrappers.forEach((el) => { el.style.display = 'none'; });
 
       try {
-        const url = `http://localhost:5000/api/posts/${postId}`;
+        const url = `${API_BASE}/posts/${postId}`;
         const response = await fetch(url);
 
         if (response.ok) {
@@ -79,10 +161,16 @@ const ForumPost = ({ blockEl }) => {
           if (data.success && data.post) {
             const fetchedPost = data.post;
             const transformedPost = {
-              id: fetchedPost._id, // eslint-disable-line no-underscore-dangle
+              // eslint-disable-next-line no-underscore-dangle
+              id: fetchedPost._id,
               title: fetchedPost.title,
               topic: fetchedPost.category,
-              author: 'User',
+              author: fetchedPost.author || 'User',
+              // Store createdBy so we can check ownership
+              // eslint-disable-next-line no-underscore-dangle
+              createdBy: fetchedPost.createdBy
+                ? String(fetchedPost.createdBy._id || fetchedPost.createdBy)
+                : null,
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
               comments: [],
@@ -139,6 +227,8 @@ const ForumPost = ({ blockEl }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const canEdit = isOwner(post, currentUser);
+
   return html`
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
@@ -155,7 +245,17 @@ const ForumPost = ({ blockEl }) => {
       <div class="tags-row">
         ${post.tags.map((tag) => html`<span class="tag-pill">${tag}</span>`)}
       </div>
-      <h1 class="post-title">${post.title}</h1>
+
+      <div class="post-title-row">
+        <h1 class="post-title">${post.title}</h1>
+        ${canEdit && html`
+          <button class="post-edit-btn" title="Edit post" onClick=${() => openEditForm(post)}>
+            <${EditIcon} />
+            <span>Edit</span>
+          </button>
+        `}
+      </div>
+
       <div class="post-meta">
         <span class="author-name">${post.author}</span>
         <span class="meta-separator">•</span>

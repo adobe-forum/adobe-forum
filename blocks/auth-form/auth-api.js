@@ -1,9 +1,15 @@
 /**
  * auth-api.js — fetch helpers for the auth-form block
  * Mirrors the same BASE_URL pattern used by the rest of the frontend.
+ *
+ * BASE_URL resolution order:
+ *   1. window.AUTH_API_BASE  — set this in your EDS page/env config
+ *   2. Falls back to http://localhost:5000/api/auth for local dev
  */
 
-const BASE_URL = 'http://localhost:5000/api/auth';
+const BASE_URL =
+  (typeof window !== 'undefined' && window.AUTH_API_BASE) ||
+  'http://localhost:5000/api/auth';
 
 /**
  * POST /api/auth/login
@@ -56,5 +62,51 @@ export async function forgotPassword({ email }) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Could not send reset link.');
+  return data;
+}
+
+/**
+ * GET /api/auth/me
+ * Returns the currently authenticated user (based on session cookie).
+ * Call this on page load to restore auth state without re-entering credentials.
+ * @returns {Promise<{ success: boolean, user: object }>}
+ */
+export async function getMe() {
+  const res = await fetch(`${BASE_URL}/me`, {
+    credentials: 'include',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Not authenticated.');
+  return data;
+}
+
+/**
+ * POST /api/auth/logout
+ * Destroys the server-side session and clears the cookie.
+ * @returns {Promise<{ success: boolean }>}
+ */
+export async function logoutUser() {
+  const res = await fetch(`${BASE_URL}/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Logout failed.');
+  return data;
+}
+
+/**
+ * POST /api/auth/reset-password
+ * @param {{ token: string, password: string }} payload
+ * @returns {Promise<{ success: boolean }>}
+ */
+export async function resetPassword({ token, password }) {
+  const res = await fetch(`${BASE_URL}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Reset failed.');
   return data;
 }

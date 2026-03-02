@@ -1572,6 +1572,7 @@ function CreatePost() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(postData),
       });
 
@@ -1591,6 +1592,7 @@ function CreatePost() {
           await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(smartPayload),
           });
         } catch (sidebarErr) { // eslint-disable-line no-unused-vars

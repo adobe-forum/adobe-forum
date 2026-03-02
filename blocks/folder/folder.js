@@ -316,6 +316,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         res = await fetch(`${API_BASE}/sidebar/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ name }),
         });
       } else {
@@ -327,6 +328,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         res = await fetch(`${API_BASE}/sidebar-items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             title: name, category, parentId: mongoParentId, isFolder: true,
           }),
@@ -355,6 +357,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       await fetch(`${API_BASE}/sidebar-items/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ title: name }),
       });
       await fetchFolders();
@@ -372,7 +375,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
         : `${API_BASE}/sidebar-items/${node.id}`;
-      await fetch(url, { method: 'DELETE' });
+      await fetch(url, { method: 'DELETE', credentials: 'include' });
       if (selected === node.id) setSelected(null);
       if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
       await fetchFolders();

@@ -3,12 +3,13 @@
  * Preact + htm (vendor imports, no bundler)
  *
  * Reads ?token= from the URL, lets the user set a new password,
- * then calls POST /api/auth/reset-password on the backend.
+ * then calls POST /api/auth/reset-password via auth-api.js.
  */
 
 import { h, render } from '../../vendor/preact.js';
 import { useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
+import { resetPassword } from '../auth-form/auth-api.js';
 
 const html = htm.bind(h);
 
@@ -186,13 +187,8 @@ function ResetPassword() {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Reset failed.');
+      // Uses auth-api.js — BASE_URL is resolved from window.AUTH_API_BASE or localhost fallback
+      await resetPassword({ token, password });
       setSuccess(true);
       // Redirect to sign in after 3 seconds
       setTimeout(() => { window.location.href = '/auth-form'; }, 3000);
@@ -205,7 +201,7 @@ function ResetPassword() {
 
   const renderContent = () => {
     if (success) {
-      return html` 
+      return html`
       <div class="auth-form-success is-visible" aria-live="polite">
         <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
         <p class="auth-form-success-title">Password updated!</p>
@@ -291,6 +287,13 @@ function ResetPassword() {
 
 /* ── 7. EDS block decorator ─────────────────────────────────────────────── */
 export default function decorate(block) {
+  // Hide EDS chrome so the auth overlay is the only thing visible
+  document.querySelector('header')?.style.setProperty('display', 'none');
+  document.querySelector('footer')?.style.setProperty('display', 'none');
+  document.querySelector('.sidebar-mount')?.style.setProperty('display', 'none');
+
+  // Render into a mount div appended to <body> so the overlay
+  // sits above all EDS chrome at the correct z-index
   block.textContent = '';
   const mount = document.createElement('div');
   document.body.append(mount);
