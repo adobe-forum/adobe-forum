@@ -38,20 +38,15 @@ const sidebarItemSchema = new mongoose.Schema({
   },
   path: {
     type: String,
-    default: '', 
+    default: '', // e.g., "React > Hooks > useState"
   },
+  // Auto-nesting tags for related content (e.g., ES6 features)
   relatedTags: [{
     type: String,
   }],
   order: {
     type: Number,
     default: 0,
-  },
-  // NEW: Link the sidebar item/folder to the user who created it
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true, 
   },
   createdAt: {
     type: Date,

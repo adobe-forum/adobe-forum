@@ -3,13 +3,6 @@ import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 const API_BASE = 'http://localhost:5000/api';
 
-// Helper — always reads the latest token from localStorage
-const getToken = () => localStorage.getItem('forum_token') || '';
-const authHeaders = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${getToken()}`,
-});
-
 // ============================================
 // NORMALIZE
 // ============================================
@@ -141,13 +134,7 @@ function InlineInput({
   const [value, setValue] = useState(initialValue);
   const doneRef = useRef(false);
 
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.focus();
-      // Place cursor at end of pre-filled text
-      ref.current.setSelectionRange(value.length, value.length);
-    }
-  }, []);
+  useEffect(() => { if (ref.current) ref.current.focus(); }, []);
 
   const confirm = () => {
     if (doneRef.current) return;
@@ -214,12 +201,6 @@ function TreeItem({
 
   // Only show action buttons if the logged-in user created this item
   const canEdit = isOwner(item, currentUser);
-
-  // Only show action buttons if logged-in user owns this item
-  const isOwner = currentUser && item.createdBy
-    && String(currentUser._id) === String(
-      typeof item.createdBy === 'object' ? item.createdBy._id : item.createdBy,
-    );
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
@@ -312,7 +293,7 @@ function TreeItem({
             <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
               onConfirm=${(name) => { onAddSubfolder(itemId, name); setIsAddingChild(false); }}
               onCancel=${() => setIsAddingChild(false)} />`
-          }
+}
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
@@ -579,24 +560,6 @@ function Sidebar() {
       itemId: isItemDelete ? itemId : null,
       name: isItemDelete ? itemTitle : itemId,
     });
-  };
-
-  // Rename a sidebar item — calls PATCH /api/sidebar-items/:id with auth
-  const handleRename = async (itemId, newTitle) => {
-    try {
-      const response = await fetch(`${API_BASE}/sidebar-items/${itemId}`, {
-        method: 'PATCH',
-        headers: authHeaders(),
-        body: JSON.stringify({ title: newTitle }),
-      });
-      const data = await response.json();
-      if (data.success) await fetchCategories();
-      // eslint-disable-next-line no-console
-      else console.error('Rename failed:', data.error);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Rename failed:', err);
-    }
   };
 
   const confirmDelete = async () => {

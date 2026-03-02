@@ -12,29 +12,6 @@ import {
   loadCSS,
 } from './aem.js';
 
-// --- NEW AUTH HELPERS ---
-/**
- * Returns the Authorization header with the JWT token if available.
- */
-export function getAuthHeader() {
-  const token = localStorage.getItem('forum_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
-
-/**
- * Checks if the current user has permission to modify a resource.
- */
-export function canModify(resource) {
-  const user = JSON.parse(localStorage.getItem('forum_user'));
-  if (!user || !resource) return false;
-  // Handle both string IDs and populated objects
-  const creatorId = typeof resource.createdBy === 'object' 
-    ? resource.createdBy._id 
-    : resource.createdBy;
-  return String(user._id) === String(creatorId);
-}
-// ------------------------
-
 /**
  * load fonts.css and set a session storage flag
  */
@@ -55,6 +32,7 @@ function buildAutoBlocks(main) {
   try {
     const fragments = [...main.querySelectorAll('a[href*="/fragments/"]')].filter((f) => !f.closest('.fragment'));
     if (fragments.length > 0) {
+      // eslint-disable-next-line import/no-cycle
       import('../blocks/fragment/fragment.js').then(({ loadFragment }) => {
         fragments.forEach(async (fragment) => {
           try {
@@ -62,17 +40,25 @@ function buildAutoBlocks(main) {
             const frag = await loadFragment(pathname);
             fragment.parentElement.replaceWith(...frag.children);
           } catch (error) {
+            // eslint-disable-next-line no-console
             console.error('Fragment loading failed', error);
           }
         });
       });
     }
   } catch (error) {
-    // ignore
+    // eslint-disable-next-line no-console
+    console.error('Auto Blocking failed', error);
   }
 }
 
+/**
+ * Decorates the main element.
+ * @param {Element} main The main element
+ */
+// eslint-disable-next-line import/prefer-default-export
 export function decorateMain(main) {
+  // hopefully forward compatible button decoration
   decorateButtons(main);
   decorateIcons(main);
   buildAutoBlocks(main);
@@ -80,6 +66,10 @@ export function decorateMain(main) {
   decorateBlocks(main);
 }
 
+/**
+ * Loads everything needed to get to LCP.
+ * @param {Element} doc The container element
+ */
 async function loadEager(doc) {
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
@@ -91,6 +81,7 @@ async function loadEager(doc) {
   }
 
   try {
+    /* if desktop (proxy for fast connection) or fonts already loaded, load fonts.css */
     if (window.innerWidth >= 900 || sessionStorage.getItem('fonts-loaded')) {
       loadFonts();
     }
@@ -99,6 +90,10 @@ async function loadEager(doc) {
   }
 }
 
+/**
+ * Loads everything that doesn't need to be delayed.
+ * @param {Element} doc The container element
+ */
 async function loadLazy(doc) {
   const main = doc.querySelector('main');
   await loadSections(main);
@@ -108,9 +103,11 @@ async function loadLazy(doc) {
   if (hash && element) element.scrollIntoView();
 
   loadHeader(doc.querySelector('header'));
+
   loadFooter(doc.querySelector('footer'));
 
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
+  loadFonts();
 }
 
 async function loadPage() {

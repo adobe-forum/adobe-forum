@@ -259,11 +259,10 @@ const ForumPost = ({ blockEl }) => {
         <span class="topic-name">${post.topic}</span>
       </div>
 
-        <div
-          class="post-body-raw"
-          dangerouslySetInnerHTML=${{ __html: post.body }}
-        />
-     
+      <div
+        class="post-body-raw"
+        dangerouslySetInnerHTML=${{ __html: post.body }}
+      />
 
       <hr class="post-divider" />
 
