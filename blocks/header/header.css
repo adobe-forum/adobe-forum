@@ -507,6 +507,16 @@
   padding-right: 44px;
 }
 
+/* Remove browser built-in password eye icon */
+.pp-input::-ms-reveal,
+.pp-input::-ms-clear,
+.pp-input::-webkit-contacts-auto-fill-button,
+.pp-input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* stylelint-disable-next-line selector-class-pattern */
 .pp-input.pp-input--disabled {
   background: #f5f5f5;
@@ -522,27 +532,34 @@
 }
 
 .pp-pw-toggle {
-  position: absolute;
-  right: 10px;
-  top: 0;
-  bottom: 0;
-  height: 100%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #767676;
-  padding: 0 4px;
-  border-radius: 4px;
-  background: none;
-  border: none;
-  outline: none;
-  line-height: 0;
-  transition: color 0.15s;
+  all: unset !important;
+  position: absolute !important;
+  right: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  color: #6e6e6e !important;
+  cursor: pointer !important;
+  transition: color 0.13s ease-in-out !important;
+  line-height: 0 !important;
 }
 
 .pp-pw-toggle:hover {
-  color: #1a1a1a;
+  color: #2c2c2c !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.pp-pw-toggle:focus-visible {
+  outline: 2px solid #1473e6 !important;
+  outline-offset: 2px !important;
 }
 
 .pp-field-error {
