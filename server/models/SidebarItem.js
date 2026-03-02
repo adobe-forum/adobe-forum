@@ -18,7 +18,6 @@ const sidebarItemSchema = new mongoose.Schema({
     ref: 'Post',
     required: false,
   },
-  // New fields for nested folder structure
   isFolder: {
     type: Boolean,
     default: false,
@@ -30,15 +29,20 @@ const sidebarItemSchema = new mongoose.Schema({
   },
   path: {
     type: String,
-    default: '', // e.g., "React > Hooks > useState"
+    default: '', 
   },
-  // Auto-nesting tags for related content (e.g., ES6 features)
   relatedTags: [{
     type: String,
   }],
   order: {
     type: Number,
     default: 0,
+  },
+  // NEW: Link the sidebar item/folder to the user who created it
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true, 
   },
   createdAt: {
     type: Date,
@@ -58,9 +62,8 @@ sidebarItemSchema.pre('save', function updateTimestamp() {
 // Index for efficient queries
 sidebarItemSchema.index({ category: 1, order: 1 });
 sidebarItemSchema.index({ postId: 1 });
-sidebarItemSchema.index({ parentId: 1 });
-sidebarItemSchema.index({ path: 1 });
-sidebarItemSchema.index({ isFolder: 1 });
+// NEW: Index by creator for faster lookups later if we want a "My Posts" view
+sidebarItemSchema.index({ createdBy: 1 });
 
 const SidebarItem = mongoose.model('SidebarItem', sidebarItemSchema);
 

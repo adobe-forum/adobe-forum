@@ -262,12 +262,34 @@ function LoginPanel({ onForgot, active }) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1100); });
-    setLoading(false);
-    // TODO: replace with real Adobe IMS auth call
-    // TODO: replace with real Adobe IMS auth call — remove console.log in production
-    // eslint-disable-next-line no-console
-    console.log('✓ Sign-in submitted — wire to your Adobe IMS endpoint.');
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrors({ password: data.error || 'Invalid email or password.' });
+      } else {
+        // Store JWT and user info so other blocks can read them
+        localStorage.setItem('forum_token', data.token);
+        localStorage.setItem('forum_user', JSON.stringify({
+          _id: data._id,
+          username: data.username,
+          email: data.email,
+        }));
+        // Notify header + sidebar to re-render with auth state
+        window.dispatchEvent(new CustomEvent('forum-auth-changed'));
+        // Close the overlay by removing its mount node
+        const overlay = document.querySelector('.auth-form-overlay');
+        if (overlay && overlay.parentNode) overlay.parentNode.remove();
+      }
+    } catch {
+      setErrors({ password: 'Network error. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
@@ -358,12 +380,37 @@ function SignupPanel({ active }) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1100); });
-    setLoading(false);
-    // TODO: replace with real registration endpoint
-    // TODO: replace with real registration endpoint — remove console.log in production
-    // eslint-disable-next-line no-console
-    console.log('✓ Account created — wire to your registration endpoint.');
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: `${f.first.trim()} ${f.last.trim()}`,
+          email: f.email,
+          password: f.pass,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrors({ email: data.error || 'Registration failed.' });
+      } else {
+        // Auto-login after registration
+        localStorage.setItem('forum_token', data.token);
+        localStorage.setItem('forum_user', JSON.stringify({
+          _id: data._id,
+          username: data.username,
+          email: data.email,
+        }));
+        window.dispatchEvent(new CustomEvent('forum-auth-changed'));
+        const overlay = document.querySelector('.auth-form-overlay');
+        if (overlay && overlay.parentNode) overlay.parentNode.remove();
+      }
+    } catch {
+      setErrors({ email: 'Network error. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
   };
 
   return html`

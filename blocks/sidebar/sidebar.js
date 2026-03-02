@@ -3,6 +3,13 @@ import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 const API_BASE = 'http://localhost:5000/api';
 
+// Helper — always reads the latest token from localStorage
+const getToken = () => localStorage.getItem('forum_token') || '';
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${getToken()}`,
+});
+
 // ============================================
 // NORMALIZE
 // ============================================
@@ -80,6 +87,13 @@ const TrashIcon = () => html`
   </svg>
 `;
 
+const PencilIcon = () => html`
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+`;
+
 const FolderPlusIcon = () => html`
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -120,13 +134,19 @@ const FileIcon = () => html`
 // ============================================
 
 function InlineInput({
-  placeholder, onConfirm, onCancel, paddingLeft = 12,
+  placeholder, onConfirm, onCancel, paddingLeft = 12, initialValue = '',
 }) {
   const ref = useRef(null);
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue);
   const doneRef = useRef(false);
 
-  useEffect(() => { if (ref.current) ref.current.focus(); }, []);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.focus();
+      // Place cursor at end of pre-filled text
+      ref.current.setSelectionRange(value.length, value.length);
+    }
+  }, []);
 
   const confirm = () => {
     if (doneRef.current) return;
@@ -161,19 +181,26 @@ function InlineInput({
 // ============================================
 
 function TreeItem({
-  item, activeItem, onItemClick, onAddSubfolder, onDelete, level = 0,
+  item, activeItem, onItemClick, onAddSubfolder, onDelete, onRename, level = 0, currentUser,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingChild, setIsAddingChild] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);  // NEW: inline rename toggle
   const hasChildren = item.children && item.children.length > 0;
   const isFolder = item.isFolder || hasChildren;
   const itemId = item.id;
-  // Cap indentation at 80px so deeply-nested labels always stay visible
   const paddingLeft = Math.min(12 + level * 20, 80);
+
+  // Only show action buttons if logged-in user owns this item
+  const isOwner = currentUser && item.createdBy
+    && String(currentUser._id) === String(
+      typeof item.createdBy === 'object' ? item.createdBy._id : item.createdBy,
+    );
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
+    if (isRenaming) return;  // don't navigate while renaming
     if (isFolder) setIsExpanded((prev) => !prev);
     let targetPostId = null;
     if (item.postId) {
@@ -197,49 +224,79 @@ function TreeItem({
     onDelete(itemId, item.title);
   };
 
+  // NEW: open inline rename input
+  const handleRenameStart = (e) => {
+    e.stopPropagation();
+    setIsRenaming(true);
+  };
+
+  // NEW: confirm rename — call parent handler then close input
+  const handleRenameConfirm = (newTitle) => {
+    setIsRenaming(false);
+    if (newTitle && newTitle !== item.title) onRename(itemId, newTitle);
+  };
+
   return html`
     <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}">
-      <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
-        style="padding-left: ${paddingLeft}px" onClick=${handleClick}
-        onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
-        title=${item.title}>
-        <span class="tree-chevron">
-          ${isFolder
-    ? html`<${ChevronIcon} expanded=${isExpanded} />`
-    : html`<span class="tree-chevron-spacer"/>`}
-        </span>
-        <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
-          ${isFolder
-    ? html`<${FolderIcon} expanded=${isExpanded} />`
-    : html`<${FileIcon} />`}
-        </span>
-        <span class="tree-label">${item.title}</span>
-        ${isHovered && html`
-          <span class="item-actions">
-            ${isFolder && html`
-              <button class="item-action-btn" title="Add subfolder"
-                onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddSubfolder}>
-                <${FolderPlusIcon} />
-              </button>
+      ${isRenaming
+        ? html`
+          <div style="padding-left: ${paddingLeft}px; padding-right: 8px; padding-top: 2px; padding-bottom: 2px;">
+            <${InlineInput}
+              placeholder=${item.title}
+              initialValue=${item.title}
+              onConfirm=${handleRenameConfirm}
+              onCancel=${() => setIsRenaming(false)}
+              paddingLeft=${0}
+            />
+          </div>`
+        : html`
+          <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
+            style="padding-left: ${paddingLeft}px" onClick=${handleClick}
+            onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
+            title=${item.title}>
+            <span class="tree-chevron">
+              ${isFolder
+                ? html`<${ChevronIcon} expanded=${isExpanded} />`
+                : html`<span class="tree-chevron-spacer"/>`}
+            </span>
+            <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
+              ${isFolder
+                ? html`<${FolderIcon} expanded=${isExpanded} />`
+                : html`<${FileIcon} />`}
+            </span>
+            <span class="tree-label">${item.title}</span>
+            ${isHovered && isOwner && html`
+              <span class="item-actions">
+                <button class="item-action-btn" title="Rename"
+                  onMouseDown=${(e) => e.preventDefault()} onClick=${handleRenameStart}>
+                  <${PencilIcon} />
+                </button>
+                ${isFolder && html`
+                  <button class="item-action-btn" title="Add subfolder"
+                    onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddSubfolder}>
+                    <${FolderPlusIcon} />
+                  </button>
+                `}
+                <button class="item-action-btn item-action-btn-delete" title="Delete"
+                  onMouseDown=${(e) => e.preventDefault()} onClick=${handleDelete}>
+                  <${TrashIcon} />
+                </button>
+              </span>
             `}
-            <button class="item-action-btn item-action-btn-delete" title="Delete"
-              onMouseDown=${(e) => e.preventDefault()} onClick=${handleDelete}>
-              <${TrashIcon} />
-            </button>
-          </span>
-        `}
-      </div>
+          </div>`
+      }
       ${(isExpanded || isAddingChild) && html`
         <ul class="tree-children">
           ${isAddingChild && html`
             <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
               onConfirm=${(name) => { onAddSubfolder(itemId, name); setIsAddingChild(false); }}
               onCancel=${() => setIsAddingChild(false)} />`
-}
+          }
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               onItemClick=${onItemClick} onAddSubfolder=${onAddSubfolder}
-              onDelete=${onDelete} level=${level + 1} />
+              onDelete=${onDelete} onRename=${onRename}
+              currentUser=${currentUser} level=${level + 1} />
           `)}
         </ul>
       `}
@@ -252,12 +309,16 @@ function TreeItem({
 // ============================================
 
 function CategoryItem({
-  category, activeSubcategory, onSubcategoryClick, onAddFolder, onDeleteCategory,
+  category, activeSubcategory, onSubcategoryClick, onAddFolder, onDeleteCategory, onRename, currentUser,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const hasItems = category.items && category.items.length > 0;
+
+  // NEW: only show action buttons if logged-in user owns this category
+  const isOwner = currentUser && category.createdById
+    && String(currentUser._id) === String(category.createdById);
 
   const handleAddFolder = (e) => {
     e.stopPropagation();
@@ -277,7 +338,7 @@ function CategoryItem({
         <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
         <span class="category-icon"><${FolderIcon} expanded=${!isCollapsed} /></span>
         <span class="category-name">${category.name}</span>
-        ${isHovered && html`
+        ${isHovered && isOwner && html`
           <span class="item-actions">
             <button class="item-action-btn" title="Add folder"
               onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddFolder}>
@@ -303,6 +364,8 @@ function CategoryItem({
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onAddSubfolder=${(parentId, name) => onAddFolder(category.name, parentId, name)}
                   onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle)}
+                  onRename=${onRename}
+                  currentUser=${currentUser}
                   level=${0} />
               `)
     : !isAddingFolder && html`<div class="no-items">No items yet</div>`
@@ -329,6 +392,19 @@ function Sidebar() {
   const [creationError, setCreationError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null);
   const inputRef = useRef(null);
+
+  // NEW: track logged-in user so we can show/hide action buttons per-item
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('forum_user')) || null; } catch { return null; }
+  });
+
+  useEffect(() => {
+    const onAuthChange = () => {
+      try { setCurrentUser(JSON.parse(localStorage.getItem('forum_user')) || null); } catch { setCurrentUser(null); }
+    };
+    window.addEventListener('forum-auth-changed', onAuthChange);
+    return () => window.removeEventListener('forum-auth-changed', onAuthChange);
+  }, []);
 
   const applyBodyOffset = (open) => {
     if (open) {
@@ -414,7 +490,7 @@ function Sidebar() {
     try {
       const response = await fetch(`${API_BASE}/sidebar-items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           title: name, category: categoryId, parentId: parentId || null, isFolder: true,
         }),
@@ -438,6 +514,24 @@ function Sidebar() {
     });
   };
 
+  // Rename a sidebar item — calls PATCH /api/sidebar-items/:id with auth
+  const handleRename = async (itemId, newTitle) => {
+    try {
+      const response = await fetch(`${API_BASE}/sidebar-items/${itemId}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ title: newTitle }),
+      });
+      const data = await response.json();
+      if (data.success) await fetchCategories();
+      // eslint-disable-next-line no-console
+      else console.error('Rename failed:', data.error);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Rename failed:', err);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteDialog) return;
     const { categoryId, itemId } = deleteDialog;
@@ -446,7 +540,10 @@ function Sidebar() {
       const url = itemId
         ? `${API_BASE}/sidebar-items/${itemId}`
         : `${API_BASE}/sidebar/categories/${categoryId}`;
-      const response = await fetch(url, { method: 'DELETE' });
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
       const data = await response.json();
       if (data.success) await fetchCategories();
       // eslint-disable-next-line no-console
@@ -470,7 +567,7 @@ function Sidebar() {
     try {
       const response = await fetch(`${API_BASE}/sidebar-items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           title: trimmedName, category: trimmedName, isFolder: true, parentId: null,
         }),
@@ -548,6 +645,8 @@ function Sidebar() {
                     onSubcategoryClick=${handleSubcategoryClick}
                     onAddFolder=${handleAddFolder}
                     onDeleteCategory=${handleDelete}
+                    onRename=${handleRename}
+                    currentUser=${currentUser}
                   />
                 `)
     : html`<div class="no-results">No categories found</div>`

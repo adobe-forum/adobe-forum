@@ -30,6 +30,26 @@ const UserIcon = () => html`
 function HeaderComponent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
+  // NEW: read auth state from localStorage on mount + on auth change events
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('forum_user')) || null; } catch { return null; }
+  });
+
+  // Re-read user whenever login/logout fires
+  useEffect(() => {
+    const onAuthChange = () => {
+      try { setCurrentUser(JSON.parse(localStorage.getItem('forum_user')) || null); } catch { setCurrentUser(null); }
+    };
+    window.addEventListener('forum-auth-changed', onAuthChange);
+    return () => window.removeEventListener('forum-auth-changed', onAuthChange);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('forum_token');
+    localStorage.removeItem('forum_user');
+    setCurrentUser(null);
+    window.dispatchEvent(new CustomEvent('forum-auth-changed'));
+  };
 
   useEffect(() => {
     const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
@@ -74,15 +94,30 @@ function HeaderComponent() {
                             <${SettingsIcon} />
                         </a>
                     </li>
-                    <li class="profile-item">
-                        <a href="/profile" class="profile-link">
-                            <div class="profile-avatar">
-                                ${!profileImageError
-    ? html`<img src="/icons/profile.png" alt="Profile" onError=${() => setProfileImageError(true)} />`
-    : html`<${UserIcon} />`}
-                            </div>
+                    ${currentUser ? html`
+                      <li style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:14px;font-weight:600;color:var(--spectrum-gray-800);">
+                          ${currentUser.username}
+                        </span>
+                        <button
+                          onClick=${handleLogout}
+                          style="background:transparent;border:1px solid var(--spectrum-gray-400);border-radius:14px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--spectrum-gray-700);font-family:inherit;"
+                          aria-label="Log out"
+                        >
+                          Log out
+                        </button>
+                      </li>
+                    ` : html`
+                      <li class="profile-item">
+                        <a href="/auth-form" class="profile-link" aria-label="Sign in">
+                          <div class="profile-avatar">
+                            ${!profileImageError
+                              ? html`<img src="/icons/profile.png" alt="Profile" onError=${() => setProfileImageError(true)} />`
+                              : html`<${UserIcon} />`}
+                          </div>
                         </a>
-                    </li>
+                      </li>
+                    `}
                 </ul>
             </div>
         </nav>

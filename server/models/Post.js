@@ -18,6 +18,12 @@ const postSchema = new mongoose.Schema({
   tags: [{
     type: String,
   }],
+  // NEW: Link the post to the user who created it
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true, 
+  },
   createdAt: {
     type: Date,
     default: Date.now,

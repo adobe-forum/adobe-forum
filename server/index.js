@@ -2,6 +2,9 @@
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import User from './models/user.js';
+import authMiddleware from './middleware/authMiddleware.js';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
 
@@ -77,6 +80,81 @@ const buildTree = (items) => {
   return roots;
 };
 
+/* -------------------- AUTHENTICATION ROUTES -------------------- */
+
+// Helper function to generate JWT tokens
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d', // Token lasts for 30 days
+  });
+};
+
+// @route   POST /api/auth/register
+// @desc    Register a new user
+app.post('/api/auth/register', async (req, res) => {
+  const { username, email, password } = req.body;
+
+  try {
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    const user = await User.create({ username, email, password });
+
+    if (user) {
+      res.status(201).json({
+        _id: user.id,
+        username: user.username,
+        email: user.email,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(400).json({ error: 'Invalid user data' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// @route   POST /api/auth/login
+// @desc    Authenticate a user & get token
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        _id: user.id,
+        username: user.username,
+        email: user.email,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401).json({ error: 'Invalid email or password' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// @route   GET /api/me
+// @desc    Get current logged-in user details (Protected Route Example)
+app.get('/api/me', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      _id: req.user.id,
+      username: req.user.username,
+      email: req.user.email,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 /* -------------------- POSTS -------------------- */
 
 /**
@@ -85,7 +163,7 @@ const buildTree = (items) => {
  * Validates that title is at least 15 chars, body plain-text is at least 20 chars,
  * category is present, and tags is a non-empty array.
  */
-app.post('/api/posts', async (req, res) => {
+app.post('/api/posts', authMiddleware, async (req, res) => {
   try {
     const { title, category, body, tags } = req.body;
 
@@ -103,7 +181,13 @@ app.post('/api/posts', async (req, res) => {
     if (plainText.length < 20)
       return res.status(400).json({ error: 'Body too short' });
 
-    const post = await Post.create({ title, category, body, tags });
+    const post = await Post.create({ 
+      title, 
+      category, 
+      body, 
+      tags,
+      createdBy: req.user._id // Assign ownership
+    });
 
     res.status(201).json({ success: true, post });
 
@@ -161,7 +245,8 @@ app.get('/api/posts', async (req, res) => {
  */
 app.get('/api/posts/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    // NEW: populate createdBy so frontend gets the author's username
+    const post = await Post.findById(req.params.id).populate('createdBy', 'username');
     if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });
   } catch (err) {
@@ -175,19 +260,8 @@ app.get('/api/posts/:id', async (req, res) => {
 /**
  * POST /api/sidebar-items
  * Creates a sidebar item (post link or sub-folder) inside an existing category.
- *
- * Expected body:
- *   { title, category, postId?, parentId?, isFolder }
- *
- * NOTE: Do NOT use this endpoint to create a top-level / root folder.
- *       Use POST /api/sidebar/categories for that instead. Sending a root
- *       folder here would result in it appearing both as the category header
- *       AND as a duplicate child item inside that category.
- *
- * `order` is derived automatically from how many siblings already exist
- * so new items always appear at the end of their parent's children list.
  */
-app.post('/api/sidebar-items', async (req, res) => {
+app.post('/api/sidebar-items', authMiddleware, async (req, res) => {
   try {
     const { title, category, postId, parentId = null, isFolder } = req.body;
 
@@ -210,6 +284,7 @@ app.post('/api/sidebar-items', async (req, res) => {
       postId: isFolder ? null : postId, // folders never reference a post
       isFolder: Boolean(isFolder),
       order,
+      createdBy: req.user._id // Assign ownership
     });
 
     res.status(201).json({ success: true, item });
@@ -228,7 +303,7 @@ app.post('/api/sidebar-items', async (req, res) => {
  * Called after a post is created. Ensures the category anchor exists,
  * then creates a leaf SidebarItem linking the post into the sidebar.
  */
-app.post('/api/sidebar-items/smart-add', async (req, res) => {
+app.post('/api/sidebar-items/smart-add', authMiddleware, async (req, res) => {
   try {
     const { title, category, postId } = req.body;
 
@@ -254,6 +329,7 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
         postId: null,
         isFolder: true,
         order: anchorOrder,
+        createdBy: req.user._id // Assign ownership
       });
     }
 
@@ -275,6 +351,7 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
       postId: new mongoose.Types.ObjectId(postId),
       isFolder: false,
       order,
+      createdBy: req.user._id // Assign ownership
     });
 
     return res.status(201).json({ success: true, item });
@@ -289,15 +366,8 @@ app.post('/api/sidebar-items/smart-add', async (req, res) => {
 /**
  * POST /api/sidebar/categories
  * Creates a new root-level category (top-level folder).
- *
- * Categories are not stored as a separate collection — they are represented
- * by a "category anchor" SidebarItem where title === category and parentId is null.
- * The GET /api/sidebar/categories endpoint detects this anchor and strips it
- * from the children list, so it renders only as the category header in the UI.
- *
- * Returns 409 if a category with the same name already exists.
  */
-app.post('/api/sidebar/categories', async (req, res) => {
+app.post('/api/sidebar/categories', authMiddleware, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || !name.trim())
@@ -327,6 +397,7 @@ app.post('/api/sidebar/categories', async (req, res) => {
       postId: null,
       isFolder: true,
       order,
+      createdBy: req.user._id // Assign ownership
     });
 
     res.status(201).json({ success: true, item });
@@ -339,15 +410,6 @@ app.post('/api/sidebar/categories', async (req, res) => {
 /**
  * GET /api/sidebar/categories
  * Returns all categories, each with a fully nested tree of their children.
- *
- * How duplicate-free rendering works:
- *   Each category has an "anchor" SidebarItem (title === category, parentId null).
- *   This handler detects the anchor and excludes it from the items list that gets
- *   passed to buildTree — so the category name appears only as the header, never
- *   also as a child folder inside itself.
- *
- *   The anchor's _id is used as the category's `id` so that the delete endpoint
- *   can target it by ObjectId.
  */
 app.get('/api/sidebar/categories', async (_req, res) => {
   try {
@@ -382,6 +444,8 @@ app.get('/api/sidebar/categories', async (_req, res) => {
           : categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         name: categoryName,
         icon: '',
+        // NEW: expose createdById so the frontend can compare against logged-in user
+        createdById: rootAnchor ? String(rootAnchor.createdBy) : null,
         items: buildTree(children),
       });
     });
@@ -397,15 +461,16 @@ app.get('/api/sidebar/categories', async (_req, res) => {
 /**
  * DELETE /api/sidebar/categories/:id
  * Deletes an entire category and every item it contains.
- *
- * `:id` must be the ObjectId of the category's anchor SidebarItem
- * (returned as `id` by GET /api/sidebar/categories).
- * All SidebarItems sharing the same `category` string are removed.
  */
-app.delete('/api/sidebar/categories/:id', async (req, res) => {
+app.delete('/api/sidebar/categories/:id', authMiddleware, async (req, res) => {
   try {
     const root = await SidebarItem.findById(req.params.id);
     if (!root) return res.status(404).json({ error: 'Category not found' });
+
+    // Verify ownership: Only the creator can delete it
+    if (root.createdBy && root.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to delete this category' });
+    }
 
     // Wipe the anchor and every item belonging to this category
     await SidebarItem.deleteMany({ category: root.category });
@@ -421,25 +486,75 @@ app.delete('/api/sidebar/categories/:id', async (req, res) => {
 /**
  * PATCH /api/sidebar-items/:id
  * Renames a sidebar item (folder or post link) by updating its title.
- * The category field is intentionally not changed here — renaming a root
- * category would require a separate migration of all items in that category.
  */
-app.patch('/api/sidebar-items/:id', async (req, res) => {
+app.patch('/api/sidebar-items/:id', authMiddleware, async (req, res) => {
   try {
     const { title } = req.body;
     if (!title || !title.trim())
       return res.status(400).json({ error: 'Title is required' });
+
+    // Ownership check — only the creator can rename
+    const existing = await SidebarItem.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Item not found' });
+    if (existing.createdBy && existing.createdBy.toString() !== req.user._id.toString())
+      return res.status(403).json({ error: 'Not authorized to edit this item' });
 
     const item = await SidebarItem.findByIdAndUpdate(
       req.params.id,
       { title: title.trim(), updatedAt: Date.now() },
       { new: true },
     );
-    if (!item) return res.status(404).json({ error: 'Item not found' });
     return res.json({ success: true, item });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Rename failed' });
+  }
+});
+
+/**
+ * PATCH /api/posts/:id
+ * Updates a post's title, body, tags, category.
+ * Only the original author can edit their post.
+ */
+app.patch('/api/posts/:id', authMiddleware, async (req, res) => {
+  try {
+    const { title, body, tags, category } = req.body;
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    // Ownership check — only the creator can edit
+    if (post.createdBy && post.createdBy.toString() !== req.user._id.toString())
+      return res.status(403).json({ error: 'Not authorized to edit this post' });
+
+    // Validate what's being updated
+    if (title !== undefined) {
+      if (!title.trim()) return res.status(400).json({ error: 'Title is required' });
+      if (title.length > 150) return res.status(400).json({ error: 'Title too long' });
+      post.title = title.trim();
+    }
+    if (body !== undefined) {
+      const plainText = String(body).replace(/<[^>]*>/g, '').trim();
+      if (plainText.length < 20) return res.status(400).json({ error: 'Body too short' });
+      post.body = body;
+    }
+    if (tags !== undefined) {
+      if (!Array.isArray(tags) || !tags.length)
+        return res.status(400).json({ error: 'Tags must be a non-empty array' });
+      post.tags = tags;
+    }
+    if (category !== undefined) {
+      if (!category.trim()) return res.status(400).json({ error: 'Category is required' });
+      post.category = category.trim();
+    }
+
+    post.updatedAt = Date.now();
+    await post.save();
+
+    return res.json({ success: true, post });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Post update failed' });
   }
 });
 
@@ -448,13 +563,17 @@ app.patch('/api/sidebar-items/:id', async (req, res) => {
 /**
  * DELETE /api/sidebar-items/:id
  * Deletes a single sidebar item and all of its descendants recursively.
- *
- * Uses MongoDB's $graphLookup to collect the full subtree in one query,
- * then removes every collected _id in a single deleteMany call.
- * This ensures no orphaned children are left behind.
  */
-app.delete('/api/sidebar-items/:id', async (req, res) => {
+app.delete('/api/sidebar-items/:id', authMiddleware, async (req, res) => {
   try {
+    // Verify ownership before looking up the tree
+    const targetItem = await SidebarItem.findById(req.params.id);
+    if (!targetItem) return res.status(404).json({ error: 'Item not found' });
+
+    if (targetItem.createdBy && targetItem.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to delete this item' });
+    }
+
     const result = await SidebarItem.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
       {
