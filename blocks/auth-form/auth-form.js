@@ -11,6 +11,7 @@
 import { h, render } from '../../vendor/preact.js';
 import { useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
+import { loginUser, registerUser, forgotPassword } from './auth-api.js';
 
 const html = htm.bind(h);
 
@@ -262,41 +263,47 @@ function LoginPanel({ onForgot, active }) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1100); });
-    setLoading(false);
-    // TODO: replace with real Adobe IMS auth call
-    // TODO: replace with real Adobe IMS auth call — remove console.log in production
-    // eslint-disable-next-line no-console
-    console.log('✓ Sign-in submitted — wire to your Adobe IMS endpoint.');
+    try {
+      await loginUser({ email, password });
+      window.location.href = '/';
+    } catch (err) {
+      setErrors({ email: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
     <div id="auth-login" class=${`auth-panel${active ? ' is-active' : ''}`}
          role="tabpanel" aria-labelledby="tab-login">
 
-      <${Field}
-        id="l-email" label="Email address" type="email"
-        placeholder="you@adobe.com" autocomplete="email" withHint=${true}
-        value=${email} error=${errors.email}
-        onChange=${(v) => { setEmail(v); clearErr('email'); }}
-        onBlur=${handleBlurEmail}
-      />
+      <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
 
-      <${Field}
-        id="l-pass" label="Password" type="password"
-        placeholder="••••••••" autocomplete="current-password"
-        value=${password} error=${errors.password}
-        onChange=${(v) => { setPassword(v); clearErr('password'); }}
-        onBlur=${handleBlurPassword}
-      />
+        <${Field}
+          id="l-email" label="Email address" type="email"
+          placeholder="you@adobe.com" autocomplete="email" withHint=${true}
+          value=${email} error=${errors.email}
+          onChange=${(v) => { setEmail(v); clearErr('email'); }}
+          onBlur=${handleBlurEmail}
+        />
 
-      <button type="button" class="auth-form-quiet-link" onClick=${onForgot}>
-        Forgot password?
-      </button>
+        <${Field}
+          id="l-pass" label="Password" type="password"
+          placeholder="••••••••" autocomplete="current-password"
+          value=${password} error=${errors.password}
+          onChange=${(v) => { setPassword(v); clearErr('password'); }}
+          onBlur=${handleBlurPassword}
+        />
 
-      <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
-        Sign in
-      <//>
+        <button type="button" class="auth-form-quiet-link" onClick=${onForgot}>
+          Forgot password?
+        </button>
+
+        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+          Sign in
+        <//>
+
+      </form>
     </div>`;
 }
 
@@ -358,60 +365,66 @@ function SignupPanel({ active }) {
     if (Object.keys(e).length) { setErrors(e); return; }
 
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1100); });
-    setLoading(false);
-    // TODO: replace with real registration endpoint
-    // TODO: replace with real registration endpoint — remove console.log in production
-    // eslint-disable-next-line no-console
-    console.log('✓ Account created — wire to your registration endpoint.');
+    try {
+      await registerUser(f);
+      window.location.href = '/auth-form';
+    } catch (err) {
+      setErrors({ email: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
     <div id="auth-signup" class=${`auth-panel${active ? ' is-active' : ''}`}
          role="tabpanel" aria-labelledby="tab-signup">
 
-      <div class="auth-form-2col">
+      <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
+
+        <div class="auth-form-2col">
+          <${Field}
+            id="su-first" label="First name"
+            placeholder="Jane" autocomplete="given-name"
+            blockNumbers=${true}
+            value=${f.first} error=${errors.first}
+            onChange=${setField('first')} onBlur=${handleBlur('first')}
+          />
+          <${Field}
+            id="su-last" label="Last name"
+            placeholder="Doe" autocomplete="family-name"
+            blockNumbers=${true}
+            value=${f.last} error=${errors.last}
+            onChange=${setField('last')} onBlur=${handleBlur('last')}
+          />
+        </div>
+
         <${Field}
-          id="su-first" label="First name"
-          placeholder="Jane" autocomplete="given-name"
-          blockNumbers=${true}
-          value=${f.first} error=${errors.first}
-          onChange=${setField('first')} onBlur=${handleBlur('first')}
+          id="su-email" label="Email address" type="email"
+          placeholder="you@adobe.com" autocomplete="email" withHint=${true}
+          value=${f.email} error=${errors.email}
+          onChange=${setField('email')} onBlur=${handleBlur('email')}
         />
+
         <${Field}
-          id="su-last" label="Last name"
-          placeholder="Doe" autocomplete="family-name"
-          blockNumbers=${true}
-          value=${f.last} error=${errors.last}
-          onChange=${setField('last')} onBlur=${handleBlur('last')}
+          id="su-pass" label="Password" type="password"
+          placeholder="Min. 8 characters" autocomplete="new-password"
+          showStrength=${true}
+          value=${f.pass} error=${errors.pass}
+          onChange=${setField('pass')} onBlur=${handleBlur('pass')}
         />
-      </div>
 
-      <${Field}
-        id="su-email" label="Email address" type="email"
-        placeholder="you@adobe.com" autocomplete="email" withHint=${true}
-        value=${f.email} error=${errors.email}
-        onChange=${setField('email')} onBlur=${handleBlur('email')}
-      />
+        <${Field}
+          id="su-confirm" label="Confirm password" type="password"
+          placeholder="Repeat password" autocomplete="new-password"
+          value=${f.confirm} error=${errors.confirm}
+          onChange=${setField('confirm')} onBlur=${handleBlur('confirm')}
+        />
 
-      <${Field}
-        id="su-pass" label="Password" type="password"
-        placeholder="Min. 8 characters" autocomplete="new-password"
-        showStrength=${true}
-        value=${f.pass} error=${errors.pass}
-        onChange=${setField('pass')} onBlur=${handleBlur('pass')}
-      />
+        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+          Create account
+        <//>
 
-      <${Field}
-        id="su-confirm" label="Confirm password" type="password"
-        placeholder="Repeat password" autocomplete="new-password"
-        value=${f.confirm} error=${errors.confirm}
-        onChange=${setField('confirm')} onBlur=${handleBlur('confirm')}
-      />
-
-      <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
-        Create account
-      <//>
+      </form>
     </div>`;
 }
 
@@ -428,9 +441,14 @@ function ForgotPanel({ onBack, active }) {
     const err = emailValidator(email);
     if (err) { setError(err); return; }
     setLoading(true);
-    await new Promise((resolve) => { setTimeout(resolve, 1000); });
-    setLoading(false);
-    setSent(true);
+    try {
+      await forgotPassword({ email });
+      setSent(true);
+    } catch (fpErr) {
+      setError(fpErr.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return html`
@@ -451,17 +469,21 @@ function ForgotPanel({ onBack, active }) {
             <${IconArrowLeft}/>${' '}Back to sign in
           </button>
 
-          <${Field}
-            id="fp-email" label="Email address" type="email"
-            placeholder="you@adobe.com" autocomplete="email" withHint=${true}
-            value=${email} error=${error}
-            onChange=${(v) => { setEmail(v); if (error) setError(null); }}
-            onBlur=${handleBlur}
-          />
+          <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
 
-          <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
-            Send reset link
-          <//>
+            <${Field}
+              id="fp-email" label="Email address" type="email"
+              placeholder="you@adobe.com" autocomplete="email" withHint=${true}
+              value=${email} error=${error}
+              onChange=${(v) => { setEmail(v); if (error) setError(null); }}
+              onBlur=${handleBlur}
+            />
+
+            <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+              Send reset link
+            <//>
+
+          </form>
         `}
     </div>`;
 }
