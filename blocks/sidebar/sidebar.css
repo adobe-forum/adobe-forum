@@ -32,7 +32,6 @@
     /* Geometry */
     --sidebar-item-height: 40px;
     --sidebar-category-height: 36px;
-    --sidebar-indent-line: #e0e0e0;
     --sidebar-border-radius: 4px;
     --sidebar-active-bar-width: 3px;
   }
@@ -309,10 +308,8 @@
     margin: 0;
   }
   
-  /* Indent guide line — fixed small offset; all real indentation comes from item padding-left */
   .sidebar .tree-children {
-    border-left: 1px solid var(--sidebar-indent-line);
-    margin-left: 20px;
+    margin-left: 0;
   }
   
   .sidebar .tree-item {

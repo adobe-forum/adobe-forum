@@ -83,7 +83,8 @@ function Card({ post, onClick }) {
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
   const imgSrc = post.image || extractImage(post.body);
   const author = post.author?.name || post.author?.username || post.author
-    || post.createdBy?.name || post.createdBy?.username || post.createdBy
+    || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
+    || post.createdBy?.name || post.createdBy?.username
     || post.userId?.name || post.userId?.username || 'Anonymous';
 
   const initials = avatarInitials(author);
