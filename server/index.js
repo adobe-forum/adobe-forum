@@ -1,3 +1,4 @@
+﻿import crypto from 'crypto';
 ﻿import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -6,8 +7,7 @@ import jwt from 'jsonwebtoken';
 import User from './models/user.js';
 import authMiddleware from './middleware/authMiddleware.js';
 import Post from './models/Post.js';
-import SidebarItem from './models/SidebarItem.js';
-import User from './models/user.js';
+import SidebarItem from './models/SidebarItem.js';   
 
 dotenv.config();
 
@@ -152,6 +152,134 @@ app.get('/api/me', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+/* -------------------- FORGOT PASSWORD -------------------- */
+
+/**
+ * POST /api/auth/forgot-password
+ * Accepts an email, generates a secure reset token, stores a hashed
+ * version in the DB with a 1-hour expiry, and returns the raw token
+ * in the response (in production you would email this instead).
+ */
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Always return 200 — never confirm whether an email exists (security)
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: 'If that email exists, a reset link has been sent.',
+      });
+    }
+
+    // Generate a random 32-byte token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+
+    // Store a SHA-256 hash of the token (never store raw tokens in DB)
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    // In production: send rawToken via email as part of a reset URL.
+    // For now, return it in the response so you can test with Thunder Client.
+    console.log(`[DEV] Reset token for ${email}: ${rawToken}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'If that email exists, a reset link has been sent.',
+      // Remove devToken in production — only here for local testing
+      devToken: rawToken,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not process request' });
+  }
+});
+
+/**
+ * GET /api/auth/reset-password/:token
+ * Validates the reset token — call this before showing the new-password form.
+ * Returns 200 if valid, 400 if expired or invalid.
+ */
+app.get('/api/auth/reset-password/:token', async (req, res) => {
+  try {
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }, // must not be expired
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Token is valid' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Token validation failed' });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password/:token
+ * Sets a new password using a valid reset token.
+ * Clears the token fields after use so it can't be reused.
+ */
+app.post('/api/auth/reset-password/:token', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    // Set new password — pre-save hook will hash it automatically
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
+    await user.save();
+
+    // Issue a fresh JWT so user is logged in immediately after reset
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successful',
+      _id: user.id,
+      username: user.username,
+      email: user.email,
+      token,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Password reset failed' });
   }
 });
 
