@@ -18,11 +18,13 @@ const postSchema = new mongoose.Schema({
   tags: [{
     type: String,
   }],
-  // NEW: Link the post to the user who created it
+  // Tracks which user created this post.
+  // Used for ownership checks on edit/delete.
+  // Optional (null) for posts created before this field was added.
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true, 
+    default: null,
   },
   createdAt: {
     type: Date,
@@ -38,6 +40,9 @@ const postSchema = new mongoose.Schema({
 postSchema.pre('save', function updateTimestamp() {
   this.updatedAt = Date.now();
 });
+
+// Index so we can efficiently query "all posts by user X"
+postSchema.index({ createdBy: 1 });
 
 const Post = mongoose.model('Post', postSchema);
 

@@ -316,6 +316,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         res = await fetch(`${API_BASE}/sidebar/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ name }),
         });
       } else {
@@ -327,6 +328,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         res = await fetch(`${API_BASE}/sidebar-items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             title: name, category, parentId: mongoParentId, isFolder: true,
           }),
@@ -355,6 +357,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       await fetch(`${API_BASE}/sidebar-items/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ title: name }),
       });
       await fetchFolders();
@@ -372,7 +375,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
         : `${API_BASE}/sidebar-items/${node.id}`;
-      await fetch(url, { method: 'DELETE' });
+      await fetch(url, { method: 'DELETE', credentials: 'include' });
       if (selected === node.id) setSelected(null);
       if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
       await fetchFolders();
@@ -395,14 +398,17 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     if (node) {
       const ancestors = findAncestors(tree, selected) || [];
       const path = [...ancestors.map((a) => a.name), node.name].join(' > ');
-      onSelect(node.name, path);
+      // Category-root nodes don't have a parentId — only subfolders do
+      const folderId = node.isCategoryRoot ? null : node.id;
+      onSelect(node.name, path, folderId);
     } else if (stack.length > 0) {
       const currentId = stack[stack.length - 1];
       const currentNode = findNode(tree, currentId);
       if (currentNode) {
         const ancestors = findAncestors(tree, currentId) || [];
         const path = [...ancestors.map((a) => a.name), currentNode.name].join(' > ');
-        onSelect(currentNode.name, path);
+        const folderId = currentNode.isCategoryRoot ? null : currentNode.id;
+        onSelect(currentNode.name, path, folderId);
       }
     }
     onClose();
@@ -503,9 +509,11 @@ function FolderApp() {
     window.addEventListener('folder:open', onOpen);
     return () => window.removeEventListener('folder:open', onOpen);
   }, []);
-  const handleSelect = (name, path) => {
-    localStorage.setItem('folder:pending-selection', JSON.stringify({ name, path: path || name, ts: Date.now() }));
-    window.dispatchEvent(new CustomEvent('folder:selected', { detail: { name, path: path || name } }));
+  const handleSelect = (name, path, folderId = null) => {
+    localStorage.setItem('folder:pending-selection', JSON.stringify({
+      name, path: path || name, folderId, ts: Date.now(),
+    }));
+    window.dispatchEvent(new CustomEvent('folder:selected', { detail: { name, path: path || name, folderId } }));
     setIsOpen(false);
   };
   return html`<${FolderModal} isOpen=${isOpen} onClose=${() => setIsOpen(false)} onSelect=${handleSelect}/>`;

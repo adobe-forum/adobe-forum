@@ -1,6 +1,12 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
+const API_BASE = 'http://localhost:5000/api';
+
+// ============================================
+// ICONS
+// ============================================
+
 const ArrowIcon = () => html`
   <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
     <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
@@ -14,85 +20,77 @@ const BackIcon = () => html`
   </svg>
 `;
 
+const EditIcon = () => html`
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    style="display:block;flex-shrink:0;">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+`;
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
+ * Returns null if not logged in.
+ */
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+}
+
+/**
+ * Opens /create-post in edit mode by stashing the post data in sessionStorage
+ * and navigating — avoids URL length limits (body can be large HTML).
+ */
+function openEditForm(post) {
+  const editData = {
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    tags: (post.tags || []).map((t) => t.replace(/^#/, '')),
+    category: post.topic || '',
+  };
+  sessionStorage.setItem('edit-post-draft', JSON.stringify(editData));
+  window.location.href = '/create-post';
+}
+
+/**
+ * Returns true if currentUser is the creator of this post.
+ */
+function isOwner(post, currentUser) {
+  if (!currentUser || !post?.createdBy) return false;
+  // eslint-disable-next-line no-underscore-dangle
+  return String(post.createdBy) === String(currentUser._id);
+}
+
+// ============================================
+// FORUM POST
+// ============================================
+
 const ForumPost = ({ blockEl }) => {
   const [post, setPost] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const commentsListRef = useRef(null);
 
-  // NEW: edit state
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editBody, setEditBody] = useState('');
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState('');
-
-  // NEW: read logged-in user from localStorage
-  const getCurrentUser = () => {
-    try { return JSON.parse(localStorage.getItem('forum_user')) || null; } catch { return null; }
-  };
-
-  // NEW: check if current user owns this post
-  const isOwner = (() => {
-    if (!post) return false;
-    const user = getCurrentUser();
-    if (!user || !post.createdById) return false;
-    return String(user._id) === String(post.createdById);
-  })();
-
-  // NEW: open edit mode — pre-fill fields
-  const handleEditStart = () => {
-    setEditTitle(post.title);
-    setEditBody(post.body);
-    setEditError('');
-    setIsEditing(true);
-  };
-
-  // NEW: cancel edit — just close
-  const handleEditCancel = () => {
-    setIsEditing(false);
-    setEditError('');
-  };
-
-  // NEW: save edit — PATCH /api/posts/:id
-  const handleEditSave = async () => {
-    const trimmedTitle = editTitle.trim();
-    const plainText = editBody.replace(/<[^>]*>/g, '').trim();
-    if (!trimmedTitle) { setEditError('Title cannot be empty.'); return; }
-    if (plainText.length < 20) { setEditError('Body must be at least 20 characters.'); return; }
-
-    setEditSaving(true);
-    setEditError('');
-    try {
-      const token = localStorage.getItem('forum_token') || '';
-      const res = await fetch(`http://localhost:5000/api/posts/${post.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: trimmedTitle, body: editBody }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setEditError(data.error || 'Save failed.');
-      } else {
-        // Update local post state with saved values — no full reload needed
-        setPost((prev) => ({ ...prev, title: data.post.title, body: data.post.body }));
-        setIsEditing(false);
-      }
-    } catch {
-      setEditError('Network error. Please try again.');
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
+  // Scroll to bottom when comments change
   useEffect(() => {
     if (commentsListRef.current && post) {
       commentsListRef.current.scrollTop = commentsListRef.current.scrollHeight;
     }
   }, [post?.comments]);
+
+  // Load current user on mount + re-load when auth state changes
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+    const onAuthChanged = () => setCurrentUser(getCurrentUser());
+    window.addEventListener('forum-auth-changed', onAuthChanged);
+    return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
+  }, []);
 
   // Transform raw <pre> tags into the locked two-column Flexbox layout
   useEffect(() => {
@@ -125,7 +123,17 @@ const ForumPost = ({ blockEl }) => {
     });
   }, [post]);
 
-  // Listen for sidebar click events
+  // Also listen for edit-post:saved so we can refresh the view after a save
+  useEffect(() => {
+    const handlePostSaved = (e) => {
+      const updated = e.detail;
+      if (!updated || !post || updated.id !== post.id) return;
+      setPost((prev) => (prev ? { ...prev, ...updated } : prev));
+    };
+    window.addEventListener('edit-post:saved', handlePostSaved);
+    return () => window.removeEventListener('edit-post:saved', handlePostSaved);
+  }, [post]);
+
   useEffect(() => {
     const handleLoadPost = async (event) => {
       const { postId } = event.detail;
@@ -139,22 +147,27 @@ const ForumPost = ({ blockEl }) => {
       cardsWrappers.forEach((el) => { el.style.display = 'none'; });
 
       try {
-        const url = `http://localhost:5000/api/posts/${postId}`;
+        const url = `${API_BASE}/posts/${postId}`;
         const response = await fetch(url);
 
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.post) {
             const fetchedPost = data.post;
+            const cb = fetchedPost.createdBy;
+            // Build author name from populated createdBy or fall back
+            const authorName = (cb?.firstName)
+              ? `${cb.firstName} ${cb.lastName || ''}`.trim()
+              : (fetchedPost.author || 'Anonymous');
             const transformedPost = {
-              id: fetchedPost._id, // eslint-disable-line no-underscore-dangle
+              // eslint-disable-next-line no-underscore-dangle
+              id: fetchedPost._id,
               title: fetchedPost.title,
               topic: fetchedPost.category,
-              author: fetchedPost.createdBy?.username || fetchedPost.authorName || 'Community Member',
-              // NEW: store createdBy id so isOwner check works
-              createdById: fetchedPost.createdBy?._id // eslint-disable-line no-underscore-dangle
-                ? String(fetchedPost.createdBy._id) // eslint-disable-line no-underscore-dangle
-                : String(fetchedPost.createdBy || ''),
+              author: authorName,
+              // Store createdBy id so we can check ownership
+              // eslint-disable-next-line no-underscore-dangle
+              createdBy: cb ? String(cb._id || cb) : null,
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
               comments: [],
@@ -211,6 +224,8 @@ const ForumPost = ({ blockEl }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const canEdit = isOwner(post, currentUser);
+
   return html`
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
@@ -224,110 +239,31 @@ const ForumPost = ({ blockEl }) => {
         <span class="spectrum-action-button-label">Back to Posts</span>
       </button>
 
-      ${isEditing ? html`
-        <!-- ── INLINE EDIT FORM ── -->
-        <div style="margin-bottom: 32px;">
-          <input
-            type="text"
-            value=${editTitle}
-            onInput=${(e) => setEditTitle(e.target.value)}
-            style="
-              width: 100%; font-size: 1.6rem; font-weight: 800;
-              border: 2px solid var(--spectrum-blue-500, #1473e6);
-              border-radius: 6px; padding: 8px 12px; margin-bottom: 16px;
-              font-family: var(--heading-font-family); box-sizing: border-box;
-              outline: none; color: var(--text-color);
-            "
-            placeholder="Post title"
-          />
-          <textarea
-            value=${editBody}
-            onInput=${(e) => setEditBody(e.target.value)}
-            rows="12"
-            style="
-              width: 100%; font-size: 1rem; line-height: 1.7;
-              border: 2px solid var(--spectrum-blue-500, #1473e6);
-              border-radius: 6px; padding: 12px; margin-bottom: 12px;
-              font-family: var(--body-font-family); box-sizing: border-box;
-              resize: vertical; outline: none; color: var(--text-color);
-            "
-            placeholder="Post body (HTML supported)"
-          />
-          ${editError && html`
-            <p style="color: #d7373f; font-size: 0.9rem; margin: 0 0 12px;">${editError}</p>
-          `}
-          <div style="display: flex; gap: 12px;">
-            <button
-              onClick=${handleEditSave}
-              disabled=${editSaving}
-              style="
-                background: var(--spectrum-accent-color-900, #0265dc);
-                color: #fff; border: none; border-radius: 20px;
-                padding: 8px 22px; font-size: 0.9rem; font-weight: 700;
-                cursor: ${editSaving ? 'not-allowed' : 'pointer'};
-                opacity: ${editSaving ? 0.6 : 1};
-                font-family: var(--body-font-family);
-              "
-            >${editSaving ? 'Saving…' : 'Save changes'}</button>
-            <button
-              onClick=${handleEditCancel}
-              style="
-                background: transparent;
-                color: var(--spectrum-gray-700, #4b4b4b);
-                border: 1px solid var(--spectrum-gray-300, #d3d3d3);
-                border-radius: 20px; padding: 8px 22px;
-                font-size: 0.9rem; font-weight: 600; cursor: pointer;
-                font-family: var(--body-font-family);
-              "
-            >Cancel</button>
-          </div>
-        </div>
-      ` : html`
-        <!-- ── NORMAL VIEW ── -->
-        <div class="tags-row">
-          ${post.tags.map((tag) => html`<span class="tag-pill">${tag}</span>`)}
-        </div>
+      <div class="tags-row">
+        ${post.tags.map((tag) => html`<span class="tag-pill">${tag}</span>`)}
+      </div>
 
-        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px;">
-          <h1 class="post-title" style="margin: 0;">${post.title}</h1>
-          ${isOwner && html`
-            <button
-              onClick=${handleEditStart}
-              title="Edit post"
-              style="
-                flex-shrink: 0; margin-top: 6px;
-                background: transparent;
-                border: 1px solid var(--spectrum-gray-300, #d3d3d3);
-                border-radius: 20px; padding: 6px 14px;
-                font-size: 0.82rem; font-weight: 600; cursor: pointer;
-                color: var(--spectrum-gray-700, #4b4b4b);
-                font-family: var(--body-font-family);
-                display: inline-flex; align-items: center; gap: 6px;
-                transition: background 0.15s;
-              "
-              onMouseEnter=${(e) => { e.currentTarget.style.background = 'var(--spectrum-gray-100, #f5f5f5)'; }}
-              onMouseLeave=${(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Edit
-            </button>
-          `}
-        </div>
+      <div class="post-title-row">
+        <h1 class="post-title">${post.title}</h1>
+        ${canEdit && html`
+          <button class="post-edit-btn" title="Edit post" onClick=${() => openEditForm(post)}>
+            <${EditIcon} />
+            <span>Edit</span>
+          </button>
+        `}
+      </div>
 
-        <div class="post-meta">
-          <span class="author-name">${post.author}</span>
-          <span class="meta-separator">•</span>
-          <span class="topic-name">${post.topic}</span>
-        </div>
+      <div class="post-meta">
+        <span class="author-name">${post.author}</span>
+        <span class="meta-separator">•</span>
+        <span class="topic-name">${post.topic}</span>
+      </div>
 
         <div
           class="post-body-raw"
           dangerouslySetInnerHTML=${{ __html: post.body }}
         />
-      `}
+     
 
       <hr class="post-divider" />
 

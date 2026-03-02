@@ -18,6 +18,15 @@ const sidebarItemSchema = new mongoose.Schema({
     ref: 'Post',
     required: false,
   },
+  // Tracks which user created this sidebar item (folder or post link).
+  // Used for ownership checks on rename/delete.
+  // Optional (null) for items created before this field was added.
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  // Fields for nested folder structure
   isFolder: {
     type: Boolean,
     default: false,
@@ -59,10 +68,13 @@ sidebarItemSchema.pre('save', function updateTimestamp() {
   this.updatedAt = Date.now();
 });
 
-// Index for efficient queries
+// Indexes for efficient queries
 sidebarItemSchema.index({ category: 1, order: 1 });
 sidebarItemSchema.index({ postId: 1 });
-// NEW: Index by creator for faster lookups later if we want a "My Posts" view
+sidebarItemSchema.index({ parentId: 1 });
+sidebarItemSchema.index({ path: 1 });
+sidebarItemSchema.index({ isFolder: 1 });
+// Index so we can efficiently query "all sidebar items by user X"
 sidebarItemSchema.index({ createdBy: 1 });
 
 const SidebarItem = mongoose.model('SidebarItem', sidebarItemSchema);

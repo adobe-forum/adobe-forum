@@ -220,17 +220,29 @@
 }
 
 /* Quill editor alignment & indent classes */
-.post-body-raw .ql-align-center { text-align: center; }
+.post-body-raw .ql-align-center {
+  text-align: center;
+}
 
-.post-body-raw .ql-align-right { text-align: right; }
+.post-body-raw .ql-align-right {
+  text-align: right;
+}
 
-.post-body-raw .ql-align-justify { text-align: justify; }
+.post-body-raw .ql-align-justify {
+  text-align: justify;
+}
 
-.post-body-raw .ql-indent-1 { padding-left: 3em; }
+.post-body-raw .ql-indent-1 {
+  padding-left: 3em;
+}
 
-.post-body-raw .ql-indent-2 { padding-left: 6em; }
+.post-body-raw .ql-indent-2 {
+  padding-left: 6em;
+}
 
-.post-body-raw .ql-indent-3 { padding-left: 9em; }
+.post-body-raw .ql-indent-3 {
+  padding-left: 9em;
+}
 
 .post-body-raw table {
   border-collapse: collapse;
@@ -462,4 +474,168 @@
   font-size: var(--body-font-size-s);
   color: var(--spectrum-gray-700);
   z-index: 999;
+}
+
+/* --- 9. Post Title Row (title + edit button) --- */
+.post-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.post-title-row .post-title {
+  margin: 0;
+  flex: 1;
+}
+
+.post-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+  background: var(--spectrum-gray-75, #fafafa);
+  color: var(--spectrum-gray-700, #444);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--body-font-family);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 8px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.post-edit-btn:hover {
+  background: var(--spectrum-gray-100, #f0f0f0);
+  border-color: var(--spectrum-gray-400, #aaa);
+}
+
+/* --- 10. Inline Edit Form --- */
+.edit-post-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 0 40px;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.edit-hint-inline {
+  font-weight: 400;
+  color: var(--spectrum-gray-500);
+  font-size: 0.8125rem;
+}
+
+.edit-hint {
+  font-size: 0.8rem;
+  color: var(--spectrum-gray-500);
+  margin: 4px 0 0;
+}
+
+.edit-title-input,
+.edit-tags-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: var(--body-font-family);
+  color: var(--text-color);
+  background: var(--spectrum-gray-50, #fff);
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.edit-title-input:focus,
+.edit-tags-input:focus {
+  outline: none;
+  border-color: var(--link-color, #1473e6);
+  box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+}
+
+.edit-body-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-family: Monaco, 'Courier New', monospace;
+  color: var(--text-color);
+  background: var(--spectrum-gray-50, #fff);
+  box-sizing: border-box;
+  resize: vertical;
+  line-height: 1.6;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.edit-body-textarea:focus {
+  outline: none;
+  border-color: var(--link-color, #1473e6);
+  box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+}
+
+.edit-error {
+  background: #fff0f0;
+  border: 1px solid #e34850;
+  color: #c9252d;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.edit-btn {
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-family: var(--body-font-family);
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, transform 0.08s;
+}
+
+.edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-btn-cancel {
+  background: var(--spectrum-gray-100, #f0f0f0);
+  color: var(--text-color);
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+}
+
+.edit-btn-cancel:hover:not(:disabled) {
+  background: var(--spectrum-gray-200, #e0e0e0);
+}
+
+.edit-btn-save {
+  background: var(--link-color, #1473e6);
+  color: #fff;
+}
+
+.edit-btn-save:hover:not(:disabled) {
+  background: var(--link-hover-color, #0d5bbf);
+}
+
+.edit-btn-save:active:not(:disabled) {
+  transform: scale(0.98);
 }

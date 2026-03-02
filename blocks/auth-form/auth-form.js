@@ -6,12 +6,23 @@
  *   auth-form                 → Login (default)
  *   auth-form signup          → Sign-up active
  *   auth-form forgot-password → Forgot-password view
+ *
+ * Auth strategy: httpOnly session cookies (set by the server).
+ * No tokens are stored in localStorage — the browser handles the cookie
+ * automatically, and JS on the page cannot read it (XSS-safe).
+ *
+ * All API calls go through auth-api.js so the base URL is managed
+ * in one place (window.AUTH_API_BASE or localhost:5000 fallback).
  */
 
 import { h, render } from '../../vendor/preact.js';
 import { useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
-import { loginUser, registerUser, forgotPassword } from './auth-api.js';
+import {
+  loginUser,
+  registerUser,
+  forgotPassword,
+} from './auth-api.js';
 
 const html = htm.bind(h);
 
@@ -115,12 +126,6 @@ function getStrength(value) {
 }
 
 /* ── 5. Reusable Field component ────────────────────────────────────────── */
-/**
- * Props:
- *   id, label, type, placeholder, autocomplete, required,
- *   withHint, value, error, onChange, onBlur,
- *   showStrength  — pass true on the password field that needs the meter
- */
 function Field({
   id, label, type = 'text', placeholder = '', autocomplete = '',
   required = true, withHint = false,
@@ -139,7 +144,6 @@ function Field({
   const isInvalid = !!error;
   const strength = showStrength ? getStrength(value || '') : null;
 
-  /* Strip any digit that sneaks in via paste, autofill or speech input */
   const handleInput = (e) => {
     if (blockNumbers) {
       const clean = e.target.value.replace(/[0-9]/g, '');
@@ -150,7 +154,6 @@ function Field({
     }
   };
 
-  /* Block digit keys at keydown level (keyboard + numpad) */
   const handleKeyDown = blockNumbers
     ? (e) => { if (/^[0-9]$/.test(e.key)) e.preventDefault(); }
     : undefined;
@@ -237,7 +240,7 @@ function SubmitBtn({ loading, onClick, children }) {
     </button>`;
 }
 
-/* ── 7. Login panel ─────────────────────────────────────────────────────── */
+/* ── 8. Login panel ─────────────────────────────────────────────────────── */
 function LoginPanel({ onForgot, active }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -264,10 +267,11 @@ function LoginPanel({ onForgot, active }) {
 
     setLoading(true);
     try {
-      await loginUser({ email, password });
+      const data = await loginUser({ email, password });
+      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
       window.location.href = '/';
     } catch (err) {
-      setErrors({ email: err.message });
+      setErrors({ password: err.message });
     } finally {
       setLoading(false);
     }
@@ -307,7 +311,7 @@ function LoginPanel({ onForgot, active }) {
     </div>`;
 }
 
-/* ── 8. Sign-up panel ───────────────────────────────────────────────────── */
+/* ── 9. Sign-up panel ───────────────────────────────────────────────────── */
 function SignupPanel({ active }) {
   const [f, setF] = useState({
     first: '', last: '', email: '', pass: '', confirm: '',
@@ -320,7 +324,6 @@ function SignupPanel({ active }) {
     setErrors((e) => ({ ...e, [key]: undefined }));
   };
 
-  /* per-field blur validators */
   const validators = {
     first: (v) => {
       const t = v.trim();
@@ -366,8 +369,9 @@ function SignupPanel({ active }) {
 
     setLoading(true);
     try {
-      await registerUser(f);
-      window.location.href = '/auth-form';
+      const data = await registerUser(f);
+      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
+      window.location.href = '/';
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
@@ -428,7 +432,7 @@ function SignupPanel({ active }) {
     </div>`;
 }
 
-/* ── 9. Forgot-password panel ───────────────────────────────────────────── */
+/* ── 10. Forgot-password panel ──────────────────────────────────────────── */
 function ForgotPanel({ onBack, active }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState(null);
@@ -442,6 +446,7 @@ function ForgotPanel({ onBack, active }) {
     if (err) { setError(err); return; }
     setLoading(true);
     try {
+      // Actually calls POST /api/auth/forgot-password — not a fake timeout
       await forgotPassword({ email });
       setSent(true);
     } catch (fpErr) {
@@ -488,7 +493,7 @@ function ForgotPanel({ onBack, active }) {
     </div>`;
 }
 
-/* ── 10. Root AuthForm component ────────────────────────────────────────── */
+/* ── 11. Root AuthForm component ────────────────────────────────────────── */
 function AuthForm({ initPanel }) {
   const [panel, setPanel] = useState(initPanel);
 
@@ -544,13 +549,6 @@ function AuthForm({ initPanel }) {
           </p>
         `}
 
-        <!--
-          All three panels are ALWAYS rendered in the DOM.
-          The CSS .auth-panel rule hides inactive panels (display:none).
-          The .is-active class (toggled via the active prop) shows the panel.
-          This matches the original vanilla JS approach and prevents state
-          loss when switching tabs, while keeping the reveal animation.
-        -->
         <${LoginPanel}
           active=${panel === 'login'}
           onForgot=${() => setPanel('forgot')}
@@ -567,7 +565,7 @@ function AuthForm({ initPanel }) {
     </div>`;
 }
 
-/* ── 11. EDS block decorator ────────────────────────────────────────────── */
+/* ── 12. EDS block decorator ────────────────────────────────────────────── */
 export default function decorate(block) {
   const cls = [...block.classList];
   let initPanel;
@@ -581,8 +579,6 @@ export default function decorate(block) {
 
   block.textContent = '';
 
-  // Mount into a dedicated node appended to <body> so the overlay sits
-  // above all EDS chrome (sidebar, header, etc.)
   const mount = document.createElement('div');
   document.body.append(mount);
 

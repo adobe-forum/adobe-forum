@@ -21,7 +21,10 @@ function normalizeItems(items) {
       ...item,
       // eslint-disable-next-line no-underscore-dangle
       id: String(item._id || item.id || ''),
-      isFolder: item.isFolder || children.length > 0,
+      isFolder: Boolean(item.isFolder),
+      // Normalize createdBy to a plain string so we can compare it
+      // against currentUser._id (also a string) with ===
+      createdBy: item.createdBy ? String(item.createdBy) : null,
       children,
     };
   });
@@ -87,7 +90,7 @@ const TrashIcon = () => html`
   </svg>
 `;
 
-const PencilIcon = () => html`
+const EditIcon = () => html`
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -110,7 +113,6 @@ const ChevronIcon = ({ expanded }) => html`
   </svg>
 `;
 
-/* Spectrum-style folder icon (filled when expanded) */
 const FolderIcon = ({ expanded }) => (expanded
   ? html`
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -121,7 +123,6 @@ const FolderIcon = ({ expanded }) => (expanded
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
     </svg>`);
 
-/* Spectrum-style file/document icon */
 const FileIcon = () => html`
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -130,11 +131,11 @@ const FileIcon = () => html`
 `;
 
 // ============================================
-// INLINE INPUT
+// INLINE INPUT (used for rename + new folder)
 // ============================================
 
 function InlineInput({
-  placeholder, onConfirm, onCancel, paddingLeft = 12, initialValue = '',
+  placeholder, initialValue = '', onConfirm, onCancel, paddingLeft = 12,
 }) {
   const ref = useRef(null);
   const [value, setValue] = useState(initialValue);
@@ -177,20 +178,42 @@ function InlineInput({
 }
 
 // ============================================
+// OWNERSHIP HELPER
+// ============================================
+
+/**
+ * Returns true if the current user owns this item.
+ * Rules:
+ *   - Not logged in → never owns anything
+ *   - createdBy is null (legacy/shared item) → treat as unowned, no buttons shown
+ *   - createdBy matches currentUser._id → owns it
+ */
+function isOwner(item, currentUser) {
+  if (!currentUser) return false;
+  if (!item.createdBy) return false;
+  // eslint-disable-next-line no-underscore-dangle
+  return item.createdBy === String(currentUser._id);
+}
+
+// ============================================
 // TREE ITEM
 // ============================================
 
 function TreeItem({
-  item, activeItem, onItemClick, onAddSubfolder, onDelete, onRename, level = 0, currentUser,
+  item, activeItem, currentUser, onItemClick, onAddSubfolder, onDelete, onRename, level = 0,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingChild, setIsAddingChild] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);  // NEW: inline rename toggle
+  const [isRenaming, setIsRenaming] = useState(false);
+
   const hasChildren = item.children && item.children.length > 0;
   const isFolder = item.isFolder || hasChildren;
   const itemId = item.id;
-  const paddingLeft = Math.min(12 + level * 20, 80);
+  const paddingLeft = Math.min(12 + level * 20, 100);
+
+  // Only show action buttons if the logged-in user created this item
+  const canEdit = isOwner(item, currentUser);
 
   // Only show action buttons if logged-in user owns this item
   const isOwner = currentUser && item.createdBy
@@ -200,7 +223,7 @@ function TreeItem({
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
-    if (isRenaming) return;  // don't navigate while renaming
+    if (isRenaming) return;
     if (isFolder) setIsExpanded((prev) => !prev);
     let targetPostId = null;
     if (item.postId) {
@@ -224,68 +247,66 @@ function TreeItem({
     onDelete(itemId, item.title);
   };
 
-  // NEW: open inline rename input
-  const handleRenameStart = (e) => {
+  const handleRenameClick = (e) => {
     e.stopPropagation();
     setIsRenaming(true);
   };
 
-  // NEW: confirm rename — call parent handler then close input
   const handleRenameConfirm = (newTitle) => {
     setIsRenaming(false);
-    if (newTitle && newTitle !== item.title) onRename(itemId, newTitle);
+    if (newTitle !== item.title) onRename(itemId, newTitle);
   };
 
   return html`
     <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}">
       ${isRenaming
-        ? html`
-          <div style="padding-left: ${paddingLeft}px; padding-right: 8px; padding-top: 2px; padding-bottom: 2px;">
-            <${InlineInput}
-              placeholder=${item.title}
-              initialValue=${item.title}
-              onConfirm=${handleRenameConfirm}
-              onCancel=${() => setIsRenaming(false)}
-              paddingLeft=${0}
-            />
-          </div>`
-        : html`
+    ? html`
+          <${InlineInput}
+            placeholder="Rename…"
+            initialValue=${item.title}
+            paddingLeft=${paddingLeft}
+            onConfirm=${handleRenameConfirm}
+            onCancel=${() => setIsRenaming(false)}
+          />`
+    : html`
           <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
             style="padding-left: ${paddingLeft}px" onClick=${handleClick}
             onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
             title=${item.title}>
             <span class="tree-chevron">
               ${isFolder
-                ? html`<${ChevronIcon} expanded=${isExpanded} />`
-                : html`<span class="tree-chevron-spacer"/>`}
+    ? html`<${ChevronIcon} expanded=${isExpanded} />`
+    : html`<span class="tree-chevron-spacer"/>`}
             </span>
             <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
               ${isFolder
-                ? html`<${FolderIcon} expanded=${isExpanded} />`
-                : html`<${FileIcon} />`}
+    ? html`<${FolderIcon} expanded=${isExpanded} />`
+    : html`<${FileIcon} />`}
             </span>
             <span class="tree-label">${item.title}</span>
-            ${isHovered && isOwner && html`
+
+            ${isHovered && canEdit && html`
               <span class="item-actions">
-                <button class="item-action-btn" title="Rename"
-                  onMouseDown=${(e) => e.preventDefault()} onClick=${handleRenameStart}>
-                  <${PencilIcon} />
-                </button>
                 ${isFolder && html`
                   <button class="item-action-btn" title="Add subfolder"
                     onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddSubfolder}>
                     <${FolderPlusIcon} />
                   </button>
                 `}
+                <button class="item-action-btn" title="Rename"
+                  onMouseDown=${(e) => e.preventDefault()} onClick=${handleRenameClick}>
+                  <${EditIcon} />
+                </button>
                 <button class="item-action-btn item-action-btn-delete" title="Delete"
                   onMouseDown=${(e) => e.preventDefault()} onClick=${handleDelete}>
                   <${TrashIcon} />
                 </button>
               </span>
             `}
-          </div>`
-      }
-      ${(isExpanded || isAddingChild) && html`
+          </div>
+        `}
+
+      ${isExpanded && html`
         <ul class="tree-children">
           ${isAddingChild && html`
             <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
@@ -294,9 +315,9 @@ function TreeItem({
           }
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
+              currentUser=${currentUser}
               onItemClick=${onItemClick} onAddSubfolder=${onAddSubfolder}
-              onDelete=${onDelete} onRename=${onRename}
-              currentUser=${currentUser} level=${level + 1} />
+              onDelete=${onDelete} onRename=${onRename} level=${level + 1} />
           `)}
         </ul>
       `}
@@ -309,16 +330,19 @@ function TreeItem({
 // ============================================
 
 function CategoryItem({
-  category, activeSubcategory, onSubcategoryClick, onAddFolder, onDeleteCategory, onRename, currentUser,
+  category, activeSubcategory, currentUser, onSubcategoryClick, onAddFolder,
+  onDeleteCategory, onRenameItem,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingFolder, setIsAddingFolder] = useState(false);
+
   const hasItems = category.items && category.items.length > 0;
 
-  // NEW: only show action buttons if logged-in user owns this category
-  const isOwner = currentUser && category.createdById
-    && String(currentUser._id) === String(category.createdById);
+  // Category-level actions: any logged-in user can add folders to any category.
+  // Delete is only shown if logged in (categories have createdBy: null so
+  // the ownership rule passes for legacy items — handled in confirmDelete).
+  const isLoggedIn = !!currentUser;
 
   const handleAddFolder = (e) => {
     e.stopPropagation();
@@ -338,7 +362,7 @@ function CategoryItem({
         <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
         <span class="category-icon"><${FolderIcon} expanded=${!isCollapsed} /></span>
         <span class="category-name">${category.name}</span>
-        ${isHovered && isOwner && html`
+        ${isHovered && isLoggedIn && html`
           <span class="item-actions">
             <button class="item-action-btn" title="Add folder"
               onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddFolder}>
@@ -361,11 +385,11 @@ function CategoryItem({
           ${hasItems
     ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
+                  currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onAddSubfolder=${(parentId, name) => onAddFolder(category.name, parentId, name)}
-                  onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle)}
-                  onRename=${onRename}
-                  currentUser=${currentUser}
+                  onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
+                  onRename=${onRenameItem}
                   level=${0} />
               `)
     : !isAddingFolder && html`<div class="no-items">No items yet</div>`
@@ -391,21 +415,43 @@ function Sidebar() {
   const [newCatName, setNewCatName] = useState('');
   const [creationError, setCreationError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null);
+
+  // ── Auth state ──────────────────────────────────────────────────────────
+  // null  = not yet checked
+  // false = checked, not logged in
+  // {...} = checked, logged in user object
+  const [currentUser, setCurrentUser] = useState(null);
+
   const inputRef = useRef(null);
 
-  // NEW: track logged-in user so we can show/hide action buttons per-item
-  const [currentUser, setCurrentUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('forum_user')) || null; } catch { return null; }
-  });
+  // ── Fetch current user on mount ─────────────────────────────────────────
+  // Calls GET /api/auth/me (session cookie sent automatically).
+  // If 401, the user is not logged in — set to false so we stop loading.
+  // Re-runs whenever the forum-auth-changed event fires (login/logout).
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data.user);
+      } else {
+        setCurrentUser(false); // not logged in
+      }
+    } catch {
+      setCurrentUser(false);
+    }
+  };
 
   useEffect(() => {
-    const onAuthChange = () => {
-      try { setCurrentUser(JSON.parse(localStorage.getItem('forum_user')) || null); } catch { setCurrentUser(null); }
-    };
-    window.addEventListener('forum-auth-changed', onAuthChange);
-    return () => window.removeEventListener('forum-auth-changed', onAuthChange);
+    fetchCurrentUser();
+
+    // Re-fetch when auth state changes (e.g. user logs in via the overlay)
+    const onAuthChanged = () => fetchCurrentUser();
+    window.addEventListener('forum-auth-changed', onAuthChanged);
+    return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
   }, []);
 
+  // ── Sidebar open/close ──────────────────────────────────────────────────
   const applyBodyOffset = (open) => {
     if (open) {
       document.body.classList.add('sidebar-is-open');
@@ -436,6 +482,7 @@ function Sidebar() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // ── Fetch sidebar data ──────────────────────────────────────────────────
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -470,6 +517,8 @@ function Sidebar() {
     if (isCreating && inputRef.current) inputRef.current.focus();
   }, [isCreating]);
 
+  // ── Handlers ────────────────────────────────────────────────────────────
+
   const handleSubcategoryClick = (subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
     // eslint-disable-next-line no-console
@@ -490,7 +539,8 @@ function Sidebar() {
     try {
       const response = await fetch(`${API_BASE}/sidebar-items`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // sends session cookie
         body: JSON.stringify({
           title: name, category: categoryId, parentId: parentId || null, isFolder: true,
         }),
@@ -505,12 +555,29 @@ function Sidebar() {
     }
   };
 
-  const handleDelete = (categoryId, itemIdOrName, itemTitle) => {
-    const isItemDelete = itemTitle !== undefined;
+  const handleRenameItem = async (itemId, newTitle) => {
+    try {
+      const response = await fetch(`${API_BASE}/sidebar-items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: newTitle }),
+      });
+      const data = await response.json();
+      if (data.success) await fetchCategories();
+      // eslint-disable-next-line no-console
+      else console.error('Failed to rename item:', data.error);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to rename item:', err);
+    }
+  };
+
+  const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
     setDeleteDialog({
       categoryId,
-      itemId: isItemDelete ? itemIdOrName : null,
-      name: isItemDelete ? itemTitle : itemIdOrName,
+      itemId: isItemDelete ? itemId : null,
+      name: isItemDelete ? itemTitle : itemId,
     });
   };
 
@@ -542,7 +609,7 @@ function Sidebar() {
         : `${API_BASE}/sidebar/categories/${categoryId}`;
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: authHeaders(),
+        credentials: 'include', // sends session cookie
       });
       const data = await response.json();
       if (data.success) await fetchCategories();
@@ -565,24 +632,24 @@ function Sidebar() {
     const exists = categories.some((c) => c.name.toLowerCase() === trimmedName.toLowerCase());
     if (exists) { setCreationError('Category already exists'); return; }
     try {
-      const response = await fetch(`${API_BASE}/sidebar-items`, {
+      const response = await fetch(`${API_BASE}/sidebar/categories`, {
         method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          title: trimmedName, category: trimmedName, isFolder: true, parentId: null,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: trimmedName }),
       });
       const data = await response.json();
       if (data.success) { await fetchCategories(); cancelCreating(); } else setCreationError(data.error || 'Failed to create category');
     } catch { setCreationError('Network error'); }
   };
 
+  // ── Search filter ───────────────────────────────────────────────────────
+
   const filterItems = (items, term) => items.reduce((acc, item) => {
     const matches = item.title.toLowerCase().includes(term);
     const filteredChildren = item.children ? filterItems(item.children, term) : [];
     if (matches || filteredChildren.length > 0) {
-      const mergedChildren = filteredChildren.length > 0 ? filteredChildren : item.children;
-      acc.push({ ...item, children: mergedChildren });
+      acc.push({ ...item, children: filteredChildren });
     }
     return acc;
   }, []);
@@ -598,6 +665,8 @@ function Sidebar() {
     }).filter(Boolean)
     : categories;
 
+  // ── Render ──────────────────────────────────────────────────────────────
+
   return html`
     <div class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
       <div class="sidebar">
@@ -608,10 +677,12 @@ function Sidebar() {
 
         <div class="explorer-header">
           <span class="explorer-header-label">Topics</span>
-          <button class="add-category" title="New Category"
-            onClick=${() => { setIsCreating(true); setNewCatName(''); setCreationError(''); }}>
-            <${PlusIcon} />
-          </button>
+          ${currentUser && html`
+            <button class="add-category" title="New Category"
+              onClick=${() => { setIsCreating(true); setNewCatName(''); setCreationError(''); }}>
+              <${PlusIcon} />
+            </button>
+          `}
         </div>
 
         ${isCreating && html`
@@ -642,11 +713,11 @@ function Sidebar() {
                     key=${category.id}
                     category=${category}
                     activeSubcategory=${activeSubcategory}
+                    currentUser=${currentUser}
                     onSubcategoryClick=${handleSubcategoryClick}
                     onAddFolder=${handleAddFolder}
                     onDeleteCategory=${handleDelete}
-                    onRename=${handleRename}
-                    currentUser=${currentUser}
+                    onRenameItem=${handleRenameItem}
                   />
                 `)
     : html`<div class="no-results">No categories found</div>`
