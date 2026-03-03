@@ -45,13 +45,14 @@ function getCurrentUser() {
  * Opens /create-post in edit mode by stashing the post data in sessionStorage
  * and navigating — avoids URL length limits (body can be large HTML).
  */
-function openEditForm(post) {
+function openEditForm(post, sid) {
   const editData = {
     id: post.id,
     title: post.title,
     body: post.body,
     tags: (post.tags || []).map((t) => t.replace(/^#/, '')),
     category: post.topic || '',
+    sidebarItemId: sid || null, // so create-post can move the file location
   };
   sessionStorage.setItem('edit-post-draft', JSON.stringify(editData));
   window.location.href = '/create-post';
@@ -75,6 +76,7 @@ const ForumPost = ({ blockEl }) => {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [sidebarItemId, setSidebarItemId] = useState(null); // the SidebarItem linking this post
   const commentsListRef = useRef(null);
 
   // Scroll to bottom when comments change
@@ -136,8 +138,9 @@ const ForumPost = ({ blockEl }) => {
 
   useEffect(() => {
     const handleLoadPost = async (event) => {
-      const { postId } = event.detail;
+      const { postId, sidebarItemId: sid } = event.detail;
       if (!postId) return;
+      setSidebarItemId(sid || null);
 
       setLoading(true);
 
@@ -246,7 +249,7 @@ const ForumPost = ({ blockEl }) => {
       <div class="post-title-row">
         <h1 class="post-title">${post.title}</h1>
         ${canEdit && html`
-          <button class="post-edit-btn" title="Edit post" onClick=${() => openEditForm(post)}>
+          <button class="post-edit-btn" title="Edit post" onClick=${() => openEditForm(post, sidebarItemId)}>
             <${EditIcon} />
             <span>Edit</span>
           </button>

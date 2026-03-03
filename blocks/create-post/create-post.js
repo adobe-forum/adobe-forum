@@ -1492,6 +1492,9 @@ function CreatePost() {
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
   const [editId, setEditId] = useState(null); // non-null = edit mode
+  // SidebarItem to move if location changes
+  const [editSidebarItemId, setEditSidebarItemId] = useState(null);
+  const [originalCategory, setOriginalCategory] = useState(''); // track if user changed location
 
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
@@ -1545,10 +1548,12 @@ function CreatePost() {
       const draft = JSON.parse(raw);
       sessionStorage.removeItem('edit-post-draft'); // clear so refresh doesn't re-trigger
       setEditId(draft.id || null);
+      setEditSidebarItemId(draft.sidebarItemId || null);
       setTitle(draft.title || '');
       setBody(draft.body || '');
       setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
       setCategory(draft.category || '');
+      setOriginalCategory(draft.category || ''); // remember starting location
     } catch { /* ignore corrupted draft */ }
   }, []);
 
@@ -1585,10 +1590,25 @@ function CreatePost() {
         });
         const result = await response.json();
         if (response.ok) {
+          // If the user picked a new location, also move the SidebarItem
+          const locationChanged = editSidebarItemId
+            && (category !== originalCategory || folderId !== null);
+          if (locationChanged) {
+            try {
+              await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ category, parentId: folderId || null }),
+              });
+              // Refresh the sidebar so it shows the new location
+              window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+            } catch { /* non-fatal — post is already saved */ }
+          }
           // Notify forum-post to refresh its view
           window.dispatchEvent(new CustomEvent('edit-post:saved', {
             detail: {
-              id: editId, title: title.trim(), body, tags: tagsWithHash,
+              id: editId, title: title.trim(), body, tags: tagsWithHash, topic: category,
             },
           }));
           // Return to the post view

@@ -29,7 +29,7 @@ const sidebarItemSchema = new mongoose.Schema({
   // Fields for nested folder structure
   isFolder: {
     type: Boolean,
-    default: false,
+    default: false
   },
   parentId: {
     type: mongoose.Schema.Types.ObjectId,

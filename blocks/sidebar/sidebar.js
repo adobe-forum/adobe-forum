@@ -195,7 +195,10 @@ function TreeItem({
   const [isRenaming, setIsRenaming] = useState(false);
 
   const hasChildren = item.children && item.children.length > 0;
-  const isFolder = item.isFolder || hasChildren;
+  // IMPORTANT: trust the server's isFolder flag exclusively.
+  // Never upgrade a post-link to a folder just because it has children —
+  // that causes post-links to render as folders and duplicate items on create.
+  const { isFolder } = item;
   const itemId = item.id;
   const paddingLeft = Math.min(12 + level * 20, 100);
 
@@ -320,10 +323,10 @@ function CategoryItem({
 
   const hasItems = category.items && category.items.length > 0;
 
-  // Category-level actions: any logged-in user can add folders to any category.
-  // Delete is only shown if logged in (categories have createdBy: null so
-  // the ownership rule passes for legacy items — handled in confirmDelete).
+  // Show add-folder to any logged-in user; show delete only to the category creator.
   const isLoggedIn = !!currentUser;
+  // eslint-disable-next-line no-underscore-dangle
+  const canDeleteCategory = isOwner({ createdBy: category.createdBy }, currentUser);
 
   const handleAddFolder = (e) => {
     e.stopPropagation();
@@ -349,10 +352,12 @@ function CategoryItem({
               onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddFolder}>
               <${FolderPlusIcon} />
             </button>
-            <button class="item-action-btn item-action-btn-delete" title="Delete category"
-              onMouseDown=${(e) => e.preventDefault()} onClick=${handleDeleteCategory}>
-              <${TrashIcon} />
-            </button>
+            ${canDeleteCategory && html`
+              <button class="item-action-btn item-action-btn-delete" title="Delete category"
+                onMouseDown=${(e) => e.preventDefault()} onClick=${handleDeleteCategory}>
+                <${TrashIcon} />
+              </button>
+            `}
           </span>
         `}
       </div>
@@ -396,6 +401,7 @@ function Sidebar() {
   const [newCatName, setNewCatName] = useState('');
   const [creationError, setCreationError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   // ── Auth state ──────────────────────────────────────────────────────────
   // null  = not yet checked
@@ -566,21 +572,25 @@ function Sidebar() {
     if (!deleteDialog) return;
     const { categoryId, itemId } = deleteDialog;
     setDeleteDialog(null);
+    setDeleteError(null);
     try {
       const url = itemId
         ? `${API_BASE}/sidebar-items/${itemId}`
         : `${API_BASE}/sidebar/categories/${categoryId}`;
       const response = await fetch(url, {
         method: 'DELETE',
-        credentials: 'include', // sends session cookie
+        credentials: 'include',
       });
       const data = await response.json();
-      if (data.success) await fetchCategories();
-      // eslint-disable-next-line no-console
-      else console.error('Failed to delete:', data.error);
+      if (data.success) {
+        await fetchCategories();
+      } else {
+        setDeleteError(data.error || 'Delete failed.');
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to delete:', err);
+      setDeleteError('Network error. Please try again.');
     }
   };
 
@@ -701,6 +711,15 @@ function Sidebar() {
         confirmLabel="Delete"
         onConfirm=${confirmDelete}
         onCancel=${() => setDeleteDialog(null)}
+      />
+
+      <${SpectrumAlertDialog}
+        isOpen=${!!deleteError}
+        title="Cannot Delete"
+        message=${deleteError || ''}
+        confirmLabel="OK"
+        onConfirm=${() => setDeleteError(null)}
+        onCancel=${() => setDeleteError(null)}
       />
     </div>
   `;
