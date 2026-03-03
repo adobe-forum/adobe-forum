@@ -48,6 +48,7 @@
     background: var(--spectrum-gray-50);
     border: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
     border-radius: var(--spectrum-border-radius-200);
+  
     /* overflow: hidden removed — was clipping the category tooltip */
     cursor: pointer;
     display: flex;
@@ -85,14 +86,14 @@
     transform: scaleX(1);
   }
   
-  /* Image wrapper — overflow:hidden here clips the image to rounded corners */
+  /* Image wrapper — clips image to rounded corners; tooltip escapes via overflow:visible */
   .card-img-wrapper {
     position: relative;
     flex-shrink: 0;
-    overflow: hidden;
-    border-radius: var(--spectrum-border-radius-200) var(--spectrum-border-radius-200) 0 0;
+  
     /* Allow tooltip to escape the image wrapper */
     overflow: visible;
+    border-radius: var(--spectrum-border-radius-200) var(--spectrum-border-radius-200) 0 0;
   }
   
   /* Clip only the actual image, not the badge/tooltip */
@@ -105,12 +106,15 @@
     overflow: hidden;
   }
   
+  /* stylelint-disable-next-line selector-class-pattern */
   .card-img--placeholder {
     background: linear-gradient(135deg, var(--spectrum-gray-100) 0%, var(--spectrum-gray-200) 100%);
+  
     /* Keep the SVG logo fully visible without cropping */
-    object-fit: contain; 
+    object-fit: contain;
+  
     /* Add some padding so the logo doesn't touch the edges */
-    padding: 40px; 
+    padding: 40px;
     box-sizing: border-box;
   }
   
@@ -130,8 +134,8 @@
     text-transform: none;
     backdrop-filter: blur(4px);
     cursor: default;
+  
     /* Must be relative so tooltip positions against it */
-    position: absolute;
     z-index: 2;
   }
   
@@ -352,6 +356,8 @@
   .cards-error { color: var(--spectrum-accent-color-900); }
   
   /* Skeleton */
+  
+  /* stylelint-disable-next-line selector-class-pattern */
   .card--skeleton { pointer-events: none; }
   
   .skeleton-box,
@@ -448,3 +454,4 @@
     .cards-display { padding: var(--spectrum-spacing-400) 0; }
     .cards-title   { font-size: var(--heading-font-size-m); }
   }
+  

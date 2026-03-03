@@ -75,7 +75,7 @@ function Card({ post, onClick }) {
   const id = post._id || post.id;
 
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
-  
+
   // Extract the image, or fallback to the default Adobe logo
   const extractedImg = post.image || extractImage(post.body);
   const imgSrc = extractedImg || '../../icons/adobe_logo.svg';
