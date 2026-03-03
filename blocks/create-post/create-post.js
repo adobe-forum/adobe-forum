@@ -1492,7 +1492,8 @@ function CreatePost() {
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
   const [editId, setEditId] = useState(null); // non-null = edit mode
-  const [editSidebarItemId, setEditSidebarItemId] = useState(null); // SidebarItem to move if location changes
+  // SidebarItem to move if location changes
+  const [editSidebarItemId, setEditSidebarItemId] = useState(null);
   const [originalCategory, setOriginalCategory] = useState(''); // track if user changed location
 
   const showToast = (message, type = 'success', onConfirm = null) => {
@@ -1590,7 +1591,8 @@ function CreatePost() {
         const result = await response.json();
         if (response.ok) {
           // If the user picked a new location, also move the SidebarItem
-          const locationChanged = editSidebarItemId && (category !== originalCategory || folderId !== null);
+          const locationChanged = editSidebarItemId
+            && (category !== originalCategory || folderId !== null);
           if (locationChanged) {
             try {
               await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
