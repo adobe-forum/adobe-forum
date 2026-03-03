@@ -33,15 +33,14 @@
     gap: var(--spectrum-spacing-600);
     width: 100%;
     box-sizing: border-box;
-    align-items: start; /* Keeps cards hugged to content without dead space */
   }
   
-  @media (width <= 1024px) { 
-    .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } 
+  @media (width <= 1024px) {
+    .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   
-  @media (width <= 600px)  { 
-    .cards-grid { grid-template-columns: minmax(0, 1fr); } 
+  @media (width <= 600px) {
+    .cards-grid { grid-template-columns: minmax(0, 1fr); }
   }
   
   /* ── Card ── */
@@ -49,10 +48,12 @@
     background: var(--spectrum-gray-50);
     border: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
     border-radius: var(--spectrum-border-radius-200);
-    overflow: hidden;
+  
+    /* overflow: hidden removed — was clipping the category tooltip */
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    height: 100%;
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
@@ -60,7 +61,6 @@
     transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
   
-  /* Colored top border slides in on hover */
   .card::before {
     content: '';
     position: absolute;
@@ -73,6 +73,7 @@
     transform-origin: left;
     transition: transform 0.25s ease;
     z-index: 1;
+    border-radius: var(--spectrum-border-radius-200) var(--spectrum-border-radius-200) 0 0;
   }
   
   .card:hover {
@@ -85,38 +86,39 @@
     transform: scaleX(1);
   }
   
-  /* Image wrapper */
+  /* Image wrapper — clips image to rounded corners; tooltip escapes via overflow:visible */
   .card-img-wrapper {
     position: relative;
     flex-shrink: 0;
+  
+    /* Allow tooltip to escape the image wrapper */
+    overflow: visible;
+    border-radius: var(--spectrum-border-radius-200) var(--spectrum-border-radius-200) 0 0;
   }
   
+  /* Clip only the actual image, not the badge/tooltip */
   .card-img-box {
     width: 100%;
     height: 180px;
     object-fit: cover;
     display: block;
+    border-radius: var(--spectrum-border-radius-200) var(--spectrum-border-radius-200) 0 0;
+    overflow: hidden;
   }
   
-  .card-img-placeholder {
+  /* stylelint-disable-next-line selector-class-pattern */
+  .card-img--placeholder {
     background: linear-gradient(135deg, var(--spectrum-gray-100) 0%, var(--spectrum-gray-200) 100%);
-    height: 180px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  
+    /* Keep the SVG logo fully visible without cropping */
+    object-fit: contain;
+  
+    /* Add some padding so the logo doesn't touch the edges */
+    padding: 40px;
+    box-sizing: border-box;
   }
   
-  .card-img-placeholder::after {
-    content: '';
-    width: 48px;
-    height: 48px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23bcbcbc' stroke-width='1.5'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E");
-    background-size: contain;
-    background-repeat: no-repeat;
-    opacity: 0.5;
-  }
-  
-  /* Category badge */
+  /* ── Category Badge ── */
   .card-category-badge {
     position: absolute;
     bottom: var(--spectrum-spacing-200);
@@ -129,8 +131,49 @@
     padding: 3px 10px;
     border-radius: 20px;
     letter-spacing: 0.03em;
-    text-transform: none; /* Changed from uppercase to none */
+    text-transform: none;
     backdrop-filter: blur(4px);
+    cursor: default;
+  
+    /* Must be relative so tooltip positions against it */
+    z-index: 2;
+  }
+  
+  /* ── Tooltip ── */
+  .card-category-tooltip {
+    display: block;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: rgb(20 20 20 / 95%);
+    color: #fff;
+    font-size: 11px;
+    font-family: var(--body-font-family);
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 100;
+  }
+  
+  /* Down-pointing arrow */
+  .card-category-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 14px;
+    border: 5px solid transparent;
+    border-top-color: rgb(20 20 20 / 95%);
+  }
+  
+  /* Show on badge hover */
+  .card-category-badge:hover .card-category-tooltip {
+    opacity: 1;
+    transform: translateY(0);
   }
   
   /* Body */
@@ -142,6 +185,7 @@
     min-width: 0;
     overflow: hidden;
     box-sizing: border-box;
+    flex: 1;
   }
   
   /* Tags */
@@ -150,7 +194,7 @@
     flex-wrap: wrap;
     gap: var(--spectrum-spacing-100);
     overflow: hidden;
-    min-height: 24px; 
+    min-height: 24px;
   }
   
   .card-tag {
@@ -180,10 +224,10 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: break-word;
-    min-height: 2.6em; 
+    min-height: 2.6em;
   }
   
-  /* ── Meta row & Adobe Spectrum Avatar Styles ── */
+  /* Meta row */
   .card-meta {
     display: flex;
     align-items: center;
@@ -194,16 +238,15 @@
     overflow: hidden;
   }
   
-  /* Adobe Spectrum Avatar - Strict Spec (Size 200 equivalent) */
   /* stylelint-disable-next-line selector-class-pattern */
   .spectrum-Avatar {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: 32px;  /* Standard Spectrum Size 200 */
-    height: 32px; /* Standard Spectrum Size 200 */
-    border-radius: 50%; /* Strictly circular */
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
     user-select: none;
@@ -217,7 +260,7 @@
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    line-height: 1; /* Prevents text from shifting off-center vertically */
+    line-height: 1;
   }
   
   .card-author {
@@ -229,9 +272,9 @@
     min-width: 0;
   }
   
-  .card-dot { 
-    color: var(--spectrum-gray-400); 
-    flex-shrink: 0; 
+  .card-dot {
+    color: var(--spectrum-gray-400);
+    flex-shrink: 0;
   }
   
   .card-category {
@@ -255,7 +298,7 @@
     overflow-wrap: break-word;
   }
   
-  /* Hover Arrow Fix */
+  /* Hover Arrow */
   .card-read-more {
     position: absolute;
     bottom: var(--spectrum-spacing-400);
@@ -268,14 +311,14 @@
     transition: opacity 0.2s ease, transform 0.2s ease;
   }
   
-  .card:hover .card-read-more { 
-    opacity: 1; 
-    transform: translateX(3px); 
+  .card:hover .card-read-more {
+    opacity: 1;
+    transform: translateX(3px);
   }
   
   /* No results */
   .cards-no-results {
-    display: none;
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -284,21 +327,21 @@
     text-align: center;
   }
   
-  .cards-no-results svg { 
-    stroke: var(--spectrum-gray-400); 
-    margin-bottom: var(--spectrum-spacing-200); 
+  .cards-no-results svg {
+    stroke: var(--spectrum-gray-400);
+    margin-bottom: var(--spectrum-spacing-200);
   }
   
-  .cards-no-results p { 
-    font-size: var(--body-font-size-s); 
-    font-weight: 600; 
-    color: var(--spectrum-gray-700); 
-    margin: 0; 
+  .cards-no-results p {
+    font-size: var(--body-font-size-s);
+    font-weight: 600;
+    color: var(--spectrum-gray-700);
+    margin: 0;
   }
   
-  .cards-no-results span { 
-    font-size: var(--body-font-size-xs); 
-    color: var(--spectrum-gray-500); 
+  .cards-no-results span {
+    font-size: var(--body-font-size-xs);
+    color: var(--spectrum-gray-500);
   }
   
   /* Empty / Error */
@@ -313,7 +356,9 @@
   .cards-error { color: var(--spectrum-accent-color-900); }
   
   /* Skeleton */
-  .card-skeleton { pointer-events: none; }
+  
+  /* stylelint-disable-next-line selector-class-pattern */
+  .card--skeleton { pointer-events: none; }
   
   .skeleton-box,
   .skeleton-line {
@@ -323,18 +368,18 @@
     border-radius: 4px;
   }
   
-  .skeleton-box { 
-    height: 180px; 
-    border-radius: 0; 
+  .skeleton-box {
+    height: 180px;
+    border-radius: 0;
   }
   
-  .skeleton-line { 
-    height: 14px; 
-    margin-bottom: var(--spectrum-spacing-200); 
+  .skeleton-line {
+    height: 14px;
+    margin-bottom: var(--spectrum-spacing-200);
   }
   
-  .skeleton-line.short   { width: 40%; }
-  .skeleton-line.medium  { width: 70%; }
+  .skeleton-line.short  { width: 40%; }
+  .skeleton-line.medium { width: 70%; }
   
   @keyframes shimmer {
     0%   { background-position: 200% 0; }
@@ -409,3 +454,4 @@
     .cards-display { padding: var(--spectrum-spacing-400) 0; }
     .cards-title   { font-size: var(--heading-font-size-m); }
   }
+  
