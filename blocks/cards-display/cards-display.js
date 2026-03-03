@@ -6,7 +6,6 @@ import htm from '../../vendor/htm.js';
 const html = htm.bind(h);
 
 // ── Environment & Config ──────────────────────────────────────────────
-// Dynamically set the API URL based on the environment
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE_URL = isLocalhost
   ? 'http://localhost:5000/api'
@@ -15,7 +14,6 @@ const API_BASE_URL = isLocalhost
 const PAGE_SIZE = 12;
 
 // ── Shared Instances ──────────────────────────────────────────────────
-// Create DOMParser once to prevent memory leaks and performance drops
 const domParser = new DOMParser();
 
 // ── Pure Helper Functions ─────────────────────────────────────────────
@@ -23,7 +21,6 @@ function extractImage(body) {
   if (!body) return null;
   const doc = domParser.parseFromString(body, 'text/html');
   const img = doc.querySelector('img');
-  // Security check: ensure the src isn't a malicious javascript: URI
   // eslint-disable-next-line no-script-url
   return (img && img.src && !img.src.startsWith('javascript:')) ? img.src : null;
 }
@@ -54,14 +51,12 @@ function avatarColor(name) {
 }
 
 function normalizeApiData(data, category) {
-  // Abstracts API inconsistencies to keep state management clean
   if (category) {
     return (data.items || []).map((item) => item.postId).filter(Boolean);
   }
   return data.posts || data || [];
 }
 
-// Helper to manage DOM layout shifts outside of Preact
 function toggleViews(showCards) {
   const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
   const fw = document.querySelector('.forum-post-wrapper');
@@ -71,7 +66,6 @@ function toggleViews(showCards) {
   if (fw) fw.style.display = showCards ? 'none' : '';
   if (sw) sw.style.display = showCards ? '' : 'none';
 
-  // Adds a state class to body for better CSS control
   document.body.classList.toggle('is-viewing-post', !showCards);
 }
 
@@ -81,7 +75,12 @@ function Card({ post, onClick }) {
   const id = post._id || post.id;
 
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
-  const imgSrc = post.image || extractImage(post.body);
+  
+  // Extract the image, or fallback to the default Adobe logo
+  const extractedImg = post.image || extractImage(post.body);
+  const imgSrc = extractedImg || '../../icons/adobe_logo.svg';
+  const isPlaceholder = !extractedImg;
+
   const author = post.author?.name || post.author?.username || post.author
     || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
     || post.createdBy?.name || post.createdBy?.username
@@ -91,8 +90,16 @@ function Card({ post, onClick }) {
   const avColor = avatarColor(author);
   const excerpt = extractExcerpt(post.body || post.description || post.content || '');
 
-  // Display the deepest category
-  const displayCategory = post.category ? post.category.split('/').pop().trim() : '';
+  const rawCategory = post.category || '';
+
+  // Show only the deepest/last segment in the badge
+  const displayCategory = rawCategory ? rawCategory.split(' > ').pop().trim() : '';
+
+  // Full path is the raw stored string — used in tooltip
+  const fullCategoryPath = rawCategory.trim();
+
+  // Only show tooltip if the path has more than one segment
+  const hasParent = rawCategory.includes(' > ');
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -111,10 +118,20 @@ function Card({ post, onClick }) {
       aria-label="Read post: ${post.title}"
     >
       <div class="card-img-wrapper">
-        ${imgSrc
-    ? html`<img src="${imgSrc}" alt="" class="card-img-box" loading="lazy" />`
-    : html`<div class="card-img-box card-img--placeholder"></div>`}
-        ${displayCategory ? html`<span class="card-category-badge">${displayCategory}</span>` : ''}
+        <img 
+          src="${imgSrc}" 
+          alt="" 
+          class="card-img-box ${isPlaceholder ? 'card-img--placeholder' : ''}" 
+          loading="lazy" 
+        />
+        ${displayCategory ? html`
+          <span class="card-category-badge">
+            ${displayCategory}
+            ${hasParent ? html`
+              <span class="card-category-tooltip" role="tooltip">${fullCategoryPath}</span>
+            ` : ''}
+          </span>
+        ` : ''}
       </div>
       <div class="card-body">
         ${tags.length > 0 ? html`<div class="card-tags">${tags.map((tag) => html`<span class="card-tag">${tag}</span>`)}</div>` : ''}
@@ -215,7 +232,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   else if (searchQuery) displayTitle = `Search Results: "${searchQuery}"`;
 
   useEffect(() => {
-    // 1. Create the AbortController at the start of the effect
     const controller = new AbortController();
     const { signal } = controller;
 
@@ -235,7 +251,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           if (searchQuery) url.searchParams.append('search', searchQuery);
         }
 
-        // 2. Pass the signal to the fetch request
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error('Network response was not ok');
         const data = await res.json();
@@ -243,28 +258,17 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
         setPosts(normalizeApiData(data, category));
         setTotalPages(data.totalPages || 1);
       } catch (err) {
-        // 3. Ignore the error if it was an intentional abort
-        if (err.name === 'AbortError') {
-          return;
-        }
+        if (err.name === 'AbortError') return;
         // eslint-disable-next-line no-console
         console.error('cards-display: failed to fetch posts', err);
         setError(true);
       } finally {
-        // 4. Only clear the loading state if the request wasn't aborted
-        if (!signal.aborted) {
-          setLoading(false);
-        }
+        if (!signal.aborted) setLoading(false);
       }
     };
 
     fetchPosts();
-
-    // 5. Cleanup function: Abort the fetch if the component unmounts
-    // or if the user clicks a new page before this fetch finishes.
-    return () => {
-      controller.abort();
-    };
+    return () => { controller.abort(); };
   }, [currentPage, searchQuery, category]);
 
   useEffect(() => {
@@ -288,8 +292,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     window.addEventListener('search-posts', handleSearch);
     window.addEventListener('filter-category', handleFilter);
     window.addEventListener('show-cards', handleShowCards);
-
-    // Initial setup for the view
     toggleViews(true);
 
     return () => {
@@ -312,7 +314,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Generate the UI string
   const getEmptyStateContent = () => {
     if (searchQuery || category) {
       return html`
@@ -352,7 +353,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 // ── Exported Decorator ────────────────────────────────────────────────
 
 export default async function decorate(block) {
-  // Auth guard — redirect to sign in if not logged in
   if (!localStorage.getItem('af_user')) {
     window.location.replace('/auth-form');
     return;
