@@ -69,810 +69,810 @@
 /* ════════════════════════════════════════════════════════════════════════════
    OVERLAY  — S2 token fallbacks + fixed full-viewport layout (single block)
    ════════════════════════════════════════════════════════════════════════════ */
-   .auth-form-overlay {
-    /* ── S2 token fallbacks (scoped so they don't pollute global) ── */
-  
-    /* Typography */
-    --af-font-size-75:   11px;
-    --af-font-size-100:  14px;
-    --af-font-size-200:  16px;
-    --af-font-size-300:  18px;
-    --af-font-weight-regular: 400;
-    --af-font-weight-medium:  500;
-    --af-font-weight-bold:    700;
-  
-    /* Sizing */
-    --af-height-100:  32px;
-    --af-height-75:   24px;
-    --af-radius-100:  4px;
-    --af-border-100:  1px;
-    --af-border-200:  2px;
-    --af-edge-100:    12px;
-  
-    /* Spacing */
-    --af-sp-100: 4px;
-    --af-sp-200: 8px;
-    --af-sp-300: 12px;
-    --af-sp-400: 16px;
-    --af-sp-500: 20px;
-    --af-sp-600: 24px;
-    --af-sp-700: 28px;
-    --af-sp-800: 32px;
-  
-    /* Gray palette — light theme */
-    --af-gray-50:  #fff;
-    --af-gray-100: #f5f5f5;
-    --af-gray-300: #d5d5d5;
-    --af-gray-400: #b3b3b3;
-    --af-gray-500: #8e8e8e;
-    --af-gray-600: #6e6e6e;
-    --af-gray-700: #4b4b4b;
-    --af-gray-800: #2c2c2c;
-    --af-gray-900: #1a1a1a;
-  
-    /* Accent */
-    --af-blue-800:  #1473e6;
-    --af-blue-900:  #0d66d0;
-    --af-blue-1000: #095aba;
-    --af-blue-1100: #0550a0;
-  
-    /* Semantic */
-    --af-red-800:   #d7373f;
-    --af-green-800: #268e6c;
-  
-    /* Focus rings */
-    --af-focus-ring-blue: rgb(20 115 230 / 28%);
-    --af-focus-ring-red:  rgb(215 55 63 / 22%);
-  
-    /* Animation */
-    --af-duration: 130ms;
-  
-    /* Opacity */
-    --af-opacity-disabled: 0.3;
-  
-    /* ── Layout — pure white full-page, no backdrop ── */
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9999 !important;
-    display: flex !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    background-color: #fff !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-    border: none !important;
-    outline: none !important;
-  
-    /* Spectrum font stack — adobe-clean first, system fallbacks */
-    font-family:
-      adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
-      'Segoe UI', Roboto, sans-serif !important;
+.auth-form-overlay {
+  /* ── S2 token fallbacks (scoped so they don't pollute global) ── */
+
+  /* Typography */
+  --af-font-size-75:   11px;
+  --af-font-size-100:  14px;
+  --af-font-size-200:  16px;
+  --af-font-size-300:  18px;
+  --af-font-weight-regular: 400;
+  --af-font-weight-medium:  500;
+  --af-font-weight-bold:    700;
+
+  /* Sizing */
+  --af-height-100:  32px;
+  --af-height-75:   24px;
+  --af-radius-100:  4px;
+  --af-border-100:  1px;
+  --af-border-200:  2px;
+  --af-edge-100:    12px;
+
+  /* Spacing */
+  --af-sp-100: 4px;
+  --af-sp-200: 8px;
+  --af-sp-300: 12px;
+  --af-sp-400: 16px;
+  --af-sp-500: 20px;
+  --af-sp-600: 24px;
+  --af-sp-700: 28px;
+  --af-sp-800: 32px;
+
+  /* Gray palette — light theme */
+  --af-gray-50:  #fff;
+  --af-gray-100: #f5f5f5;
+  --af-gray-300: #d5d5d5;
+  --af-gray-400: #b3b3b3;
+  --af-gray-500: #8e8e8e;
+  --af-gray-600: #6e6e6e;
+  --af-gray-700: #4b4b4b;
+  --af-gray-800: #2c2c2c;
+  --af-gray-900: #1a1a1a;
+
+  /* Accent */
+  --af-blue-800:  #1473e6;
+  --af-blue-900:  #0d66d0;
+  --af-blue-1000: #095aba;
+  --af-blue-1100: #0550a0;
+
+  /* Semantic */
+  --af-red-800:   #d7373f;
+  --af-green-800: #268e6c;
+
+  /* Focus rings */
+  --af-focus-ring-blue: rgb(20 115 230 / 28%);
+  --af-focus-ring-red:  rgb(215 55 63 / 22%);
+
+  /* Animation */
+  --af-duration: 130ms;
+
+  /* Opacity */
+  --af-opacity-disabled: 0.3;
+
+  /* ── Layout — pure white full-page, no backdrop ── */
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  background-color: #fff !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  outline: none !important;
+
+  /* Spectrum font stack — adobe-clean first, system fallbacks */
+  font-family:
+    adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CARD  — flat white column, no border, no shadow, no radius
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-card {
+  position: relative !important;
+  overflow: visible !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  min-height: 100vh !important;
+  padding: 60px 48px 64px !important;
+  background-color: #fff !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  color: var(--af-gray-900, #1a1a1a) !important;
+  outline: none !important;
+}
+
+/* Prevent host stylesheet interference */
+.auth-form-card:hover,
+.auth-form-card:focus,
+.auth-form-card:focus-within,
+.auth-form-card:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove red top-bar */
+.auth-form-card::before {
+  display: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BRAND HEADER
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--af-sp-300, 12px);
+  margin-bottom: 44px;
+}
+
+/* Logo wrapper */
+.auth-form-brand-logo {
+  all: unset !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
+}
+
+.auth-form-brand-logo img,
+.auth-form-brand-logo svg {
+  width: 44px !important;
+  height: 44px !important;
+  display: block !important;
+  object-fit: contain !important;
+}
+
+/* Brand name — larger for full-page SSO layout */
+.auth-form-brand-name {
+  font-size: 20px;
+  font-weight: var(--af-font-weight-bold, 700);
+  line-height: 1.2;
+  color: var(--af-gray-900, #1a1a1a);
+  letter-spacing: -0.2px;
+}
+
+.auth-form-brand-name em {
+  font-style: normal;
+  color: #fa0f00; /* Adobe brand red — static, not theme-dependent */
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   HEADING & BODY (forgot-password view)
+   Spectrum: Heading S, Body S
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-heading {
+  margin: 0 0 var(--af-sp-200, 8px);
+  font-size: var(--af-font-size-300, 18px);
+  font-weight: var(--af-font-weight-bold, 700);
+  line-height: 1.3;
+  color: var(--af-gray-900, #1a1a1a);
+  letter-spacing: -0.15px;
+}
+
+.auth-form-body {
+  margin: 0 0 var(--af-sp-700, 28px);
+  font-size: var(--af-font-size-100, 14px); /* S2 Body S = 14px, not 12px */
+  line-height: 1.5;
+  color: var(--af-gray-600, #6e6e6e);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TABS — Spectrum Tabs, quiet/compact variant
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-tabs {
+  display: flex;
+  border-bottom: var(--af-border-100, 1px) solid var(--af-gray-300, #d5d5d5);
+  margin-bottom: 32px;
+  gap: 0;
+}
+
+/*
+ * all: unset  — wipes all inherited site-level button rules including
+ * the red pill/capsule that appears on :hover in this EDS context.
+ */
+.auth-form-tab {
+  all: unset !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 !important;
+
+  /* S2 Tab: 2px bottom border indicator */
+  border-bottom: var(--af-border-200, 2px) solid transparent !important;
+  margin-bottom: -1px !important;
+  padding: 14px var(--af-sp-500, 20px) !important;
+
+  /* S2 typography */
+  font-family: inherit !important;
+  font-size: var(--af-font-size-100, 14px) !important;
+  font-weight: var(--af-font-weight-medium, 500) !important;
+  line-height: 1.3 !important;
+  color: var(--af-gray-600, #6e6e6e) !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+
+  /* Hard-reset shape — nothing from host */
+  background: transparent !important;
+  background-image: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  /* S2: only color + indicator animate */
+  transition:
+    color               var(--af-duration, 130ms) ease-in-out,
+    border-bottom-color var(--af-duration, 130ms) ease-in-out !important;
+}
+
+/* Hover — text goes to gray-800, no background change */
+.auth-form-tab:hover {
+  color: var(--af-gray-800, #2c2c2c) !important;
+  background: transparent !important;
+  background-image: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Keyboard focus — inset ring, no shape change */
+.auth-form-tab:focus-visible {
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline-offset: -2px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* Mousedown */
+.auth-form-tab:active {
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Selected — S2 accent blue underline */
+.auth-form-tab[aria-selected="true"] {
+  color: var(--af-blue-900, #0d66d0) !important;
+  font-weight: var(--af-font-weight-bold, 700) !important; /* S2: selected tab is bold */
+  border-bottom: var(--af-border-200, 2px) solid var(--af-blue-900, #0d66d0) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Selected + hover */
+.auth-form-tab[aria-selected="true"]:hover {
+  color: var(--af-blue-900, #0d66d0) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   FIELD WRAPPER
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-field {
+  margin-bottom: var(--af-sp-500, 20px);
+}
+
+/* ── Spectrum FieldLabel ─────────────────────────────────────────────────── */
+
+/*
+ * S2 FieldLabel (medium) — corrected to spec:
+ *   font-size      = 11px   (--spectrum-font-size-75)
+ *   font-weight    = 500    (medium)
+ *   line-height    = 1.25   (--spectrum-line-height-100 for UI labels) ← fixed from 1.3
+ *   letter-spacing = 0.06em (--spectrum-label-letter-spacing)         ← added, was missing
+ *   color          = #4b4b4b (gray-700)
+ *   margin-bottom  = 8px    (--spectrum-spacing-200, label-to-input)  ← fixed from 4px
+ */
+.auth-form-label {
+  display: block;
+  font-size: var(--af-font-size-75, 11px);
+  font-weight: var(--af-font-weight-medium, 500);
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  color: var(--af-gray-700, #4b4b4b);
+  margin-bottom: var(--af-sp-200, 8px);
+  cursor: default;
+  user-select: none;
+}
+
+/* Required asterisk — Spectrum negative color */
+.auth-form-label-req {
+  color: var(--af-red-800, #d7373f);
+  margin-left: 2px;
+  user-select: none;
+}
+
+/* ── Spectrum Textfield wrapper ──────────────────────────────────────────── */
+.auth-form-textfield {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Spectrum Textfield input ────────────────────────────────────────────── */
+
+/*
+ * S2 Textfield (medium):
+ *   height         = 32px  (component-height-100)
+ *   padding-inline = 12px  (component-edge-to-text-100)
+ *   border         = 1px solid gray-400 (#b3b3b3)
+ *   border-radius  = 4px   (corner-radius-100)
+ *   font-size      = 14px  (font-size-100)
+ *   color          = gray-800 (#2c2c2c)   ← S2 uses 2c not 4b
+ *   bg             = gray-50 (#fff)
+ *   placeholder    = gray-500 (#8e8e8e)
+ *   hover border   = gray-800 (#2c2c2c)  ← S2 spec
+ *   focus border   = blue-800 (#1473e6) + 2px ring
+ *   keyfocus border= gray-800 (#2c2c2c)  ← S2 spec change
+ */
+.auth-form-input {
+  all: unset !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: var(--af-height-100, 32px) !important;
+  padding: 0 var(--af-edge-100, 12px) !important;
+  font-family: inherit !important;
+  font-size: var(--af-font-size-100, 14px) !important;
+  font-weight: var(--af-font-weight-regular, 400) !important;
+  line-height: 1.3 !important;
+  color: var(--af-gray-800, #2c2c2c) !important;
+  background-color: var(--af-gray-50, #fff) !important;
+  border: var(--af-border-100, 1px) solid var(--af-gray-400, #b3b3b3) !important;
+  border-radius: var(--af-radius-100, 4px) !important;
+  outline: none !important;
+  transition:
+    border-color var(--af-duration, 130ms) ease-in-out,
+    box-shadow   var(--af-duration, 130ms) ease-in-out !important;
+
+  /* Remove browser-native password reveal icon (Edge/IE/Chrome) */
+  appearance: none !important;
+}
+
+/* IE11 / Edge legacy — hide native reveal button */
+.auth-form-input::-ms-reveal {
+  display: none !important;
+}
+
+/* Chrome autofill eye icon */
+.auth-form-input::-webkit-credentials-auto-fill-button {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+}
+
+/* Edge Chromium native password reveal */
+.auth-form-input::-ms-clear {
+  display: none !important;
+}
+
+.auth-form-input::placeholder {
+  color: var(--af-gray-500, #8e8e8e) !important;
+  font-weight: var(--af-font-weight-regular, 400) !important;
+}
+
+/*
+ * Selector order follows specificity rules required by the linter:
+ * higher-specificity / pseudo-class selectors must appear BEFORE
+ * the :hover:not(...) compound selector.
+ */
+
+/* Focus — blue ring (S2 pointer/mouse focus) */
+.auth-form-input:focus {
+  border-color: var(--af-blue-800, #1473e6) !important;
+  box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(20 115 230 / 28%)) !important;
+  background-color: var(--af-gray-50, #fff) !important;
+}
+
+.auth-form-input:focus-visible {
+  border-color: var(--af-blue-800, #1473e6) !important;
+  box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(20 115 230 / 28%)) !important;
+  background-color: var(--af-gray-50, #fff) !important;
+}
+
+/* Disabled */
+.auth-form-input:disabled {
+  opacity: var(--af-opacity-disabled, 0.3) !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* Hover — gray-800 border (S2 spec), no background change — MUST come after :focus/:disabled */
+.auth-form-input:hover:not(:disabled, :focus, :focus-visible) {
+  border-color: var(--af-gray-800, #2c2c2c) !important;
+  background-color: var(--af-gray-50, #fff) !important;
+  box-shadow: none !important;
+}
+
+/* Right padding when password toggle present */
+.auth-form-input.has-icon {
+  padding-right: calc(var(--af-sp-200, 8px) * 2 + 18px) !important;
+}
+
+/* ── Invalid state ───────────────────────────────────────────────────────── */
+.auth-form-field.is-invalid .auth-form-input {
+  border-color: var(--af-red-800, #d7373f) !important;
+}
+
+/* Focus on invalid field — red ring */
+.auth-form-field.is-invalid .auth-form-input:focus {
+  border-color: var(--af-red-800, #d7373f) !important;
+  box-shadow: 0 0 0 2px var(--af-focus-ring-red, rgb(215 55 63 / 22%)) !important;
+}
+
+.auth-form-field.is-invalid .auth-form-input:focus-visible {
+  border-color: var(--af-red-800, #d7373f) !important;
+  box-shadow: 0 0 0 2px var(--af-focus-ring-red, rgb(215 55 63 / 22%)) !important;
+}
+
+/* Hover on invalid field — MUST come after :focus/:focus-visible */
+.auth-form-field.is-invalid .auth-form-input:hover:not(:focus, :focus-visible) {
+  border-color: var(--af-red-800, #d7373f) !important;
+  box-shadow: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PASSWORD VISIBILITY TOGGLE — Spectrum ActionButton, quiet variant
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-pw-btn {
+  all: unset !important;
+  position: absolute !important;
+  right: var(--af-sp-200, 8px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: var(--af-height-75, 24px) !important;
+  height: var(--af-height-75, 24px) !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--af-radius-100, 4px) !important;
+  box-shadow: none !important;
+  color: var(--af-gray-600, #6e6e6e) !important;
+  cursor: pointer !important;
+  transition: color var(--af-duration, 130ms) ease-in-out !important;
+}
+
+/* Hover: icon goes to gray-800, zero background */
+.auth-form-pw-btn:hover {
+  color: var(--af-gray-800, #2c2c2c) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.auth-form-pw-btn:focus-visible {
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline-offset: 2px !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   HELPTEXT — Spectrum HelpText, negative variant
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-help {
+  display: none;
+  align-items: flex-start;
+  gap: var(--af-sp-100, 4px);
+  margin-top: var(--af-sp-100, 4px);
+  font-size: var(--af-font-size-75, 11px);
+  line-height: 1.4;
+  color: var(--af-red-800, #d7373f);
+}
+
+.auth-form-field.is-invalid .auth-form-help {
+  display: flex;
+}
+
+/* Informational hint — hidden when field invalid (prevents double messages) */
+.auth-form-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--af-sp-100, 4px);
+  margin-top: var(--af-sp-100, 4px);
+  font-size: var(--af-font-size-75, 11px);
+  line-height: 1.4;
+  color: var(--af-gray-600, #6e6e6e);
+}
+
+.auth-form-field.is-invalid .auth-form-hint {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   QUIET LINK — Spectrum Link, quiet/secondary variant
+   (Forgot password button — no underline, static color, hover = same)
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-quiet-link {
+  all: unset !important;
+  display: inline-block !important;
+  margin-top: var(--af-sp-200, 8px) !important;
+  margin-bottom: var(--af-sp-500, 20px) !important;
+  font-family: inherit !important;
+  font-size: var(--af-font-size-75, 11px) !important;
+  font-weight: var(--af-font-weight-regular, 400) !important;
+  line-height: 1.3 !important;
+  color: var(--af-blue-900, #0d66d0) !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* S2 quiet link hover: underline appears */
+.auth-form-quiet-link:hover {
+  color: var(--af-blue-900, #0d66d0) !important;
+  text-decoration: underline !important;
+  background: none !important;
+}
+
+.auth-form-quiet-link:focus-visible {
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline-offset: 2px !important;
+  border-radius: 2px !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PRIMARY BUTTON — Spectrum Button, accent fill variant
+   S2: border-radius = 4px (corner-radius-100), NOT pill-shaped
+       height        = 32px (component-height-100, medium)
+       font-size     = 14px (font-size-100)
+       font-weight   = 700  (bold)
+       bg            = blue-900 (#0d66d0)
+       hover bg      = blue-1000 (#095aba)
+       active bg     = blue-1100 (#0550a0)
+       text          = white (#fff) — always
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-btn {
+  all: unset !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: var(--af-height-100, 32px) !important;
+  padding: 0 var(--af-sp-400, 16px) !important;
+  font-family: inherit !important;
+  font-size: var(--af-font-size-100, 14px) !important;
+  font-weight: var(--af-font-weight-bold, 700) !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0 !important;
+  color: #fff !important;
+  background-color: var(--af-blue-900, #0d66d0) !important;
+  border: none !important;             /* S2 fill button has no border */
+  border-radius: var(--af-radius-100, 4px) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  margin-top: var(--af-sp-300, 12px) !important;
+  transition:
+    background-color var(--af-duration, 130ms) ease-in-out !important;
+}
+
+/* Hover — one step darker blue, no shape/color shift */
+.auth-form-btn:hover {
+  background-color: var(--af-blue-1000, #095aba) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: var(--af-radius-100, 4px) !important;
+  box-shadow: none !important;
+}
+
+/* Pressed / active */
+.auth-form-btn:active {
+  background-color: var(--af-blue-1100, #0550a0) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Keyboard focus ring */
+.auth-form-btn:focus-visible {
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline-offset: var(--af-sp-100, 4px) !important;
+}
+
+/* Disabled — S2 uses 30% opacity */
+.auth-form-btn:disabled {
+  opacity: var(--af-opacity-disabled, 0.3) !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* Loading state */
+.auth-form-btn-spinner {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgb(255 255 255 / 30%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: af-spin 0.65s linear infinite;
+}
+
+.auth-form-btn.is-loading .auth-form-btn-label  { opacity: 0; }
+.auth-form-btn.is-loading .auth-form-btn-spinner { display: block; }
+
+@keyframes af-spin {
+  to { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PASSWORD STRENGTH METER
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-strength {
+  margin-top: var(--af-sp-100, 4px);
+}
+
+.auth-form-strength-track {
+  height: 3px;
+  border-radius: 2px;
+  background-color: var(--af-gray-300, #d5d5d5);
+  overflow: hidden;
+  margin-bottom: var(--af-sp-100, 4px);
+}
+
+.auth-form-strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  width: 0;
+  transition: width 280ms ease, background-color 280ms ease;
+}
+
+.auth-form-strength-text {
+  font-size: var(--af-font-size-75, 11px);
+  color: var(--af-gray-600, #6e6e6e);
+  line-height: 1.3;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BACK LINK — Spectrum Link with leading icon
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-back {
+  all: unset !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: var(--af-sp-100, 4px) !important;
+  margin-bottom: var(--af-sp-600, 24px) !important;
+  font-family: inherit !important;
+  font-size: var(--af-font-size-100, 14px) !important;
+  font-weight: var(--af-font-weight-medium, 500) !important;
+  line-height: 1.3 !important;
+  color: var(--af-blue-900, #0d66d0) !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* S2 link hover: underline */
+.auth-form-back:hover {
+  color: var(--af-blue-900, #0d66d0) !important;
+  text-decoration: underline !important;
+  background: none !important;
+}
+
+.auth-form-back:focus-visible {
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline-offset: 2px !important;
+  border-radius: 2px !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SUCCESS STATE
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-success {
+  display: none;
+  text-align: center;
+  padding: var(--af-sp-400, 16px) 0 var(--af-sp-200, 8px);
+}
+
+.auth-form-success.is-visible { display: block; }
+
+.auth-form-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--af-sp-400, 16px);
+  background-color: rgb(38 142 108 / 10%);
+  border-radius: 50%;
+  color: var(--af-green-800, #268e6c);
+}
+
+.auth-form-success-title {
+  margin: 0 0 var(--af-sp-200, 8px);
+  font-size: var(--af-font-size-200, 16px);
+  font-weight: var(--af-font-weight-bold, 700);
+  color: var(--af-gray-900, #1a1a1a);
+}
+
+.auth-form-success-desc {
+  margin: 0;
+  font-size: var(--af-font-size-100, 14px);
+  line-height: 1.5;
+  color: var(--af-gray-600, #6e6e6e);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LEGAL TEXT — Spectrum Body XS
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-legal {
+  margin-top: var(--af-sp-600, 24px);
+  font-size: var(--af-font-size-75, 11px);
+  color: var(--af-gray-600, #6e6e6e);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.auth-form-legal a {
+  color: var(--af-blue-900, #0d66d0);
+  text-decoration: none;
+}
+
+.auth-form-legal a:hover {
+  color: var(--af-blue-900, #0d66d0) !important;
+  text-decoration: underline;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   2-COLUMN NAME ROW
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-form-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--af-sp-300, 12px);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PANEL VISIBILITY  — CSS-driven, matches vanilla JS original
+   ════════════════════════════════════════════════════════════════════════════ */
+.auth-panel {
+  display: none;
+}
+
+.auth-panel.is-active {
+  display: block;
+  animation: af-reveal var(--af-duration, 130ms) ease-out both;
+}
+
+@keyframes af-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     CARD  — flat white column, no border, no shadow, no radius
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-card {
-    position: relative !important;
-    overflow: visible !important;
-    width: 100% !important;
-    max-width: 480px !important;
-    min-height: 100vh !important;
-    padding: 60px 48px 64px !important;
-    background-color: #fff !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    box-sizing: border-box !important;
-    color: var(--af-gray-900, #1a1a1a) !important;
-    outline: none !important;
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  /* Prevent host stylesheet interference */
-  .auth-form-card:hover,
-  .auth-form-card:focus,
-  .auth-form-card:focus-within,
-  .auth-form-card:focus-visible {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-  }
-  
-  /* Remove red top-bar */
-  .auth-form-card::before {
-    display: none !important;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     BRAND HEADER
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-brand {
-    display: flex;
-    align-items: center;
-    gap: var(--af-sp-300, 12px);
-    margin-bottom: 44px;
-  }
-  
-  /* Logo wrapper */
-  .auth-form-brand-logo {
-    all: unset !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
-    width: 44px !important;
-    height: 44px !important;
-  }
-  
-  .auth-form-brand-logo img,
-  .auth-form-brand-logo svg {
-    width: 44px !important;
-    height: 44px !important;
-    display: block !important;
-    object-fit: contain !important;
-  }
-  
-  /* Brand name — larger for full-page SSO layout */
-  .auth-form-brand-name {
-    font-size: 20px;
-    font-weight: var(--af-font-weight-bold, 700);
-    line-height: 1.2;
-    color: var(--af-gray-900, #1a1a1a);
-    letter-spacing: -0.2px;
-  }
-  
-  .auth-form-brand-name em {
-    font-style: normal;
-    color: #fa0f00; /* Adobe brand red — static, not theme-dependent */
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     HEADING & BODY (forgot-password view)
-     Spectrum: Heading S, Body S
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-heading {
-    margin: 0 0 var(--af-sp-200, 8px);
-    font-size: var(--af-font-size-300, 18px);
-    font-weight: var(--af-font-weight-bold, 700);
-    line-height: 1.3;
-    color: var(--af-gray-900, #1a1a1a);
-    letter-spacing: -0.15px;
-  }
-  
-  .auth-form-body {
-    margin: 0 0 var(--af-sp-700, 28px);
-    font-size: var(--af-font-size-100, 14px); /* S2 Body S = 14px, not 12px */
-    line-height: 1.5;
-    color: var(--af-gray-600, #6e6e6e);
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     TABS — Spectrum Tabs, quiet/compact variant
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-tabs {
-    display: flex;
-    border-bottom: var(--af-border-100, 1px) solid var(--af-gray-300, #d5d5d5);
-    margin-bottom: 32px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   S2 large scale (mobile/touch): component-height-100 = 40px
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (width <= 440px) {
+  .auth-form-2col {
+    grid-template-columns: 1fr;
     gap: 0;
   }
-  
-  /*
-   * all: unset  — wipes all inherited site-level button rules including
-   * the red pill/capsule that appears on :hover in this EDS context.
-   */
-  .auth-form-tab {
-    all: unset !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex: 1 !important;
-  
-    /* S2 Tab: 2px bottom border indicator */
-    border-bottom: var(--af-border-200, 2px) solid transparent !important;
-    margin-bottom: -1px !important;
-    padding: 14px var(--af-sp-500, 20px) !important;
-  
-    /* S2 typography */
-    font-family: inherit !important;
-    font-size: var(--af-font-size-100, 14px) !important;
-    font-weight: var(--af-font-weight-medium, 500) !important;
-    line-height: 1.3 !important;
-    color: var(--af-gray-600, #6e6e6e) !important;
-    text-align: center !important;
-    cursor: pointer !important;
-    white-space: nowrap !important;
-  
-    /* Hard-reset shape — nothing from host */
-    background: transparent !important;
-    background-image: none !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    outline: none !important;
-  
-    /* S2: only color + indicator animate */
-    transition:
-      color               var(--af-duration, 130ms) ease-in-out,
-      border-bottom-color var(--af-duration, 130ms) ease-in-out !important;
+}
+
+@media (width <= 600px) {
+  .auth-form-card {
+    max-width: 100% !important;
+    padding: 40px 24px 48px !important;
   }
-  
-  /* Hover — text goes to gray-800, no background change */
-  .auth-form-tab:hover {
-    color: var(--af-gray-800, #2c2c2c) !important;
-    background: transparent !important;
-    background-image: none !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+
+  .auth-form-brand {
+    margin-bottom: 32px;
   }
-  
-  /* Keyboard focus — inset ring, no shape change */
-  .auth-form-tab:focus-visible {
-    outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
-    outline-offset: -2px !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-  }
-  
-  /* Mousedown */
-  .auth-form-tab:active {
-    background: transparent !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-  
-  /* Selected — S2 accent blue underline */
-  .auth-form-tab[aria-selected="true"] {
-    color: var(--af-blue-900, #0d66d0) !important;
-    font-weight: var(--af-font-weight-bold, 700) !important; /* S2: selected tab is bold */
-    border-bottom: var(--af-border-200, 2px) solid var(--af-blue-900, #0d66d0) !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-  
-  /* Selected + hover */
-  .auth-form-tab[aria-selected="true"]:hover {
-    color: var(--af-blue-900, #0d66d0) !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     FIELD WRAPPER
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-field {
-    margin-bottom: var(--af-sp-500, 20px);
-  }
-  
-  /* ── Spectrum FieldLabel ─────────────────────────────────────────────────── */
-  
-  /*
-   * S2 FieldLabel (medium) — corrected to spec:
-   *   font-size      = 11px   (--spectrum-font-size-75)
-   *   font-weight    = 500    (medium)
-   *   line-height    = 1.25   (--spectrum-line-height-100 for UI labels) ← fixed from 1.3
-   *   letter-spacing = 0.06em (--spectrum-label-letter-spacing)         ← added, was missing
-   *   color          = #4b4b4b (gray-700)
-   *   margin-bottom  = 8px    (--spectrum-spacing-200, label-to-input)  ← fixed from 4px
-   */
-  .auth-form-label {
-    display: block;
-    font-size: var(--af-font-size-75, 11px);
-    font-weight: var(--af-font-weight-medium, 500);
-    line-height: 1.25;
-    letter-spacing: 0.06em;
-    color: var(--af-gray-700, #4b4b4b);
-    margin-bottom: var(--af-sp-200, 8px);
-    cursor: default;
-    user-select: none;
-  }
-  
-  /* Required asterisk — Spectrum negative color */
-  .auth-form-label-req {
-    color: var(--af-red-800, #d7373f);
-    margin-left: 2px;
-    user-select: none;
-  }
-  
-  /* ── Spectrum Textfield wrapper ──────────────────────────────────────────── */
-  .auth-form-textfield {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-  
-  /* ── Spectrum Textfield input ────────────────────────────────────────────── */
-  
-  /*
-   * S2 Textfield (medium):
-   *   height         = 32px  (component-height-100)
-   *   padding-inline = 12px  (component-edge-to-text-100)
-   *   border         = 1px solid gray-400 (#b3b3b3)
-   *   border-radius  = 4px   (corner-radius-100)
-   *   font-size      = 14px  (font-size-100)
-   *   color          = gray-800 (#2c2c2c)   ← S2 uses 2c not 4b
-   *   bg             = gray-50 (#fff)
-   *   placeholder    = gray-500 (#8e8e8e)
-   *   hover border   = gray-800 (#2c2c2c)  ← S2 spec
-   *   focus border   = blue-800 (#1473e6) + 2px ring
-   *   keyfocus border= gray-800 (#2c2c2c)  ← S2 spec change
-   */
+
+  /* Prevent iOS zoom on input focus — must stay 16px */
   .auth-form-input {
-    all: unset !important;
-    display: block !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    height: var(--af-height-100, 32px) !important;
-    padding: 0 var(--af-edge-100, 12px) !important;
-    font-family: inherit !important;
-    font-size: var(--af-font-size-100, 14px) !important;
-    font-weight: var(--af-font-weight-regular, 400) !important;
-    line-height: 1.3 !important;
-    color: var(--af-gray-800, #2c2c2c) !important;
-    background-color: var(--af-gray-50, #fff) !important;
-    border: var(--af-border-100, 1px) solid var(--af-gray-400, #b3b3b3) !important;
-    border-radius: var(--af-radius-100, 4px) !important;
-    outline: none !important;
-    transition:
-      border-color var(--af-duration, 130ms) ease-in-out,
-      box-shadow   var(--af-duration, 130ms) ease-in-out !important;
-  
-    /* Remove browser-native password reveal icon (Edge/IE/Chrome) */
-    appearance: none !important;
+    font-size: 16px !important;
   }
-  
-  /* IE11 / Edge legacy — hide native reveal button */
-  .auth-form-input::-ms-reveal {
-    display: none !important;
-  }
-  
-  /* Chrome autofill eye icon */
-  .auth-form-input::-webkit-credentials-auto-fill-button {
-    visibility: hidden !important;
-    pointer-events: none !important;
-    position: absolute !important;
-  }
-  
-  /* Edge Chromium native password reveal */
-  .auth-form-input::-ms-clear {
-    display: none !important;
-  }
-  
-  .auth-form-input::placeholder {
-    color: var(--af-gray-500, #8e8e8e) !important;
-    font-weight: var(--af-font-weight-regular, 400) !important;
-  }
-  
-  /*
-   * Selector order follows specificity rules required by the linter:
-   * higher-specificity / pseudo-class selectors must appear BEFORE
-   * the :hover:not(...) compound selector.
-   */
-  
-  /* Focus — blue ring (S2 pointer/mouse focus) */
-  .auth-form-input:focus {
-    border-color: var(--af-blue-800, #1473e6) !important;
-    box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(20 115 230 / 28%)) !important;
-    background-color: var(--af-gray-50, #fff) !important;
-  }
-  
-  .auth-form-input:focus-visible {
-    border-color: var(--af-blue-800, #1473e6) !important;
-    box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(20 115 230 / 28%)) !important;
-    background-color: var(--af-gray-50, #fff) !important;
-  }
-  
-  /* Disabled */
-  .auth-form-input:disabled {
-    opacity: var(--af-opacity-disabled, 0.3) !important;
-    cursor: not-allowed !important;
-    pointer-events: none !important;
-  }
-  
-  /* Hover — gray-800 border (S2 spec), no background change — MUST come after :focus/:disabled */
-  .auth-form-input:hover:not(:disabled, :focus, :focus-visible) {
-    border-color: var(--af-gray-800, #2c2c2c) !important;
-    background-color: var(--af-gray-50, #fff) !important;
-    box-shadow: none !important;
-  }
-  
-  /* Right padding when password toggle present */
-  .auth-form-input.has-icon {
-    padding-right: calc(var(--af-sp-200, 8px) * 2 + 18px) !important;
-  }
-  
-  /* ── Invalid state ───────────────────────────────────────────────────────── */
-  .auth-form-field.is-invalid .auth-form-input {
-    border-color: var(--af-red-800, #d7373f) !important;
-  }
-  
-  /* Focus on invalid field — red ring */
-  .auth-form-field.is-invalid .auth-form-input:focus {
-    border-color: var(--af-red-800, #d7373f) !important;
-    box-shadow: 0 0 0 2px var(--af-focus-ring-red, rgb(215 55 63 / 22%)) !important;
-  }
-  
-  .auth-form-field.is-invalid .auth-form-input:focus-visible {
-    border-color: var(--af-red-800, #d7373f) !important;
-    box-shadow: 0 0 0 2px var(--af-focus-ring-red, rgb(215 55 63 / 22%)) !important;
-  }
-  
-  /* Hover on invalid field — MUST come after :focus/:focus-visible */
-  .auth-form-field.is-invalid .auth-form-input:hover:not(:focus, :focus-visible) {
-    border-color: var(--af-red-800, #d7373f) !important;
-    box-shadow: none !important;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     PASSWORD VISIBILITY TOGGLE — Spectrum ActionButton, quiet variant
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-pw-btn {
-    all: unset !important;
-    position: absolute !important;
-    right: var(--af-sp-200, 8px) !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: var(--af-height-75, 24px) !important;
-    height: var(--af-height-75, 24px) !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
-    border-radius: var(--af-radius-100, 4px) !important;
-    box-shadow: none !important;
-    color: var(--af-gray-600, #6e6e6e) !important;
-    cursor: pointer !important;
-    transition: color var(--af-duration, 130ms) ease-in-out !important;
-  }
-  
-  /* Hover: icon goes to gray-800, zero background */
-  .auth-form-pw-btn:hover {
-    color: var(--af-gray-800, #2c2c2c) !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
-  
-  .auth-form-pw-btn:focus-visible {
-    outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
-    outline-offset: 2px !important;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     HELPTEXT — Spectrum HelpText, negative variant
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-help {
-    display: none;
-    align-items: flex-start;
-    gap: var(--af-sp-100, 4px);
-    margin-top: var(--af-sp-100, 4px);
-    font-size: var(--af-font-size-75, 11px);
-    line-height: 1.4;
-    color: var(--af-red-800, #d7373f);
-  }
-  
-  .auth-form-field.is-invalid .auth-form-help {
-    display: flex;
-  }
-  
-  /* Informational hint — hidden when field invalid (prevents double messages) */
-  .auth-form-hint {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--af-sp-100, 4px);
-    margin-top: var(--af-sp-100, 4px);
-    font-size: var(--af-font-size-75, 11px);
-    line-height: 1.4;
-    color: var(--af-gray-600, #6e6e6e);
-  }
-  
-  .auth-form-field.is-invalid .auth-form-hint {
-    display: none;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     QUIET LINK — Spectrum Link, quiet/secondary variant
-     (Forgot password button — no underline, static color, hover = same)
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-quiet-link {
-    all: unset !important;
-    display: inline-block !important;
-    margin-top: var(--af-sp-200, 8px) !important;
-    margin-bottom: var(--af-sp-500, 20px) !important;
-    font-family: inherit !important;
-    font-size: var(--af-font-size-75, 11px) !important;
-    font-weight: var(--af-font-weight-regular, 400) !important;
-    line-height: 1.3 !important;
-    color: var(--af-blue-900, #0d66d0) !important;
-    text-decoration: none !important;
-    cursor: pointer !important;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-  }
-  
-  /* S2 quiet link hover: underline appears */
-  .auth-form-quiet-link:hover {
-    color: var(--af-blue-900, #0d66d0) !important;
-    text-decoration: underline !important;
-    background: none !important;
-  }
-  
-  .auth-form-quiet-link:focus-visible {
-    outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
-    outline-offset: 2px !important;
-    border-radius: 2px !important;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     PRIMARY BUTTON — Spectrum Button, accent fill variant
-     S2: border-radius = 4px (corner-radius-100), NOT pill-shaped
-         height        = 32px (component-height-100, medium)
-         font-size     = 14px (font-size-100)
-         font-weight   = 700  (bold)
-         bg            = blue-900 (#0d66d0)
-         hover bg      = blue-1000 (#095aba)
-         active bg     = blue-1100 (#0550a0)
-         text          = white (#fff) — always
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-btn {
-    all: unset !important;
-    position: relative !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    height: var(--af-height-100, 32px) !important;
-    padding: 0 var(--af-sp-400, 16px) !important;
-    font-family: inherit !important;
-    font-size: var(--af-font-size-100, 14px) !important;
-    font-weight: var(--af-font-weight-bold, 700) !important;
-    line-height: 1.3 !important;
-    letter-spacing: 0 !important;
-    color: #fff !important;
-    background-color: var(--af-blue-900, #0d66d0) !important;
-    border: none !important;             /* S2 fill button has no border */
-    border-radius: var(--af-radius-100, 4px) !important;
-    box-shadow: none !important;
-    cursor: pointer !important;
-    margin-top: var(--af-sp-300, 12px) !important;
-    transition:
-      background-color var(--af-duration, 130ms) ease-in-out !important;
-  }
-  
-  /* Hover — one step darker blue, no shape/color shift */
-  .auth-form-btn:hover {
-    background-color: var(--af-blue-1000, #095aba) !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: var(--af-radius-100, 4px) !important;
-    box-shadow: none !important;
-  }
-  
-  /* Pressed / active */
-  .auth-form-btn:active {
-    background-color: var(--af-blue-1100, #0550a0) !important;
-    color: #fff !important;
-    box-shadow: none !important;
-  }
-  
-  /* Keyboard focus ring */
-  .auth-form-btn:focus-visible {
-    outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
-    outline-offset: var(--af-sp-100, 4px) !important;
-  }
-  
-  /* Disabled — S2 uses 30% opacity */
-  .auth-form-btn:disabled {
-    opacity: var(--af-opacity-disabled, 0.3) !important;
-    cursor: not-allowed !important;
-    pointer-events: none !important;
-  }
-  
-  /* Loading state */
-  .auth-form-btn-spinner {
-    display: none;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgb(255 255 255 / 30%);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: af-spin 0.65s linear infinite;
-  }
-  
-  .auth-form-btn.is-loading .auth-form-btn-label  { opacity: 0; }
-  .auth-form-btn.is-loading .auth-form-btn-spinner { display: block; }
-  
-  @keyframes af-spin {
-    to { transform: translateX(-50%) rotate(360deg); }
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     PASSWORD STRENGTH METER
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-strength {
-    margin-top: var(--af-sp-100, 4px);
-  }
-  
-  .auth-form-strength-track {
-    height: 3px;
-    border-radius: 2px;
-    background-color: var(--af-gray-300, #d5d5d5);
-    overflow: hidden;
-    margin-bottom: var(--af-sp-100, 4px);
-  }
-  
-  .auth-form-strength-fill {
-    height: 100%;
-    border-radius: 2px;
-    width: 0;
-    transition: width 280ms ease, background-color 280ms ease;
-  }
-  
-  .auth-form-strength-text {
-    font-size: var(--af-font-size-75, 11px);
-    color: var(--af-gray-600, #6e6e6e);
-    line-height: 1.3;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     BACK LINK — Spectrum Link with leading icon
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-back {
-    all: unset !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: var(--af-sp-100, 4px) !important;
-    margin-bottom: var(--af-sp-600, 24px) !important;
-    font-family: inherit !important;
-    font-size: var(--af-font-size-100, 14px) !important;
-    font-weight: var(--af-font-weight-medium, 500) !important;
-    line-height: 1.3 !important;
-    color: var(--af-blue-900, #0d66d0) !important;
-    text-decoration: none !important;
-    cursor: pointer !important;
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-  }
-  
-  /* S2 link hover: underline */
-  .auth-form-back:hover {
-    color: var(--af-blue-900, #0d66d0) !important;
-    text-decoration: underline !important;
-    background: none !important;
-  }
-  
-  .auth-form-back:focus-visible {
-    outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
-    outline-offset: 2px !important;
-    border-radius: 2px !important;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     SUCCESS STATE
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-success {
-    display: none;
-    text-align: center;
-    padding: var(--af-sp-400, 16px) 0 var(--af-sp-200, 8px);
-  }
-  
-  .auth-form-success.is-visible { display: block; }
-  
-  .auth-form-success-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    margin: 0 auto var(--af-sp-400, 16px);
-    background-color: rgb(38 142 108 / 10%);
-    border-radius: 50%;
-    color: var(--af-green-800, #268e6c);
-  }
-  
-  .auth-form-success-title {
-    margin: 0 0 var(--af-sp-200, 8px);
-    font-size: var(--af-font-size-200, 16px);
-    font-weight: var(--af-font-weight-bold, 700);
-    color: var(--af-gray-900, #1a1a1a);
-  }
-  
-  .auth-form-success-desc {
-    margin: 0;
-    font-size: var(--af-font-size-100, 14px);
-    line-height: 1.5;
-    color: var(--af-gray-600, #6e6e6e);
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     LEGAL TEXT — Spectrum Body XS
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-legal {
-    margin-top: var(--af-sp-600, 24px);
-    font-size: var(--af-font-size-75, 11px);
-    color: var(--af-gray-600, #6e6e6e);
-    text-align: center;
-    line-height: 1.5;
-  }
-  
-  .auth-form-legal a {
-    color: var(--af-blue-900, #0d66d0);
-    text-decoration: none;
-  }
-  
-  .auth-form-legal a:hover {
-    color: var(--af-blue-900, #0d66d0) !important;
-    text-decoration: underline;
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     2-COLUMN NAME ROW
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-form-2col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--af-sp-300, 12px);
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     PANEL VISIBILITY  — CSS-driven, matches vanilla JS original
-     ════════════════════════════════════════════════════════════════════════════ */
-  .auth-panel {
-    display: none;
-  }
-  
-  .auth-panel.is-active {
-    display: block;
-    animation: af-reveal var(--af-duration, 130ms) ease-out both;
-  }
-  
-  @keyframes af-reveal {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-  
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  /* ════════════════════════════════════════════════════════════════════════════
-     RESPONSIVE
-     S2 large scale (mobile/touch): component-height-100 = 40px
-     ════════════════════════════════════════════════════════════════════════════ */
-  @media (width <= 440px) {
-    .auth-form-2col {
-      grid-template-columns: 1fr;
-      gap: 0;
-    }
-  }
-  
-  @media (width <= 600px) {
-    .auth-form-card {
-      max-width: 100% !important;
-      padding: 40px 24px 48px !important;
-    }
-  
-    .auth-form-brand {
-      margin-bottom: 32px;
-    }
-  
-    /* Prevent iOS zoom on input focus — must stay 16px */
-    .auth-form-input {
-      font-size: 16px !important;
-    }
-  }
+}

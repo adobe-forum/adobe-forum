@@ -353,6 +353,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 // ── Exported Decorator ────────────────────────────────────────────────
 
 export default async function decorate(block) {
+  // Auth guard — redirect to sign in if not logged in
   if (!localStorage.getItem('af_user')) {
     window.location.replace('/auth-form');
     return;
