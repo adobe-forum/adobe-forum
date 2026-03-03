@@ -553,13 +553,17 @@ app.post('/api/sidebar-items/smart-add', requireAuth, async (req, res) => {
       });
     }
 
+    // Duplicate check: same post cannot appear more than once under the same parent.
+    // We intentionally scope this to parentId so the same post CAN appear in
+    // different categories (cross-posting) but NOT twice in the same location.
+    const resolvedParentId = parentId ? new mongoose.Types.ObjectId(parentId) : null;
     const existing = await SidebarItem.findOne({
       postId: new mongoose.Types.ObjectId(postId),
       category: categoryName,
+      parentId: resolvedParentId,
     });
     if (existing) return res.status(200).json({ success: true, item: existing, duplicate: true });
 
-    const resolvedParentId = parentId ? new mongoose.Types.ObjectId(parentId) : null;
     const order = await SidebarItem.countDocuments({ parentId: resolvedParentId, category: categoryName });
 
     const item = await SidebarItem.create({
@@ -596,7 +600,7 @@ app.post('/api/sidebar/categories', requireAuth, async (req, res) => {
     const item = await SidebarItem.create({
       title: categoryName, category: categoryName,
       parentId: null, postId: null, isFolder: true,
-      order, createdBy: null, // shared — no single owner
+      order, createdBy: req.user._id, // creator owns this category
     });
 
     res.status(201).json({ success: true, item });
@@ -638,6 +642,9 @@ app.get('/api/sidebar/categories', async (_req, res) => {
           : categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         name: categoryName,
         icon: '',
+        // Pass the anchor's createdBy so the frontend can restrict the delete button
+        // eslint-disable-next-line no-underscore-dangle
+        createdBy: rootAnchor ? (rootAnchor.createdBy ? String(rootAnchor.createdBy) : null) : null,
         items: buildTree(children),
       });
     });
@@ -652,21 +659,45 @@ app.get('/api/sidebar/categories', async (_req, res) => {
 
 /**
  * DELETE /api/sidebar/categories/:id
- * Ownership check: createdBy null = legacy/shared, any logged-in user may delete.
+ * Only the creator may delete a category.
+ * Blocked if any item inside belongs to a different user.
+ * Cascade-deletes all SidebarItems AND Post documents in the category.
  */
 app.delete('/api/sidebar/categories/:id', requireAuth, async (req, res) => {
   try {
     const root = await SidebarItem.findById(req.params.id);
     if (!root) return res.status(404).json({ error: 'Category not found' });
 
-    if (root.createdBy && String(root.createdBy) !== String(req.user._id))
+    const userId = String(req.user._id);
+
+    // Ownership check on the anchor itself (null = legacy, allow for now)
+    if (root.createdBy && String(root.createdBy) !== userId)
       return res.status(403).json({ error: 'You can only delete categories you created.' });
 
+    // Fetch every SidebarItem that belongs to this category
+    const allItems = await SidebarItem.find({ category: root.category });
+
+    // Block deletion if any item was created by someone else
+    const blockedItem = allItems.find(
+      (item) => item.createdBy && String(item.createdBy) !== userId,
+    );
+    if (blockedItem) {
+      return res.status(403).json({
+        error: `Cannot delete: "${blockedItem.title}" in this category was created by another user. Ask them to remove it first.`,
+      });
+    }
+
+    const postIds = allItems.map((i) => i.postId).filter(Boolean);
+
     await SidebarItem.deleteMany({ category: root.category });
-    res.json({ success: true });
+    if (postIds.length > 0) {
+      await Post.deleteMany({ _id: { $in: postIds } });
+    }
+
+    return res.json({ success: true, deletedPosts: postIds.length });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Delete failed' });
+    return res.status(500).json({ error: 'Delete failed' });
   }
 });
 
@@ -699,20 +730,78 @@ app.patch('/api/sidebar-items/:id', requireAuth, async (req, res) => {
   }
 });
 
-/* -------------------- SIDEBAR — SAFE DELETE -------------------- */
+/* -------------------- SIDEBAR — MOVE -------------------- */
+
+/**
+ * PATCH /api/sidebar-items/:id/move
+ * Moves a sidebar item to a new category and/or parent folder.
+ * Body: { category: string, parentId: string|null }
+ */
+app.patch('/api/sidebar-items/:id/move', requireAuth, async (req, res) => {
+  try {
+    const { category, parentId = null } = req.body;
+    if (!category)
+      return res.status(400).json({ error: 'category is required' });
+
+    const item = await SidebarItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+
+    if (item.createdBy && String(item.createdBy) !== String(req.user._id))
+      return res.status(403).json({ error: 'You can only move items you created.' });
+
+    // If a parentId is given, derive the root category from the parent
+    // (never trust the path string from the client — it's the display name, not the category key)
+    let resolvedCategory;
+    if (parentId) {
+      if (!mongoose.Types.ObjectId.isValid(parentId))
+        return res.status(400).json({ error: 'Invalid parentId' });
+      const parent = await SidebarItem.findById(parentId);
+      if (!parent) return res.status(404).json({ error: 'Destination folder not found' });
+      if (!parent.isFolder)
+        return res.status(400).json({ error: 'Destination must be a folder' });
+      item.parentId = new mongoose.Types.ObjectId(parentId);
+      resolvedCategory = parent.category; // use the parent's root category, not the display path
+    } else {
+      item.parentId = null;
+      resolvedCategory = category.trim(); // moving to root level — category is the root name
+    }
+
+    item.category = resolvedCategory;
+    item.updatedAt = Date.now();
+    await item.save();
+
+    // Also update the linked Post's category so the post view shows the new path
+    if (item.postId) {
+      await Post.findByIdAndUpdate(item.postId, { category: resolvedCategory });
+    }
+
+    return res.json({ success: true, item });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Move failed' });
+  }
+});
+
 
 /**
  * DELETE /api/sidebar-items/:id
- * Ownership check on root item. If you own the root, the full subtree is deleted.
+ *
+ * Rules:
+ *   1. You must have created the root item.
+ *   2. If ANY descendant in the subtree was created by a different user,
+ *      the entire delete is blocked. Empty the folder of other people's
+ *      content before deleting it.
  */
 app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
   try {
     const rootItem = await SidebarItem.findById(req.params.id);
     if (!rootItem) return res.status(404).json({ error: 'Item not found' });
 
+    // Rule 1 — must own the root item (null = legacy, anyone can delete)
     if (rootItem.createdBy && String(rootItem.createdBy) !== String(req.user._id))
       return res.status(403).json({ error: 'You can only delete items you created.' });
 
+    // Collect full subtree with createdBy + title on every node
     const result = await SidebarItem.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
       {
@@ -726,13 +815,22 @@ app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
       },
       {
         $project: {
-          ids: { $concatArrays: [['$_id'], '$descendants._id'] },
-          postIds: {
-            $filter: {
-              input: { $concatArrays: [[{ $ifNull: ['$postId', null] }], '$descendants.postId'] },
-              as: 'pid',
-              cond: { $ne: ['$$pid', null] },
-            },
+          allItems: {
+            $concatArrays: [
+              [{ id: '$_id', createdBy: '$createdBy', postId: '$postId', title: '$title' }],
+              {
+                $map: {
+                  input: '$descendants',
+                  as: 'd',
+                  in: {
+                    id: '$$d._id',
+                    createdBy: '$$d.createdBy',
+                    postId: '$$d.postId',
+                    title: '$$d.title',
+                  },
+                },
+              },
+            ],
           },
         },
       },
@@ -740,14 +838,29 @@ app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
 
     if (!result.length) return res.status(404).json({ error: 'Item not found' });
 
-    const { ids, postIds } = result[0];
+    const { allItems } = result[0];
+    const userId = String(req.user._id);
 
-    await SidebarItem.deleteMany({ _id: { $in: ids } });
-    if (postIds && postIds.length > 0) {
-      await Post.deleteMany({ _id: { $in: postIds } });
+    // Rule 2 — block if ANY item in the subtree belongs to a different user
+    const blockedItem = allItems.find(
+      (item) => item.createdBy && String(item.createdBy) !== userId,
+    );
+    if (blockedItem) {
+      return res.status(403).json({
+        error: `Cannot delete: "${blockedItem.title}" inside this folder was created by another user. Ask them to remove it first.`,
+      });
     }
 
-    res.json({ success: true, deletedPosts: postIds?.length || 0 });
+    // All items belong to this user — safe to delete everything
+    const allIds = allItems.map((item) => item.id);
+    const allPostIds = allItems.map((item) => item.postId).filter(Boolean);
+
+    await SidebarItem.deleteMany({ _id: { $in: allIds } });
+    if (allPostIds.length > 0) {
+      await Post.deleteMany({ _id: { $in: allPostIds } });
+    }
+
+    return res.json({ success: true, deletedPosts: allPostIds.length });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Delete failed' });
