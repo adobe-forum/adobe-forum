@@ -28,6 +28,13 @@ function extractImage(body) {
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
+
+  // Insert a space after every block-level element so that list items,
+  // paragraphs, headings etc. don't run together when textContent is read.
+  doc.querySelectorAll('p, li, div, h1, h2, h3, h4, h5, h6, br, td, th, dt, dd').forEach((el) => {
+    el.appendChild(doc.createTextNode(' '));
+  });
+
   const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
