@@ -495,6 +495,30 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
 /* -------------------- SIDEBAR — ITEMS -------------------- */
 
 /**
+ * GET /api/sidebar-items/by-post/:postId
+ * Returns the SidebarItem that links to a given post.
+ * Used by forum-post to resolve sidebarItemId when the post was opened
+ * from the cards view (which doesn't know the sidebar item).
+ */
+app.get('/api/sidebar-items/by-post/:postId', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.postId))
+      return res.status(400).json({ error: 'Invalid postId' });
+    const item = await SidebarItem.findOne({
+      postId: new mongoose.Types.ObjectId(req.params.postId),
+      isFolder: false,
+    });
+    if (!item) return res.status(404).json({ error: 'No sidebar item found for this post' });
+    // eslint-disable-next-line no-underscore-dangle
+    return res.json({ success: true, sidebarItemId: String(item._id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Lookup failed' });
+  }
+});
+
+
+/**
  * POST /api/sidebar-items
  * Now saves req.user._id as createdBy.
  */
