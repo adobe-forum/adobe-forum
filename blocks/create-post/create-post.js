@@ -1495,6 +1495,7 @@ function CreatePost() {
   // SidebarItem to move if location changes
   const [editSidebarItemId, setEditSidebarItemId] = useState(null);
   const [originalCategory, setOriginalCategory] = useState(''); // track if user changed location
+  const [originalFolderId, setOriginalFolderId] = useState(null); // track original folder
 
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
@@ -1554,6 +1555,7 @@ function CreatePost() {
       setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
       setCategory(draft.category || '');
       setOriginalCategory(draft.category || ''); // remember starting location
+      setOriginalFolderId(null); // folderId not persisted in draft; starts unknown
     } catch { /* ignore corrupted draft */ }
   }, []);
 
@@ -1586,13 +1588,16 @@ function CreatePost() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ title: title.trim(), body, tags: tagsWithHash }),
+          body: JSON.stringify({
+            title: title.trim(), body, tags: tagsWithHash, category,
+          }),
         });
         const result = await response.json();
         if (response.ok) {
-          // If the user picked a new location, also move the SidebarItem
-          const locationChanged = editSidebarItemId
-            && (category !== originalCategory || folderId !== null);
+          // Move the SidebarItem only if the user explicitly picked a new location
+          const categoryChanged = category !== originalCategory;
+          const folderChanged = folderId !== originalFolderId;
+          const locationChanged = editSidebarItemId && (categoryChanged || folderChanged);
           if (locationChanged) {
             try {
               await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
@@ -1663,7 +1668,9 @@ function CreatePost() {
         } catch (sidebarErr) { // eslint-disable-line no-unused-vars
           /* post was created; sidebar-add failed silently */
         }
-        window.location.href = '/';
+        window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+        window.dispatchEvent(new CustomEvent('refresh-cards'));
+        window.history.back();
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }

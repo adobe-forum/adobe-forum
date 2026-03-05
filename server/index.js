@@ -462,7 +462,7 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
     if (String(post.createdBy) !== String(req.user._id))
       return res.status(403).json({ error: 'You can only edit your own posts.' });
 
-    const { title, body, tags } = req.body;
+    const { title, body, tags, category } = req.body;
 
     if (title !== undefined) {
       if (!title.trim()) return res.status(400).json({ error: 'Title is required' });
@@ -478,6 +478,10 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
       if (!Array.isArray(tags) || !tags.length)
         return res.status(400).json({ error: 'Tags must be a non-empty array' });
       post.tags = tags;
+    }
+    if (category !== undefined) {
+      if (!category.trim()) return res.status(400).json({ error: 'Category is required' });
+      post.category = category.trim();
     }
 
     await post.save(); // pre-save hook sets updatedAt
@@ -549,7 +553,7 @@ app.post('/api/sidebar-items/smart-add', requireAuth, async (req, res) => {
       await SidebarItem.create({
         title: categoryName, category: categoryName,
         parentId: null, postId: null, isFolder: true,
-        order: anchorOrder, createdBy: null, // shared — no owner
+        order: anchorOrder, createdBy: req.user._id, // creator owns this anchor
       });
     }
 

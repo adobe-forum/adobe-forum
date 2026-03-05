@@ -22,9 +22,10 @@ const toFolderNode = (item) => ({
   id: String(item._id || item.id),
   name: item.title || item.name,
   type: 'folder',
-  isFolder: item.isFolder !== false,
+  isFolder: Boolean(item.isFolder), // correctly read the flag — don't default to true
   updatedAt: item.createdAt || item.updatedAt || null,
-  children: (item.children || []).map(toFolderNode),
+  // Recursively map only actual sub-folders, not post-link files
+  children: (item.children || []).filter((c) => c.isFolder).map(toFolderNode),
 });
 
 const buildFolderTree = (categories) => categories.map((cat) => ({
@@ -34,7 +35,8 @@ const buildFolderTree = (categories) => categories.map((cat) => ({
   isFolder: true,
   isCategoryRoot: true,
   updatedAt: null,
-  children: (cat.items || []).map(toFolderNode),
+  // Only show actual folders as children of a category in the picker
+  children: (cat.items || []).filter((i) => i.isFolder).map(toFolderNode),
 }));
 
 const findNode = (tree, id) => {
