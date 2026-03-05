@@ -175,7 +175,7 @@
   transition: background 0.12s;
 
   &:hover {
-    background: #e8f0fe;
+    background: #e8f0fe !important;
   }
 
   &:active {
@@ -652,6 +652,12 @@
   position: relative;
   transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
   box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgb(229 57 53 / 30%);
+    border-color: #e53935;
+  }
 
   &:hover {
     background: #f5f5f5;
@@ -663,12 +669,18 @@
   }
 
   &.fm-tile--sel {
-    background: #f0f0f0;
-    border-color: #bbb;
-    box-shadow: 0 0 0 2px rgb(0 0 0 / 8%);
+    background: #fff0f0;
+    border-color: #e53935;
+    box-shadow: 0 0 0 2px rgb(229 57 53 / 18%);
 
     & .fm-tile-dots {
       opacity: 1;
+    }
+
+    /* Prevent hover from overriding the red selected state */
+    &:hover {
+      background: #fff0f0;
+      border-color: #e53935;
     }
   }
 

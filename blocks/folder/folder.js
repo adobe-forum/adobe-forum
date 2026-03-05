@@ -298,6 +298,10 @@ function GridPanel({
   nodes, isRoot, selected, adding, renamingId, currentUser,
   onSelect, onOpen, onCtx, onCommitAdd, onCancelAdd, onCommitRename, onCancelRename,
 }) {
+  // Detect touch device once
+  const isTouchDevice = useRef(
+    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0),
+  );
   const sortedNodes = useMemo(
     () => sortNodes(nodes.filter((n) => n.type === 'folder')),
     [nodes],
@@ -334,8 +338,22 @@ function GridPanel({
     const ts = timeAgo(node.updatedAt);
     return html`
             <div key=${node.id} class=${`fm-tile${sel ? ' fm-tile--sel' : ''}`}
-              onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
+              tabIndex="0"
+              role="button"
+              aria-label=${node.name}
+              onClick=${(e) => {
+    e.stopPropagation();
+    if (isTouchDevice.current) {
+      // On touch: first tap selects, second tap opens
+      if (sel) { onOpen(node); } else { onSelect(node.id); }
+    } else {
+      onSelect(node.id);
+    }
+  }}
               onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
+              onKeyDown=${(e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(node); }
+  }}
               onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
               <div class="fm-tile-ico">
                 <svg viewBox="0 0 88 72" fill="none">
