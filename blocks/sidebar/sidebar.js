@@ -497,7 +497,18 @@ function Sidebar() {
   useEffect(() => {
     fetchCategories();
     window.addEventListener('refresh-sidebar', fetchCategories);
-    return () => window.removeEventListener('refresh-sidebar', fetchCategories);
+
+    // When the user navigates back via history.back(), the browser may restore
+    // the page from bfcache (instantly, without remounting). The refresh-sidebar
+    // event fired on the outgoing page is lost. pageshow with persisted:true
+    // detects this and re-fetches so the sidebar reflects the latest state.
+    const onPageShow = (e) => { if (e.persisted) fetchCategories(); };
+    window.addEventListener('pageshow', onPageShow);
+
+    return () => {
+      window.removeEventListener('refresh-sidebar', fetchCategories);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, []);
 
   useEffect(() => {
