@@ -226,6 +226,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [refreshTick, setRefreshTick] = useState(0);
 
   let displayTitle = initialTitle;
   if (category) displayTitle = `${category} Posts`;
@@ -269,7 +270,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     fetchPosts();
     return () => { controller.abort(); };
-  }, [currentPage, searchQuery, category]);
+  }, [currentPage, searchQuery, category, refreshTick]);
 
   useEffect(() => {
     const handleSearch = (e) => {
@@ -292,12 +293,17 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     window.addEventListener('search-posts', handleSearch);
     window.addEventListener('filter-category', handleFilter);
     window.addEventListener('show-cards', handleShowCards);
+    const handleRefresh = () => setRefreshTick((t) => t + 1);
+    window.addEventListener('refresh-cards', handleRefresh);
+    window.addEventListener('edit-post:saved', handleRefresh);
     toggleViews(true);
 
     return () => {
       window.removeEventListener('search-posts', handleSearch);
       window.removeEventListener('filter-category', handleFilter);
       window.removeEventListener('show-cards', handleShowCards);
+      window.removeEventListener('refresh-cards', handleRefresh);
+      window.removeEventListener('edit-post:saved', handleRefresh);
     };
   }, []);
 

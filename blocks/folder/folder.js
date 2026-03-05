@@ -22,9 +22,10 @@ const toFolderNode = (item) => ({
   id: String(item._id || item.id),
   name: item.title || item.name,
   type: 'folder',
-  isFolder: item.isFolder !== false,
+  isFolder: Boolean(item.isFolder), // correctly read the flag — don't default to true
   updatedAt: item.createdAt || item.updatedAt || null,
-  children: (item.children || []).map(toFolderNode),
+  // Recursively map only actual sub-folders, not post-link files
+  children: (item.children || []).filter((c) => c.isFolder).map(toFolderNode),
 });
 
 const buildFolderTree = (categories) => categories.map((cat) => ({
@@ -34,7 +35,8 @@ const buildFolderTree = (categories) => categories.map((cat) => ({
   isFolder: true,
   isCategoryRoot: true,
   updatedAt: null,
-  children: (cat.items || []).map(toFolderNode),
+  // Only show actual folders as children of a category in the picker
+  children: (cat.items || []).filter((i) => i.isFolder).map(toFolderNode),
 }));
 
 const findNode = (tree, id) => {
@@ -207,9 +209,9 @@ function GridPanel({
             </div>
             <div class="fm-tile-body">
               ${ren
-    ? html`<${NameInput} initial=${node.name} placeholder="Folder name"
+        ? html`<${NameInput} initial=${node.name} placeholder="Folder name"
                     onCommit=${(v) => onCommitRename(node, v)} onCancel=${onCancelRename}/>`
-    : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
+        : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
               <div class="fm-tile-meta">
                 <span class="fm-tile-folders">${fc > 0 ? `${fc} subfolder${fc !== 1 ? 's' : ''}` : 'No subfolders'}</span>
                 ${ts && html`<span class="fm-tile-ts">${ts}</span>`}
@@ -472,9 +474,9 @@ function FolderModal({ isOpen, onClose, onSelect }) {
               <button type="button" class="fm-btn" onClick=${fetchFolders}>Retry</button>
             </div>`}
           ${!loading && !error && (isSearching
-    ? html`<${SearchResults} results=${searchResults}
+      ? html`<${SearchResults} results=${searchResults}
                 onNavigate=${(node, ancestors) => { setStack(ancestors.map((a) => a.id)); setSelected(null); setSearchQ(''); }}/>`
-    : html`<${GridPanel} nodes=${nodes} isRoot=${isRoot} selected=${selected}
+      : html`<${GridPanel} nodes=${nodes} isRoot=${isRoot} selected=${selected}
                 adding=${adding} renamingId=${renamingId}
                 onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
                 onOpen=${goInto}
