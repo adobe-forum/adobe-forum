@@ -163,7 +163,7 @@ app.post('/api/auth/register', async (req, res) => {
     req.session.userId = String(user._id);
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.status(201).json({ success: true, user: safeUser });
+    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) } });
 
   } catch (err) {
     console.error(err);
@@ -192,7 +192,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.userId = String(user._id);
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.json({ success: true, user: safeUser });
+    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
 
   } catch (err) {
     console.error(err);
@@ -415,14 +415,21 @@ app.get('/api/posts', async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Number(req.query.limit) || 12);
     const search = req.query.search?.trim();
+    const author = req.query.author?.trim(); // for "My Posts" filter
 
-    const query = search ? {
-      $or: [
+    const query = {};
+    if (author) {
+      query.createdBy = mongoose.Types.ObjectId.isValid(author)
+        ? new mongoose.Types.ObjectId(author)
+        : author;
+    }
+    if (search) {
+      query.$or = [
         { title: new RegExp(escapeRegex(search), 'i') },
         { category: new RegExp(escapeRegex(search), 'i') },
         { tags: search },
-      ]
-    } : {};
+      ];
+    }
 
     const [posts, total] = await Promise.all([
       Post.find(query).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),

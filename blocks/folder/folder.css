@@ -615,18 +615,26 @@
   width: 24px;
   height: 24px;
   border-radius: 5px;
-  color: #aaa;
+  color: #aaa !important;
+  background: transparent !important;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s, background 0.12s, color 0.12s;
 
   &:hover {
-    background: #e4e4e4;
-    color: #333;
+    background: #e4e4e4 !important;
+    color: #555 !important;
   }
 
   &:active {
-    background: #d8d8d8;
+    background: #d8d8d8 !important;
+    color: #333 !important;
+  }
+
+  &:focus {
+    background: transparent !important;
+    color: #aaa !important;
+    outline: none;
   }
 }
 
@@ -857,4 +865,161 @@
   &:hover {
     opacity: 1;
   }
+}
+
+/* ── Spectrum Alert Dialog (same as sidebar.css) ─────────────────────────── */
+.sp-alert-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-alert-dialog {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 24%), 0 2px 8px rgb(0 0 0 / 12%);
+  width: 100%;
+  max-width: 400px;
+  margin: 16px;
+  overflow: hidden;
+  animation: sp-dialog-in 0.15s ease;
+}
+
+@keyframes sp-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.sp-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px 0;
+}
+
+.sp-alert-icon {
+  color: #d7373f;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.sp-alert-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d1d1d;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.sp-alert-body {
+  padding: 12px 24px 20px;
+}
+
+.sp-alert-message {
+  font-size: 14px;
+  color: #4b4b4b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sp-alert-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.13s, box-shadow 0.13s;
+  outline: none;
+  min-width: 72px;
+}
+
+.sp-btn-secondary {
+  background: transparent;
+  color: #1473e6;
+  border: 1px solid #b3b3b3;
+}
+
+.sp-btn-secondary:hover {
+  background: #f5f5f5;
+  border-color: #6e6e6e;
+}
+
+.sp-btn-destructive {
+  background: #d7373f;
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.sp-btn-destructive:hover {
+  background: #bb2e35;
+}
+
+/* ── Loading spinner — faster, less layout-blocking ──────────────────────── */
+.fm-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: #888;
+  font-size: 13px;
+}
+
+.fm-loading svg {
+  animation: fm-spin 0.8s linear infinite;
+}
+
+@keyframes fm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── fm-tile-no-del — invisible spacer, no UI clutter ────────────────────── */
+.fm-tile-no-del {
+  display: none;
+}
+
+/* ── Search result path breadcrumb ───────────────────────────────────────── */
+.fm-srp-crumb {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+}
+
+.fm-srp-cur {
+  color: #1473e6;
+  font-weight: 600;
+}
+
+.fm-srp-sep {
+  font-size: 11px;
+  color: #bbb;
+  margin: 0 1px;
 }
