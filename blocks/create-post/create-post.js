@@ -1600,15 +1600,28 @@ function CreatePost() {
           const locationChanged = editSidebarItemId && (categoryChanged || folderChanged);
           if (locationChanged) {
             try {
-              await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ category, parentId: folderId || null }),
-              });
-              // Refresh the sidebar so it shows the new location
-              window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-            } catch { /* non-fatal — post is already saved */ }
+              const moveRes = await fetch(
+                `http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`,
+                {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({ category, parentId: folderId || null }),
+                },
+              );
+              const moveData = await moveRes.json();
+              if (!moveRes.ok) {
+                // Post is already saved — warn but don't block
+                showToast(moveData.error || 'Location update failed.', 'error');
+              } else {
+                // Refresh the sidebar so it shows the new location
+                window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+              }
+            } catch (moveErr) {
+              // eslint-disable-next-line no-console
+              console.error('Move failed:', moveErr);
+              showToast('Location update failed — network error.', 'error');
+            }
           }
           // Notify forum-post to refresh its view
           window.dispatchEvent(new CustomEvent('edit-post:saved', {
