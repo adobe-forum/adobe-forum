@@ -469,7 +469,7 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
     if (String(post.createdBy) !== String(req.user._id))
       return res.status(403).json({ error: 'You can only edit your own posts.' });
 
-    const { title, body, tags } = req.body;
+    const { title, body, tags, category } = req.body;
 
     if (title !== undefined) {
       if (!title.trim()) return res.status(400).json({ error: 'Title is required' });
@@ -486,6 +486,10 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Tags must be a non-empty array' });
       post.tags = tags;
     }
+    if (category !== undefined) {
+      if (!category.trim()) return res.status(400).json({ error: 'Category is required' });
+      post.category = category.trim();
+    }
 
     await post.save(); // pre-save hook sets updatedAt
     return res.json({ success: true, post });
@@ -496,6 +500,30 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
 });
 
 /* -------------------- SIDEBAR — ITEMS -------------------- */
+
+/**
+ * GET /api/sidebar-items/by-post/:postId
+ * Returns the SidebarItem that links to a given post.
+ * Used by forum-post to resolve sidebarItemId when the post was opened
+ * from the cards view (which doesn't know the sidebar item).
+ */
+app.get('/api/sidebar-items/by-post/:postId', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.postId))
+      return res.status(400).json({ error: 'Invalid postId' });
+    const item = await SidebarItem.findOne({
+      postId: new mongoose.Types.ObjectId(req.params.postId),
+      isFolder: false,
+    });
+    if (!item) return res.status(404).json({ error: 'No sidebar item found for this post' });
+    // eslint-disable-next-line no-underscore-dangle
+    return res.json({ success: true, sidebarItemId: String(item._id) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Lookup failed' });
+  }
+});
+
 
 /**
  * POST /api/sidebar-items
@@ -556,7 +584,7 @@ app.post('/api/sidebar-items/smart-add', requireAuth, async (req, res) => {
       await SidebarItem.create({
         title: categoryName, category: categoryName,
         parentId: null, postId: null, isFolder: true,
-        order: anchorOrder, createdBy: null, // shared — no owner
+        order: anchorOrder, createdBy: req.user._id, // creator owns this anchor
       });
     }
 

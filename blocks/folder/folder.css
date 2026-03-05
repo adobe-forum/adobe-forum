@@ -867,7 +867,7 @@
   }
 }
 
-/* ── Spectrum Alert Dialog (same as sidebar.css) ─────────────────────────── */
+/* ── Spectrum Alert Dialog (mirrors sidebar.css) ─────────────────────────── */
 .sp-alert-backdrop {
   position: fixed;
   inset: 0;
@@ -979,7 +979,7 @@
   background: #bb2e35;
 }
 
-/* ── Loading spinner — faster, less layout-blocking ──────────────────────── */
+/* ── Loading spinner ─────────────────────────────────────────────────── */
 .fm-loading {
   display: flex;
   flex-direction: column;
@@ -1001,12 +1001,7 @@
   }
 }
 
-/* ── fm-tile-no-del — invisible spacer, no UI clutter ────────────────────── */
-.fm-tile-no-del {
-  display: none;
-}
-
-/* ── Search result path breadcrumb ───────────────────────────────────────── */
+/* ── Search breadcrumb path ───────────────────────────────────────────── */
 .fm-srp-crumb {
   font-size: 11px;
   color: #888;
@@ -1014,6 +1009,7 @@
 }
 
 .fm-srp-cur {
+  font-size: 11px;
   color: #1473e6;
   font-weight: 600;
 }

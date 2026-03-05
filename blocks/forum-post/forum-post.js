@@ -176,6 +176,15 @@ const ForumPost = ({ blockEl }) => {
               comments: [],
             };
             setPost(transformedPost);
+
+            // If sidebarItemId wasn't supplied by the event (e.g. opened from cards view),
+            // look it up so the Edit button can use it for location-move support.
+            if (!sid) {
+              fetch(`${API_BASE}/sidebar-items/by-post/${postId}`)
+                .then((r) => r.json())
+                .then((d) => { if (d.success) setSidebarItemId(d.sidebarItemId); })
+                .catch(() => { /* non-fatal — edit will still work, just won't move */ });
+            }
           }
         }
       } catch (error) {
