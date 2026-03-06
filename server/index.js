@@ -409,6 +409,9 @@ app.post('/api/posts', requireAuth, async (req, res) => {
 
 /**
  * GET /api/posts?page=1&limit=12&search=
+ *
+ * Search covers: title, category, tags (partial), body (description),
+ * and author name (firstName + lastName via a pre-query on User).
  */
 app.get('/api/posts', async (req, res) => {
   try {
@@ -416,20 +419,61 @@ app.get('/api/posts', async (req, res) => {
     const limit = Math.min(50, Number(req.query.limit) || 12);
     const search = req.query.search?.trim();
 
-    const query = search ? {
-      $or: [
-        { title: new RegExp(escapeRegex(search), 'i') },
-        { category: new RegExp(escapeRegex(search), 'i') },
-        { tags: search },
-      ]
-    } : {};
+    let query = {};
+
+    if (search) {
+      const searchRegex = new RegExp(escapeRegex(search), 'i');
+
+      // Find users whose first or last name matches the search term.
+      // Only _id is selected to keep this lightweight.
+      const matchingUsers = await User.find({
+        $or: [
+          { firstName: searchRegex },
+          { lastName: searchRegex },
+          // Also match full name e.g. "Nehal V" or just the initial "V"
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $concat: ['$firstName', ' ', '$lastName'] },
+                regex: escapeRegex(search),
+                options: 'i',
+              },
+            },
+          },
+        ],
+      }).select('_id');
+
+      const userIds = matchingUsers.map((u) => u._id);
+
+      query = {
+        $or: [
+          { title: searchRegex },                         // post title
+          { category: searchRegex },                      // category name
+          { tags: searchRegex },                          // tags (partial match)
+          { body: searchRegex },                          // post body / description
+          ...(userIds.length > 0                          // author name
+            ? [{ createdBy: { $in: userIds } }]
+            : []),
+        ],
+      };
+    }
 
     const [posts, total] = await Promise.all([
-      Post.find(query).populate('createdBy', 'firstName lastName').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Post.find(query)
+        .populate('createdBy', 'firstName lastName')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
       Post.countDocuments(query),
     ]);
 
-    res.json({ success: true, posts, totalPages: Math.ceil(total / limit), currentPage: page });
+    res.json({
+      success: true,
+      posts,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      totalCount: total,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch posts' });
@@ -577,13 +621,10 @@ app.post('/api/sidebar-items/smart-add', requireAuth, async (req, res) => {
       await SidebarItem.create({
         title: categoryName, category: categoryName,
         parentId: null, postId: null, isFolder: true,
-        order: anchorOrder, createdBy: req.user._id, // creator owns this anchor
+        order: anchorOrder, createdBy: req.user._id,
       });
     }
 
-    // Duplicate check: same post cannot appear more than once under the same parent.
-    // We intentionally scope this to parentId so the same post CAN appear in
-    // different categories (cross-posting) but NOT twice in the same location.
     const resolvedParentId = parentId ? new mongoose.Types.ObjectId(parentId) : null;
     const existing = await SidebarItem.findOne({
       postId: new mongoose.Types.ObjectId(postId),
@@ -628,7 +669,7 @@ app.post('/api/sidebar/categories', requireAuth, async (req, res) => {
     const item = await SidebarItem.create({
       title: categoryName, category: categoryName,
       parentId: null, postId: null, isFolder: true,
-      order, createdBy: req.user._id, // creator owns this category
+      order, createdBy: req.user._id,
     });
 
     res.status(201).json({ success: true, item });
@@ -670,7 +711,6 @@ app.get('/api/sidebar/categories', async (_req, res) => {
           : categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         name: categoryName,
         icon: '',
-        // Pass the anchor's createdBy so the frontend can restrict the delete button
         // eslint-disable-next-line no-underscore-dangle
         createdBy: rootAnchor ? (rootAnchor.createdBy ? String(rootAnchor.createdBy) : null) : null,
         items: buildTree(children),
@@ -698,14 +738,11 @@ app.delete('/api/sidebar/categories/:id', requireAuth, async (req, res) => {
 
     const userId = String(req.user._id);
 
-    // Ownership check on the anchor itself (null = legacy, allow for now)
     if (root.createdBy && String(root.createdBy) !== userId)
       return res.status(403).json({ error: 'You can only delete categories you created.' });
 
-    // Fetch every SidebarItem that belongs to this category
     const allItems = await SidebarItem.find({ category: root.category });
 
-    // Block deletion if any item was created by someone else
     const blockedItem = allItems.find(
       (item) => item.createdBy && String(item.createdBy) !== userId,
     );
@@ -777,8 +814,6 @@ app.patch('/api/sidebar-items/:id/move', requireAuth, async (req, res) => {
     if (item.createdBy && String(item.createdBy) !== String(req.user._id))
       return res.status(403).json({ error: 'You can only move items you created.' });
 
-    // If a parentId is given, derive the root category from the parent
-    // (never trust the path string from the client — it's the display name, not the category key)
     let resolvedCategory;
     if (parentId) {
       if (!mongoose.Types.ObjectId.isValid(parentId))
@@ -788,17 +823,16 @@ app.patch('/api/sidebar-items/:id/move', requireAuth, async (req, res) => {
       if (!parent.isFolder)
         return res.status(400).json({ error: 'Destination must be a folder' });
       item.parentId = new mongoose.Types.ObjectId(parentId);
-      resolvedCategory = parent.category; // use the parent's root category, not the display path
+      resolvedCategory = parent.category;
     } else {
       item.parentId = null;
-      resolvedCategory = category.trim(); // moving to root level — category is the root name
+      resolvedCategory = category.trim();
     }
 
     item.category = resolvedCategory;
     item.updatedAt = Date.now();
     await item.save();
 
-    // Also update the linked Post's category so the post view shows the new path
     if (item.postId) {
       await Post.findByIdAndUpdate(item.postId, { category: resolvedCategory });
     }
@@ -817,19 +851,16 @@ app.patch('/api/sidebar-items/:id/move', requireAuth, async (req, res) => {
  * Rules:
  *   1. You must have created the root item.
  *   2. If ANY descendant in the subtree was created by a different user,
- *      the entire delete is blocked. Empty the folder of other people's
- *      content before deleting it.
+ *      the entire delete is blocked.
  */
 app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
   try {
     const rootItem = await SidebarItem.findById(req.params.id);
     if (!rootItem) return res.status(404).json({ error: 'Item not found' });
 
-    // Rule 1 — must own the root item (null = legacy, anyone can delete)
     if (rootItem.createdBy && String(rootItem.createdBy) !== String(req.user._id))
       return res.status(403).json({ error: 'You can only delete items you created.' });
 
-    // Collect full subtree with createdBy + title on every node
     const result = await SidebarItem.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
       {
@@ -869,7 +900,6 @@ app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
     const { allItems } = result[0];
     const userId = String(req.user._id);
 
-    // Rule 2 — block if ANY item in the subtree belongs to a different user
     const blockedItem = allItems.find(
       (item) => item.createdBy && String(item.createdBy) !== userId,
     );
@@ -879,7 +909,6 @@ app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
       });
     }
 
-    // All items belong to this user — safe to delete everything
     const allIds = allItems.map((item) => item.id);
     const allPostIds = allItems.map((item) => item.postId).filter(Boolean);
 
