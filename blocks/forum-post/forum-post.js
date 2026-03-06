@@ -55,7 +55,7 @@ function openEditForm(post, sid) {
     sidebarItemId: sid || null, // so create-post can move the file location
   };
   sessionStorage.setItem('edit-post-draft', JSON.stringify(editData));
-  window.location.href = '/create-post';
+  window.location.href = '/edit-post';
 }
 
 /**
