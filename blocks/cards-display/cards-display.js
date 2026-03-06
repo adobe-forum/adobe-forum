@@ -224,7 +224,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [error, setError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(null);   // {n} badge count
+  const [totalCount, setTotalCount] = useState(null); // {n} badge count
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
   const [refreshTick, setRefreshTick] = useState(0);

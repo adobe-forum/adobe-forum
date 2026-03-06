@@ -41,7 +41,9 @@
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
+
     /* Slightly smaller than the heading so it reads as a badge, not a word */
+    
     vertical-align: middle;
   }
   
