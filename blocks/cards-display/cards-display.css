@@ -18,6 +18,33 @@
     font-weight: 700;
     color: var(--spectrum-gray-900);
     margin: 0 0 var(--spectrum-spacing-200);
+    display: flex;
+    align-items: center;
+    gap: var(--spectrum-spacing-300);
+    flex-wrap: wrap;
+  }
+
+  /* Dynamic count badge — sits inline inside the <h2> */
+  .cards-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 26px;
+    padding: 0 10px;
+    background: rgb(218 31 38 / 8%);
+    color: var(--spectrum-accent-color-900);
+    border: 1px solid rgb(218 31 38 / 25%);
+    border-radius: 20px;
+    font-size: 14px;
+    font-family: var(--body-font-family);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+
+    /* Slightly smaller than the heading so it reads as a badge, not a word */
+    
+    vertical-align: middle;
   }
   
   .cards-subtitle {
@@ -48,8 +75,6 @@
     background: var(--spectrum-gray-50);
     border: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
     border-radius: var(--spectrum-border-radius-200);
-  
-    /* overflow: hidden removed — was clipping the category tooltip */
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -86,17 +111,13 @@
     transform: scaleX(1);
   }
   
-  /* Image wrapper — clips image to rounded corners; tooltip escapes via overflow:visible */
   .card-img-wrapper {
     position: relative;
     flex-shrink: 0;
-  
-    /* Allow tooltip to escape the image wrapper */
     overflow: visible;
     border-radius: var(--spectrum-border-radius-200) var(--spectrum-border-radius-200) 0 0;
   }
   
-  /* Clip only the actual image, not the badge/tooltip */
   .card-img-box {
     width: 100%;
     height: 180px;
@@ -109,11 +130,7 @@
   /* stylelint-disable-next-line selector-class-pattern */
   .card-img--placeholder {
     background: linear-gradient(135deg, var(--spectrum-gray-100) 0%, var(--spectrum-gray-200) 100%);
-  
-    /* Keep the SVG logo fully visible without cropping */
     object-fit: contain;
-  
-    /* Add some padding so the logo doesn't touch the edges */
     padding: 40px;
     box-sizing: border-box;
   }
@@ -134,8 +151,6 @@
     text-transform: none;
     backdrop-filter: blur(4px);
     cursor: default;
-  
-    /* Must be relative so tooltip positions against it */
     z-index: 2;
   }
   
@@ -160,7 +175,6 @@
     z-index: 100;
   }
   
-  /* Down-pointing arrow */
   .card-category-tooltip::after {
     content: '';
     position: absolute;
@@ -170,7 +184,6 @@
     border-top-color: rgb(20 20 20 / 95%);
   }
   
-  /* Show on badge hover */
   .card-category-badge:hover .card-category-tooltip {
     opacity: 1;
     transform: translateY(0);
@@ -454,4 +467,3 @@
     .cards-display { padding: var(--spectrum-spacing-400) 0; }
     .cards-title   { font-size: var(--heading-font-size-m); }
   }
-  
