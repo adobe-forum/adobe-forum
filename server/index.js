@@ -163,7 +163,7 @@ app.post('/api/auth/register', async (req, res) => {
     req.session.userId = String(user._id);
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.status(201).json({ success: true, user: safeUser });
+    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) } });
 
   } catch (err) {
     console.error(err);
@@ -192,7 +192,7 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.userId = String(user._id);
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.json({ success: true, user: safeUser });
+    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
 
   } catch (err) {
     console.error(err);
@@ -408,18 +408,27 @@ app.post('/api/posts', requireAuth, async (req, res) => {
 });
 
 /**
- * GET /api/posts?page=1&limit=12&search=
+ * GET /api/posts?page=1&limit=12&search=&author=
  *
  * Search covers: title, category, tags (partial), body (description),
  * and author name (firstName + lastName via a pre-query on User).
+ * Author filter: pass ?author=<userId> to show only that user's posts (My Posts).
  */
 app.get('/api/posts', async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Number(req.query.limit) || 12);
     const search = req.query.search?.trim();
+    const author = req.query.author?.trim(); // for "My Posts" filter
 
     let query = {};
+
+    // Apply author filter first (My Posts)
+    if (author) {
+      query.createdBy = mongoose.Types.ObjectId.isValid(author)
+        ? new mongoose.Types.ObjectId(author)
+        : author;
+    }
 
     if (search) {
       const searchRegex = new RegExp(escapeRegex(search), 'i');
@@ -445,17 +454,15 @@ app.get('/api/posts', async (req, res) => {
 
       const userIds = matchingUsers.map((u) => u._id);
 
-      query = {
-        $or: [
-          { title: searchRegex },                         // post title
-          { category: searchRegex },                      // category name
-          { tags: searchRegex },                          // tags (partial match)
-          { body: searchRegex },                          // post body / description
-          ...(userIds.length > 0                          // author name
-            ? [{ createdBy: { $in: userIds } }]
-            : []),
-        ],
-      };
+      query.$or = [
+        { title: searchRegex },                         // post title
+        { category: searchRegex },                      // category name
+        { tags: searchRegex },                          // tags (partial match)
+        { body: searchRegex },                          // post body / description
+        ...(userIds.length > 0                          // author name
+          ? [{ createdBy: { $in: userIds } }]
+          : []),
+      ];
     }
 
     const [posts, total] = await Promise.all([

@@ -29,7 +29,7 @@ function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
 
-  // Insert a space after every block-level element so that list items,
+  // YOUR FIX: Insert a space after every block-level element so that list items,
   // paragraphs, headings etc. don't run together when textContent is read.
   doc.querySelectorAll('p, li, div, h1, h2, h3, h4, h5, h6, br, td, th, dt, dd').forEach((el) => {
     el.appendChild(doc.createTextNode(' '));
@@ -224,23 +224,25 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [error, setError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(null);
+  const [totalCount, setTotalCount] = useState(null);   // {n} badge count
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
   const [refreshTick, setRefreshTick] = useState(0);
+  // "My Posts" — read ?author= from URL once on mount
+  const [authorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
 
   // ── Resolve display title ─────────────────────────────────────────
-  // If initialTitle contains {n}, replace it with the live count once loaded.
-  // e.g. EDS: "Latest Posts {n}"  →  rendered: "Latest Posts 14"
+  // Priority: My Posts (authorId) > Category filter > Search > {n} token default
   const hasTitleToken = initialTitle.includes('{n}');
 
   let displayTitle = initialTitle;
-  if (category) {
+  if (authorId) {
+    displayTitle = 'My Posts';
+  } else if (category) {
     displayTitle = `${category} Posts`;
   } else if (searchQuery) {
     displayTitle = `Search Results: "${searchQuery}"`;
   } else if (hasTitleToken) {
-    // While loading keep the raw token; once count is known swap it in
     displayTitle = totalCount !== null
       ? initialTitle.replace('{n}', totalCount)
       : initialTitle.replace('{n}', '…');
@@ -264,6 +266,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           url.searchParams.append('page', currentPage);
           url.searchParams.append('limit', PAGE_SIZE);
           if (searchQuery) url.searchParams.append('search', searchQuery);
+          if (authorId) url.searchParams.append('author', authorId); // My Posts filter
         }
 
         const res = await fetch(url, { signal });
@@ -288,7 +291,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     fetchPosts();
     return () => { controller.abort(); };
-  }, [currentPage, searchQuery, category, refreshTick]);
+  }, [currentPage, searchQuery, category, refreshTick, authorId]);
 
   useEffect(() => {
     const handleSearch = (e) => {
@@ -339,7 +342,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const getEmptyStateContent = () => {
-    if (searchQuery || category) {
+    if (searchQuery || category || authorId) { // FRIEND: added authorId check
       return html`
         <div class="cards-no-results">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -353,11 +356,11 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     return html`<p class="cards-empty">No posts found.</p>`;
   };
 
-  // ── Split title into text + count parts for styled rendering ─────
+  // ── Split title into text + count parts for styled badge rendering ─────
   // If the title has {n}, render the number as a styled badge.
-  // Otherwise just render the plain title string.
+  // When authorId/category/search is active, skip the badge — just plain title.
   const renderTitle = () => {
-    if (!hasTitleToken || category || searchQuery) {
+    if (!hasTitleToken || category || searchQuery || authorId) {
       return html`<h2 class="cards-title">${displayTitle}</h2>`;
     }
     const parts = initialTitle.split('{n}');
@@ -374,7 +377,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   return html`
     <div class="cards-header">
       ${renderTitle()}
-      ${initialSubtitle && !searchQuery && !category ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
+      ${initialSubtitle && !searchQuery && !category && !authorId ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
     </div>
 
     ${loading && html`<${SkeletonLoaders} />`}

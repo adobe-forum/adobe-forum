@@ -40,6 +40,28 @@ const IconLock = () => html`
     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>`;
 
+const IconPosts = () => html`
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+  </svg>`;
+
+const IconUser = () => html`
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>`;
+
+const IconChevron = () => html`
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>`;
+
 const IconCheck = () => html`
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -346,12 +368,77 @@ function ProfilePopup({ onClose }) {
 }
 
 // ============================================
+// PROFILE DROPDOWN
+// ============================================
+
+function ProfileDropdown({ user, onClose, onOpenProfile }) {
+  const initials = getInitials(user.firstName, user.lastName);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onOutside = (e) => { if (!e.target.closest('.pd-trigger-wrap')) onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onOutside);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onOutside);
+    };
+  }, [onClose]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('af_user');
+    window.location.replace('/auth-form');
+  };
+
+  const handleMyPosts = () => {
+    // eslint-disable-next-line no-underscore-dangle
+    window.location.href = `/?author=${user._id}`;
+    onClose();
+  };
+
+  return html`
+    <div class="pd-dropdown" role="menu" aria-label="Profile menu">
+      <div class="pd-header">
+        <div class="pd-avatar">${initials}</div>
+        <div class="pd-info">
+          <p class="pd-name">${user.firstName} ${user.lastName}</p>
+          <p class="pd-email">${user.email}</p>
+        </div>
+      </div>
+      <div class="pd-divider"></div>
+      <ul class="pd-menu" role="none">
+        <li role="none">
+          <button type="button" class="pd-item" role="menuitem" onClick=${onOpenProfile}>
+            <span class="pd-item-icon"><${IconUser}/></span>
+            <span class="pd-item-label">View Profile</span>
+            <span class="pd-item-chevron"><${IconChevron}/></span>
+          </button>
+        </li>
+        <li role="none">
+          <button type="button" class="pd-item" role="menuitem" onClick=${handleMyPosts}>
+            <span class="pd-item-icon"><${IconPosts}/></span>
+            <span class="pd-item-label">My Posts</span>
+            <span class="pd-item-chevron"><${IconChevron}/></span>
+          </button>
+        </li>
+      </ul>
+      <div class="pd-divider"></div>
+      <div class="pd-footer">
+        <button type="button" class="pd-signout" role="menuitem" onClick=${handleLogout}>
+          <${IconLogout}/> Sign Out
+        </button>
+      </div>
+    </div>`;
+}
+
+// ============================================
 // HEADER COMPONENT
 // ============================================
 
 function HeaderComponent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
 
@@ -388,17 +475,26 @@ function HeaderComponent() {
       <div class="nav-tools">
         <ul>
           <li class="profile-item">
-            <button type="button" class="profile-avatar-btn"
-              aria-label="Open profile" aria-expanded=${String(profileOpen)}
-              onClick=${() => setProfileOpen(true)}>
-              ${initials}
-            </button>
+            <div class="pd-trigger-wrap">
+              <button type="button" class="profile-avatar-btn${dropdownOpen ? ' is-active' : ''}"
+                aria-label="Open profile menu" aria-expanded=${String(dropdownOpen)}
+                aria-haspopup="true"
+                onClick=${() => setDropdownOpen((o) => !o)}>
+                ${initials}
+              </button>
+              ${dropdownOpen && user && html`
+                <${ProfileDropdown}
+                  user=${user}
+                  onClose=${() => setDropdownOpen(false)}
+                  onOpenProfile=${() => { setDropdownOpen(false); setProfileModalOpen(true); }}
+                />`}
+            </div>
           </li>
         </ul>
       </div>
     </nav>
 
-    ${profileOpen && html`<${ProfilePopup} onClose=${() => setProfileOpen(false)}/>`}`;
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}`;
 }
 
 // ============================================
