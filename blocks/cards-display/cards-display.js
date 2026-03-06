@@ -227,9 +227,13 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
   const [refreshTick, setRefreshTick] = useState(0);
+  // "My Posts" — read ?author= from URL once on mount
+  const [authorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
 
+  // Title: My Posts > Category filter > Search > default
   let displayTitle = initialTitle;
-  if (category) displayTitle = `${category} Posts`;
+  if (authorId) displayTitle = 'My Posts';
+  else if (category) displayTitle = `${category} Posts`;
   else if (searchQuery) displayTitle = `Search Results: "${searchQuery}"`;
 
   useEffect(() => {
@@ -250,6 +254,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           url.searchParams.append('page', currentPage);
           url.searchParams.append('limit', PAGE_SIZE);
           if (searchQuery) url.searchParams.append('search', searchQuery);
+          if (authorId) url.searchParams.append('author', authorId);
         }
 
         const res = await fetch(url, { signal });
@@ -270,7 +275,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     fetchPosts();
     return () => { controller.abort(); };
-  }, [currentPage, searchQuery, category, refreshTick]);
+  }, [currentPage, searchQuery, category, refreshTick, authorId]);
 
   useEffect(() => {
     const handleSearch = (e) => {
@@ -321,7 +326,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const getEmptyStateContent = () => {
-    if (searchQuery || category) {
+    if (searchQuery || category || authorId) {
       return html`
         <div class="cards-no-results">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -338,7 +343,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   return html`
     <div class="cards-header">
       <h2 class="cards-title">${displayTitle}</h2>
-      ${initialSubtitle && !searchQuery && !category ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
+      ${initialSubtitle && !searchQuery && !category && !authorId ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
     </div>
 
     ${loading && html`<${SkeletonLoaders} />`}
