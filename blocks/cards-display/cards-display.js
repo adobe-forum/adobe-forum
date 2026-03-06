@@ -235,6 +235,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   // Priority: My Posts (authorId) > Category filter > Search > {n} token default
   const hasTitleToken = initialTitle.includes('{n}');
 
+  // Title: My Posts > Category filter > Search > default
   let displayTitle = initialTitle;
   if (authorId) {
     displayTitle = 'My Posts';
