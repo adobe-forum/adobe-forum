@@ -1,9 +1,11 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import {
-  useState, useRef, useEffect,
+  useState, useRef, useEffect, useCallback, useMemo,
 } from '../../vendor/preact-hooks.js';
 
 const API_BASE = 'http://localhost:5000/api';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const timeAgo = (ts) => {
   if (!ts) return null;
@@ -17,17 +19,26 @@ const timeAgo = (ts) => {
 
 const countFolders = (node) => (node.children || []).filter((c) => c.isFolder).length;
 
-const toFolderNode = (item) => ({
+// REQ 3+4: Files (isFolder===false) are stripped — Folder modal shows ONLY folders/subfolders.
+// createdBy is preserved as a plain string for ownership checks (req 6).
+const toFolderNode = (item) => {
   // eslint-disable-next-line no-underscore-dangle
-  id: String(item._id || item.id),
-  name: item.title || item.name,
-  type: 'folder',
-  isFolder: Boolean(item.isFolder), // correctly read the flag — don't default to true
-  updatedAt: item.createdAt || item.updatedAt || null,
-  // Recursively map only actual sub-folders, not post-link files
-  children: (item.children || []).filter((c) => c.isFolder).map(toFolderNode),
-});
+  if (item.isFolder === false) return null; // skip files
+  const children = (item.children || []).map(toFolderNode).filter(Boolean);
+  return {
+    // eslint-disable-next-line no-underscore-dangle
+    id: String(item._id || item.id),
+    name: item.title || item.name,
+    type: 'folder',
+    isFolder: true,
+    updatedAt: item.createdAt || item.updatedAt || null,
+    // eslint-disable-next-line no-underscore-dangle
+    createdBy: item.createdBy ? String(item.createdBy._id || item.createdBy) : null,
+    children,
+  };
+};
 
+// REQ 2: Build folder tree from sidebar categories (same data source as sidebar).
 const buildFolderTree = (categories) => categories.map((cat) => ({
   id: cat.id,
   name: cat.name,
@@ -35,8 +46,8 @@ const buildFolderTree = (categories) => categories.map((cat) => ({
   isFolder: true,
   isCategoryRoot: true,
   updatedAt: null,
-  // Only show actual folders as children of a category in the picker
-  children: (cat.items || []).filter((i) => i.isFolder).map(toFolderNode),
+  createdBy: cat.createdBy ? String(cat.createdBy) : null,
+  children: (cat.items || []).map(toFolderNode).filter(Boolean),
 }));
 
 const findNode = (tree, id) => {
@@ -69,7 +80,16 @@ const sortNodes = (nodes) => [...nodes].sort(
   (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
 );
 
-// Icons
+// REQ 6: ownership check — mirrors sidebar's isOwner()
+const isOwner = (node, currentUser) => {
+  if (!currentUser) return false;
+  if (!node.createdBy) return false;
+  // eslint-disable-next-line no-underscore-dangle
+  return node.createdBy === String(currentUser._id || currentUser.id);
+};
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
 const IcoClose = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 const IcoSearch = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
@@ -86,31 +106,120 @@ const IcoEmptyBox = () => html`
     <path d="M82 86H98M90 78V94" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
   </svg>`;
 
-// Inline name input
+// ─── Spectrum Alert Dialog (mirrors sidebar's SpectrumAlertDialog) ─────────────
+
+function SpectrumAlertDialog({
+  isOpen, title, message, confirmLabel = 'Delete', onConfirm, onCancel,
+}) {
+  if (!isOpen) return null;
+  return html`
+    <div class="sp-alert-backdrop"
+      onClick=${(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      role="presentation">
+      <div class="sp-alert-dialog" role="alertdialog" aria-modal="true">
+        <div class="sp-alert-header">
+          <span class="sp-alert-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </span>
+          <h2 class="sp-alert-title">${title}</h2>
+        </div>
+        <div class="sp-alert-body">
+          <p class="sp-alert-message">${message}</p>
+        </div>
+        <div class="sp-alert-footer">
+          <button class="sp-btn sp-btn-secondary" onClick=${onCancel}>Cancel</button>
+          <button class="sp-btn sp-btn-destructive" onClick=${onConfirm}>${confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Inline name input with duplicate validation ──────────────────────────────
+// onValidate(value) → returns error string or null (called before onCommit)
+
 function NameInput({
-  initial = '', placeholder, onCommit, onCancel,
+  initial = '', placeholder, onCommit, onCancel, onValidate = null,
 }) {
   const ref = useRef(null);
+  const doneRef = useRef(false);
+  const [inputErr, setInputErr] = useState('');
+  const hasErrRef = useRef(false);
+
   useEffect(() => {
     if (ref.current) { ref.current.focus(); if (initial) ref.current.select(); }
   }, []);
+
+  // Listen for ANY mousedown outside the input — cancel immediately if error showing
+  useEffect(() => {
+    const onMouseDown = (e) => {
+      if (hasErrRef.current && ref.current && !ref.current.contains(e.target)) {
+        e.preventDefault(); // prevent blur from firing separately
+        if (!doneRef.current) { doneRef.current = true; onCancel(); }
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown, true); // capture phase
+    return () => document.removeEventListener('mousedown', onMouseDown, true);
+  }, []);
+
+  const cancel = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onCancel();
+  };
+
   const commit = () => {
+    if (doneRef.current) return;
     const v = ref.current?.value.trim();
-    if (v) onCommit(v);
-    else onCancel();
+    if (!v) { cancel(); return; }
+    if (onValidate) {
+      const err = onValidate(v);
+      if (err) {
+        hasErrRef.current = true;
+        setInputErr(err);
+        return;
+      }
+    }
+    doneRef.current = true;
+    onCommit(v);
   };
+
   const onKD = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    if (e.key === 'Enter') { e.preventDefault(); if (hasErrRef.current) cancel(); else commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
   };
-  return html`<input ref=${ref} class="fm-name-input" defaultValue=${initial}
-    placeholder=${placeholder} onKeyDown=${onKD} onBlur=${commit}
-    onClick=${(e) => e.stopPropagation()}/>`;
+
+  const onInput = () => {
+    if (hasErrRef.current) { hasErrRef.current = false; setInputErr(''); }
+  };
+
+  // onBlur only commits when there's no error
+  const onBlur = () => { if (!hasErrRef.current) commit(); };
+
+  return html`
+    <div style="width:100%">
+      <input ref=${ref}
+        class=${`fm-name-input${inputErr ? ' fm-name-input--err' : ''}`}
+        defaultValue=${initial}
+        placeholder=${placeholder}
+        onKeyDown=${onKD}
+        onBlur=${onBlur}
+        onInput=${onInput}
+        onClick=${(e) => e.stopPropagation()}/>
+      ${inputErr && html`<div class="fm-name-err">${inputErr}</div>`}
+    </div>`;
 }
 
-// Context menu
+// ─── Context menu ─────────────────────────────────────────────────────────────
+// REQ 5: rename available for all non-root folders
+// REQ 6: delete visible ONLY to creator
+
 function CtxMenu({
-  x, y, node, onRename, onDelete, onAddSub, onClose,
+  x, y, node, currentUser, onRename, onDelete, onAddSub, onClose,
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -118,11 +227,13 @@ function CtxMenu({
     setTimeout(() => document.addEventListener('mousedown', h), 0);
     return () => document.removeEventListener('mousedown', h);
   }, []);
-  // Rename is hidden for category-root nodes (renaming a root category requires
-  // migrating all items in that category, so it is not supported inline)
-  const menuW = 170; const menuH = node.isCategoryRoot ? 100 : 140;
-  const left = x + menuW > window.innerWidth ? x - menuW : x;
-  const top = y + menuH > window.innerHeight ? y - menuH : y;
+
+  const canRename = !node.isCategoryRoot;
+  const canDelete = isOwner(node, currentUser); // REQ 6
+
+  const left = x + 170 > window.innerWidth ? x - 170 : x;
+  const top = y + 150 > window.innerHeight ? y - 150 : y;
+
   return html`
     <div class="fm-ctx" ref=${ref} style=${{ left: `${left}px`, top: `${top}px` }}
       onClick=${(e) => e.stopPropagation()}>
@@ -130,21 +241,26 @@ function CtxMenu({
         onClick=${() => { onAddSub(node); onClose(); }}>
         <${IcoFolderPlus}/> Add Subfolder
       </button>
-      ${!node.isCategoryRoot && html`<button type="button" class="fm-ctx-btn"
-        onClick=${() => { onRename(node); onClose(); }}>
-        <${IcoEdit}/> Rename
-      </button>`}
-      <div class="fm-ctx-divider"></div>
-      <button type="button" class="fm-ctx-btn fm-ctx-btn--danger"
-        onClick=${() => { onDelete(node); onClose(); }}>
-        <${IcoTrash}/> Delete
-      </button>
+      ${canRename && html`
+        <button type="button" class="fm-ctx-btn"
+          onClick=${() => { onRename(node); onClose(); }}>
+          <${IcoEdit}/> Rename
+        </button>`}
+      ${canDelete && html`
+        <div class="fm-ctx-divider"></div>
+        <button type="button" class="fm-ctx-btn fm-ctx-btn--danger"
+          onClick=${() => { onDelete(node); onClose(); }}>
+          <${IcoTrash}/> Delete
+        </button>`}
     </div>`;
 }
 
-// Search results
+// ─── Search results ───────────────────────────────────────────────────────────
+
 function SearchResults({ results, onNavigate }) {
-  if (results.length === 0) return html`<div class="fm-search-empty"><${IcoSearch}/><p>No folders found</p></div>`;
+  if (results.length === 0) {
+    return html`<div class="fm-search-empty"><${IcoSearch}/><p>No folders found</p></div>`;
+  }
   return html`
     <div class="fm-search-results">
       ${results.map(({ node, ancestors }) => {
@@ -152,35 +268,60 @@ function SearchResults({ results, onNavigate }) {
     const folders = countFolders(node);
     const ts = timeAgo(node.updatedAt);
     return html`
-        <button key=${node.id} type="button" class="fm-search-row" onClick=${() => onNavigate(node, ancestors)}>
-          <div class="fm-search-row-ico">
-            <svg viewBox="0 0 88 72" fill="none" style="width:100%;height:100%">
-              <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
-              <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
-            </svg>
-          </div>
-          <div class="fm-search-row-info">
-            <div class="fm-search-row-top">
-              <span class="fm-search-row-name">${node.name}</span>
-              ${ts && html`<span class="fm-search-row-ts">${ts}</span>`}
+          <button key=${node.id} type="button" class="fm-search-row"
+            onClick=${() => onNavigate(node, ancestors)}>
+            <div class="fm-search-row-ico">
+              <svg viewBox="0 0 88 72" fill="none" style="width:100%;height:100%">
+                <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
+                <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
+              </svg>
             </div>
-            <div class="fm-search-row-meta">
-              ${pathStr && html`<span class="fm-search-row-path">${pathStr}</span>`}
-              ${folders > 0 && html`<span class="fm-search-row-folders">${folders} subfolder${folders !== 1 ? 's' : ''}</span>`}
+            <div class="fm-search-row-info">
+              <div class="fm-search-row-top">
+                <span class="fm-search-row-name">${node.name}</span>
+                ${ts && html`<span class="fm-search-row-ts">${ts}</span>`}
+              </div>
+              <div class="fm-search-row-meta">
+                ${pathStr && html`<span class="fm-search-row-path">${pathStr}</span>`}
+                ${folders > 0 && html`<span class="fm-search-row-folders">${folders} subfolder${folders !== 1 ? 's' : ''}</span>`}
+              </div>
             </div>
-          </div>
-        </button>`;
+          </button>`;
   })}
     </div>`;
 }
 
-// Grid panel
+// ─── Grid panel ───────────────────────────────────────────────────────────────
+// REQ 4: only renders folder-type nodes (files already stripped upstream)
+
 function GridPanel({
-  nodes, isRoot, selected, adding, renamingId,
+  nodes, isRoot, selected, adding, renamingId, currentUser,
   onSelect, onOpen, onCtx, onCommitAdd, onCancelAdd, onCommitRename, onCancelRename,
 }) {
-  const sortedNodes = sortNodes(nodes.filter((n) => n.type === 'folder'));
+  // Detect touch device once
+  const isTouchDevice = useRef(
+    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0),
+  );
+  const sortedNodes = useMemo(
+    () => sortNodes(nodes.filter((n) => n.type === 'folder')),
+    [nodes],
+  );
   const empty = sortedNodes.length === 0 && !adding;
+
+  // Case-insensitive duplicate check against siblings
+  const validateAdd = (name) => {
+    const lower = name.toLowerCase();
+    const dup = sortedNodes.some((n) => n.name.toLowerCase() === lower);
+    return dup ? `A folder named "${name}" already exists here.` : null;
+  };
+
+  const makeValidateRename = (currentName) => (name) => {
+    const lower = name.toLowerCase();
+    if (lower === currentName.toLowerCase()) return null; // same name is fine
+    const dup = sortedNodes.some((n) => n.name.toLowerCase() === lower);
+    return dup ? `A folder named "${name}" already exists here.` : null;
+  };
+
   return html`
     <div class="fm-panel" onClick=${() => onSelect(null)}>
       ${empty && html`
@@ -196,34 +337,50 @@ function GridPanel({
     const fc = countFolders(node);
     const ts = timeAgo(node.updatedAt);
     return html`
-          <div key=${node.id} class=${`fm-tile${sel ? ' fm-tile--sel' : ''}`}
-            onClick=${(e) => { e.stopPropagation(); onSelect(node.id); }}
-            onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
-            onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
-            <div class="fm-tile-ico">
-              <svg viewBox="0 0 88 72" fill="none">
-                <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
-                <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
-                <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
-              </svg>
-            </div>
-            <div class="fm-tile-body">
-              ${ren
-    ? html`<${NameInput} initial=${node.name} placeholder="Folder name"
-                    onCommit=${(v) => onCommitRename(node, v)} onCancel=${onCancelRename}/>`
-    : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
-              <div class="fm-tile-meta">
-                <span class="fm-tile-folders">${fc > 0 ? `${fc} subfolder${fc !== 1 ? 's' : ''}` : 'No subfolders'}</span>
-                ${ts && html`<span class="fm-tile-ts">${ts}</span>`}
+            <div key=${node.id} class=${`fm-tile${sel ? ' fm-tile--sel' : ''}`}
+              tabIndex="0"
+              role="button"
+              aria-label=${node.name}
+              onClick=${(e) => {
+    e.stopPropagation();
+    if (isTouchDevice.current) {
+      // On touch: first tap selects, second tap opens
+      if (sel) { onOpen(node); } else { onSelect(node.id); }
+    } else {
+      onSelect(node.id);
+    }
+  }}
+              onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
+              onKeyDown=${(e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(node); }
+  }}
+              onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
+              <div class="fm-tile-ico">
+                <svg viewBox="0 0 88 72" fill="none">
+                  <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300"/>
+                  <path d="M4 32H84V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V32Z" fill="#FFC107"/>
+                  <rect x="4" y="32" width="80" height="5" fill="#FFB300" opacity="0.4"/>
+                </svg>
               </div>
-            </div>
-            <button type="button" class="fm-tile-dots"
-              onClick=${(e) => { e.stopPropagation(); onCtx(e, node); }}
-              title="More options"><${IcoDots}/></button>
-          </div>`;
+              <div class="fm-tile-body">
+                ${ren
+    ? html`<${NameInput} initial=${node.name} placeholder="Folder name"
+                      onValidate=${makeValidateRename(node.name)}
+                      onCommit=${(v) => onCommitRename(node, v)} onCancel=${onCancelRename}/>`
+    : html`<span class="fm-tile-name" title=${node.name}>${node.name}</span>`}
+                <div class="fm-tile-meta">
+                  <span class="fm-tile-folders">${fc > 0 ? `${fc} subfolder${fc !== 1 ? 's' : ''}` : 'No subfolders'}</span>
+                  ${ts && html`<span class="fm-tile-ts">${ts}</span>`}
+                </div>
+              </div>
+              ${currentUser && html`
+                <button type="button" class="fm-tile-dots"
+                  onClick=${(e) => { e.stopPropagation(); onCtx(e, node); }}
+                  title="More options"><${IcoDots}/></button>`}
+            </div>`;
   })}
         ${adding && html`
-          <div class="fm-tile fm-tile--new">
+          <div class="fm-tile fm-tile--new fm-tile--adding">
             <div class="fm-tile-ico">
               <svg viewBox="0 0 88 72" fill="none">
                 <path d="M4 16C4 13.8 5.8 12 8 12H32L42 22H80C82.2 22 84 23.8 84 26V62C84 64.2 82.2 66 80 66H8C5.8 66 4 64.2 4 62V16Z" fill="#FFB300" opacity="0.35"/>
@@ -231,14 +388,15 @@ function GridPanel({
               </svg>
             </div>
             <div class="fm-tile-body">
-              <${NameInput} placeholder="Folder name" onCommit=${onCommitAdd} onCancel=${onCancelAdd}/>
+              <${NameInput} placeholder="Folder name" onValidate=${validateAdd} onCommit=${onCommitAdd} onCancel=${onCancelAdd}/>
             </div>
           </div>`}
       </div>
     </div>`;
 }
 
-// Folder Modal
+// ─── Folder Modal ─────────────────────────────────────────────────────────────
+
 function FolderModal({ isOpen, onClose, onSelect }) {
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -251,26 +409,62 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const [renamingId, setRenamingId] = useState(null);
   const [ctx, setCtx] = useState(null);
   const [folderError, setFolderError] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null); // REQ 6: Spectrum dialog
+  // REQ 2: session-based current user (same as sidebar)
+  const [currentUser, setCurrentUser] = useState(null);
+  // REQ 7: in-memory cache so re-opens are instant
+  const treeCache = useRef(null);
 
-  const fetchFolders = async () => {
+  // Mirror sidebar's fetchCurrentUser pattern
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+        if (res.ok) {
+          const d = await res.json();
+          setCurrentUser(d.user);
+        } else setCurrentUser(null);
+      } catch { setCurrentUser(null); }
+    };
+    fetchUser();
+    const onAuth = () => fetchUser();
+    window.addEventListener('forum-auth-changed', onAuth);
+    return () => window.removeEventListener('forum-auth-changed', onAuth);
+  }, []);
+
+  // REQ 7: force=true bypasses cache and hits the network
+  const fetchFolders = useCallback(async (force = false) => {
+    if (!force && treeCache.current) { setTree(treeCache.current); return; }
     try {
       setLoading(true); setError(null);
       const res = await fetch(`${API_BASE}/sidebar/categories`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.success && data.categories) setTree(buildFolderTree(data.categories));
-      else throw new Error(data.error || 'Failed to load');
+      if (data.success && data.categories) {
+        const built = buildFolderTree(data.categories);
+        treeCache.current = built;
+        setTree(built);
+      } else throw new Error(data.error || 'Failed to load');
     } catch (err) { setError(err.message); } finally { setLoading(false); }
-  };
+  }, []);
 
+  // REQ 7: on open, show cache instantly then refresh in background
   useEffect(() => {
     if (isOpen) {
-      fetchFolders();
       setStack([]); setSelected(null); setSearchQ('');
-      setAdding(false); setRenamingId(null); setCtx(null);
+      setAdding(false); setRenamingId(null); setCtx(null); setFolderError(null);
+      if (treeCache.current) setTree(treeCache.current); // instant display
       requestAnimationFrame(() => setVisible(true));
+      fetchFolders(true); // background refresh
     } else { setVisible(false); }
   }, [isOpen]);
+
+  // Sync with sidebar refreshes (REQ 2: linked data source)
+  useEffect(() => {
+    const onRefresh = () => { treeCache.current = null; if (isOpen) fetchFolders(true); };
+    window.addEventListener('refresh-sidebar', onRefresh);
+    return () => window.removeEventListener('refresh-sidebar', onRefresh);
+  }, [isOpen, fetchFolders]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -279,17 +473,12 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     return () => document.removeEventListener('keydown', esc);
   }, [isOpen, renamingId, adding]);
 
-  useEffect(() => {
-    window.addEventListener('refresh-sidebar', fetchFolders);
-    return () => window.removeEventListener('refresh-sidebar', fetchFolders);
-  }, []);
-
   if (!isOpen && !visible) return null;
 
   const isSearching = searchQ.trim().length > 0;
   const isRoot = stack.length === 0;
   const parentNode = stack.length ? findNode(tree, stack[stack.length - 1]) : null;
-  const nodes = parentNode ? (parentNode.children || []) : tree;
+  const nodes = parentNode ? (parentNode.children || []) : tree; // REQ 4: only folders in children
   const crumbs = stack.map((id) => findNode(tree, id)).filter(Boolean);
   const selectedNode = selected ? findNode(tree, selected) : null;
   const showSelectedCrumb = !isSearching && selected && selectedNode;
@@ -299,7 +488,10 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     )
     : [];
 
-  const nav = (newStack) => { setStack(newStack); setSelected(null); setSearchQ(''); setAdding(false); setRenamingId(null); };
+  const nav = (newStack) => {
+    setStack(newStack); setSelected(null); setSearchQ('');
+    setAdding(false); setRenamingId(null);
+  };
   const goRoot = () => nav([]);
   const goCrumb = (i) => nav(stack.slice(0, i + 1));
   const goBack = () => nav(stack.slice(0, -1));
@@ -308,13 +500,13 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     nav([...ancestors.map((a) => a.id), node.id]);
   };
 
+  // Add folder — REQ 4: always isFolder:true, never creates files
+  // Duplicate check is done client-side in GridPanel's validateAdd (case-insensitive)
   const handleCommitAdd = async (name) => {
-    setAdding(false);
-    setFolderError(null);
+    setAdding(false); setFolderError(null);
     try {
       let res;
       if (stack.length === 0) {
-        // Root level: create a category anchor via dedicated endpoint
         res = await fetch(`${API_BASE}/sidebar/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -322,7 +514,6 @@ function FolderModal({ isOpen, onClose, onSelect }) {
           body: JSON.stringify({ name }),
         });
       } else {
-        // Inside a category or subfolder: create a normal folder item
         const rootNode = findNode(tree, stack[0]);
         const category = rootNode ? rootNode.name : name;
         const currentNode = findNode(tree, stack[stack.length - 1]);
@@ -338,13 +529,13 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        // Show inline error — duplicate name returns 409
         setFolderError(res.status === 409
           ? `A folder named "${name}" already exists here.`
           : (data.error || 'Failed to create folder.'));
         return;
       }
-      await fetchFolders();
+      treeCache.current = null;
+      await fetchFolders(true);
       window.dispatchEvent(new CustomEvent('refresh-sidebar'));
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -352,17 +543,24 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
+  // REQ 5: Rename subfolder
   const handleCommitRename = async (node, name) => {
     setRenamingId(null);
-    if (node.isCategoryRoot) return;
+    if (node.isCategoryRoot || name === node.name) return;
     try {
-      await fetch(`${API_BASE}/sidebar-items/${node.id}`, {
+      const res = await fetch(`${API_BASE}/sidebar-items/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ title: name }),
       });
-      await fetchFolders();
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setFolderError(d.error || 'Rename failed.');
+        return;
+      }
+      treeCache.current = null;
+      await fetchFolders(true);
       window.dispatchEvent(new CustomEvent('refresh-sidebar'));
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -370,9 +568,13 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-  const handleDelete = async (node) => {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`Delete "${node.name}"? This will also remove all its subfolders.`)) return;
+  // REQ 6: opens Spectrum dialog (not window.confirm)
+  const handleDelete = (node) => setDeleteDialog(node);
+
+  const confirmDelete = async () => {
+    const node = deleteDialog;
+    setDeleteDialog(null);
+    if (!node) return;
     try {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
@@ -380,7 +582,8 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       await fetch(url, { method: 'DELETE', credentials: 'include' });
       if (selected === node.id) setSelected(null);
       if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
-      await fetchFolders();
+      treeCache.current = null;
+      await fetchFolders(true);
       window.dispatchEvent(new CustomEvent('refresh-sidebar'));
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -388,29 +591,21 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-  // goInto calls nav() which resets `adding` to false, so we defer setAdding
-  // until after the nav state has flushed, otherwise it gets immediately overwritten.
-  const handleAddSub = (node) => {
-    goInto(node);
-    setTimeout(() => setAdding(true), 0);
-  };
+  const handleAddSub = (node) => { goInto(node); setTimeout(() => setAdding(true), 0); };
 
   const doOk = () => {
     const node = selectedNode;
     if (node) {
       const ancestors = findAncestors(tree, selected) || [];
       const path = [...ancestors.map((a) => a.name), node.name].join(' > ');
-      // Category-root nodes don't have a parentId — only subfolders do
-      const folderId = node.isCategoryRoot ? null : node.id;
-      onSelect(node.name, path, folderId);
+      onSelect(node.name, path, node.isCategoryRoot ? null : node.id);
     } else if (stack.length > 0) {
       const currentId = stack[stack.length - 1];
       const currentNode = findNode(tree, currentId);
       if (currentNode) {
         const ancestors = findAncestors(tree, currentId) || [];
         const path = [...ancestors.map((a) => a.name), currentNode.name].join(' > ');
-        const folderId = currentNode.isCategoryRoot ? null : currentNode.id;
-        onSelect(currentNode.name, path, folderId);
+        onSelect(currentNode.name, path, currentNode.isCategoryRoot ? null : currentNode.id);
       }
     }
     onClose();
@@ -425,64 +620,96 @@ function FolderModal({ isOpen, onClose, onSelect }) {
 
         <div class="fm-header">
           <div class="fm-nav">
-            ${!isRoot && !isSearching && html`<button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
+            ${!isRoot && !isSearching && html`
+              <button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
             <div class="fm-breadcrumb">
-              <button type="button" class=${`fm-crumb${isRoot && !showSelectedCrumb && !isSearching ? ' fm-crumb--cur' : ''}`} onClick=${goRoot}>Folders</button>
+              <button type="button"
+                class=${`fm-crumb${isRoot && !showSelectedCrumb && !isSearching ? ' fm-crumb--cur' : ''}`}
+                onClick=${goRoot}>Folders</button>
               ${!isSearching && crumbs.map((c, i) => html`
                 <span key=${`s${c.id}`} class="fm-sep">›</span>
                 <button key=${c.id} type="button"
                   class=${`fm-crumb${i === crumbs.length - 1 && !showSelectedCrumb ? ' fm-crumb--cur' : ''}`}
                   onClick=${() => goCrumb(i)}>${c.name}</button>`)}
-              ${showSelectedCrumb && html`<span class="fm-sep">›</span><span class="fm-crumb fm-crumb--cur">${selectedNode.name}</span>`}
-              ${isSearching && html`<span class="fm-sep">›</span><span class="fm-crumb fm-crumb--cur fm-crumb--search">Search results</span>`}
+              ${showSelectedCrumb && html`
+                <span class="fm-sep">›</span>
+                <span class="fm-crumb fm-crumb--cur">${selectedNode.name}</span>`}
+              ${isSearching && html`
+                <span class="fm-sep">›</span>
+                <span class="fm-crumb fm-crumb--cur fm-crumb--search">Search results</span>`}
             </div>
           </div>
-          <div class="fm-actions">
-            <button type="button" class="fm-btn" onClick=${() => { setAdding(true); setRenamingId(null); setSearchQ(''); }}>
-              <${IcoPlus}/> Add Folder
-            </button>
-          </div>
+          ${currentUser && html`
+            <div class="fm-actions">
+              <button type="button" class="fm-btn"
+                onClick=${() => { setAdding(true); setRenamingId(null); setSearchQ(''); }}>
+                <${IcoPlus}/> Add Folder
+              </button>
+            </div>`}
           <button type="button" class="fm-close" onClick=${onClose}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
         </div>
 
         <div class="fm-search-bar">
           <span class="fm-search-ico"><${IcoSearch}/></span>
           <input type="text" class="fm-search-input" placeholder="Search folders…"
-            value=${searchQ} onInput=${(e) => setSearchQ(e.target.value)} onClick=${(e) => e.stopPropagation()}/>
-          ${isSearching && html`<button type="button" class="fm-search-clear" onClick=${() => setSearchQ('')}><${IcoClose}/></button>`}
+            value=${searchQ} onInput=${(e) => setSearchQ(e.target.value)}
+            onClick=${(e) => e.stopPropagation()}/>
+          ${isSearching && html`
+            <button type="button" class="fm-search-clear" onClick=${() => setSearchQ('')}>
+              <${IcoClose}/>
+            </button>`}
         </div>
 
         <div class="fm-body" onClick=${(e) => e.stopPropagation()}>
           ${folderError && html`
             <div class="fm-folder-error" onClick=${() => setFolderError(null)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
               ${folderError}
               <button type="button" class="fm-folder-error-close"><${IcoClose}/></button>
             </div>`}
-          ${loading && html`
+
+          ${loading && !treeCache.current && html`
             <div class="fm-loading">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFB300" stroke-width="2.5" stroke-linecap="round">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
               <span>Loading folders…</span>
             </div>`}
+
           ${!loading && error && html`
             <div class="fm-error">
               <p>Failed to load: ${error}</p>
-              <button type="button" class="fm-btn" onClick=${fetchFolders}>Retry</button>
+              <button type="button" class="fm-btn" onClick=${() => fetchFolders(true)}>Retry</button>
             </div>`}
-          ${!loading && !error && (isSearching
+
+          ${(!loading || treeCache.current) && !error && (isSearching
     ? html`<${SearchResults} results=${searchResults}
-                onNavigate=${(node, ancestors) => { setStack(ancestors.map((a) => a.id)); setSelected(null); setSearchQ(''); }}/>`
-    : html`<${GridPanel} nodes=${nodes} isRoot=${isRoot} selected=${selected}
-                adding=${adding} renamingId=${renamingId}
+                onNavigate=${(node, ancestors) => {
+      setStack(ancestors.map((a) => a.id));
+      setSelected(null); setSearchQ('');
+    }}/>`
+    : html`<${GridPanel}
+                nodes=${nodes}
+                isRoot=${isRoot}
+                selected=${selected}
+                adding=${adding}
+                renamingId=${renamingId}
+                currentUser=${currentUser}
                 onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
                 onOpen=${goInto}
                 onCtx=${(e, node) => { e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, node }); }}
-                onCommitAdd=${handleCommitAdd} onCancelAdd=${() => setAdding(false)}
-                onCommitRename=${handleCommitRename} onCancelRename=${() => setRenamingId(null)}/>`)}
+                onCommitAdd=${handleCommitAdd}
+                onCancelAdd=${() => setAdding(false)}
+                onCommitRename=${handleCommitRename}
+                onCancelRename=${() => setRenamingId(null)}/>`)}
         </div>
 
         <div class="fm-footer">
@@ -496,13 +723,27 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       </div>
 
       ${ctx && html`
-        <${CtxMenu} x=${ctx.x} y=${ctx.y} node=${ctx.node}
+        <${CtxMenu}
+          x=${ctx.x} y=${ctx.y}
+          node=${ctx.node}
+          currentUser=${currentUser}
           onRename=${(node) => setRenamingId(node.id)}
           onDelete=${handleDelete}
           onAddSub=${handleAddSub}
           onClose=${() => setCtx(null)}/>`}
+
+      <${SpectrumAlertDialog}
+        isOpen=${!!deleteDialog}
+        title="Delete Folder"
+        message=${deleteDialog ? `Delete "${deleteDialog.name}"? This will also remove all its subfolders.` : ''}
+        confirmLabel="Delete"
+        onConfirm=${confirmDelete}
+        onCancel=${() => setDeleteDialog(null)}
+      />
     </div>`;
 }
+
+// ─── App shell ────────────────────────────────────────────────────────────────
 
 function FolderApp() {
   const [isOpen, setIsOpen] = useState(false);
@@ -515,11 +756,15 @@ function FolderApp() {
     localStorage.setItem('folder:pending-selection', JSON.stringify({
       name, path: path || name, folderId, ts: Date.now(),
     }));
-    window.dispatchEvent(new CustomEvent('folder:selected', { detail: { name, path: path || name, folderId } }));
+    window.dispatchEvent(new CustomEvent('folder:selected', {
+      detail: { name, path: path || name, folderId },
+    }));
     setIsOpen(false);
   };
   return html`<${FolderModal} isOpen=${isOpen} onClose=${() => setIsOpen(false)} onSelect=${handleSelect}/>`;
 }
+
+// ─── Decorate ─────────────────────────────────────────────────────────────────
 
 export default function decorate() {
   let mount = document.getElementById('folder-root');
