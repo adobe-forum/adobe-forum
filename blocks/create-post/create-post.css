@@ -1315,6 +1315,7 @@
   --post-line-nums-border: rgb(212 212 212 / 15%);
 }
 
+/* Same pill shape as Back to Posts but grey (no red) */
 .preview-action-bar {
   display: flex;
   align-items: center;
@@ -1325,20 +1326,32 @@
 .preview-back-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  background: none;
-  border: none;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #4b4b4b;
-  padding: 6px 0;
-  transition: color 0.15s;
+  white-space: nowrap;
+  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
+  background: var(--spectrum-gray-75, #fafafa);
+  color: var(--spectrum-gray-700, #444);
+  transition: background 0.13s ease, transform 0.08s ease;
 }
 
 .preview-back-btn:hover {
-  color: #1a1a1a;
+  background: var(--spectrum-gray-100, #f0f0f0);
+  border-color: var(--spectrum-gray-400, #aaa);
 }
+
+.preview-back-btn:active {
+  transform: scale(0.98);
+}
+
+
 
 .preview-post-btn {
   margin-left: auto;
@@ -1439,47 +1452,4 @@
   color: inherit;
   padding: 0;
   font-size: inherit;
-}
-
-/* ---- Preview action bar ---- */
-.preview-action-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 28px;
-}
-
-/* "Back to Edit" — same pill shape as Back to Posts but grey (no red) */
-.preview-back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-sizing: border-box;
-  height: 40px;
-  padding: 0 20px;
-  border-radius: 999px;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  border: 1px solid var(--spectrum-gray-300, #d3d3d3);
-  background: var(--spectrum-gray-75, #fafafa);
-  color: var(--spectrum-gray-700, #444);
-  transition: background 0.13s ease, transform 0.08s ease;
-
-  &:hover {
-    background: var(--spectrum-gray-100, #f0f0f0);
-    border-color: var(--spectrum-gray-400, #aaa);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-
-  & svg {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-  }
 }
