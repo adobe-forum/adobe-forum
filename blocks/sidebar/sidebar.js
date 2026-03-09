@@ -410,6 +410,9 @@ function Sidebar() {
   const [currentUser, setCurrentUser] = useState(null);
 
   const inputRef = useRef(null);
+  // Ref that always holds the current isOpen value — used inside resize handler
+  // to avoid the stale-closure problem (resize useEffect has empty dep array).
+  const isOpenRef = useRef(isOpen);
 
   // ── Fetch current user on mount ─────────────────────────────────────────
   // Calls GET /api/auth/me (session cookie sent automatically).
@@ -460,10 +463,19 @@ function Sidebar() {
     return () => window.removeEventListener('toggle-sidebar', onToggle);
   }, [isOpen]);
 
+  // Keep ref in sync whenever isOpen changes
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
+
   useEffect(() => {
     applyBodyOffset(isOpen);
     const onResize = () => {
-      if (window.innerWidth >= 768 && !isOpen) { setIsOpen(true); applyBodyOffset(true); }
+      // Use ref instead of isOpen to avoid stale closure — the effect has [] deps
+      // so isOpen would always be the mount-time value (true), meaning the sidebar
+      // would never re-open when resizing from mobile back to desktop.
+      if (window.innerWidth >= 768 && !isOpenRef.current) {
+        setIsOpen(true);
+        applyBodyOffset(true);
+      }
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
