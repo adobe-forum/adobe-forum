@@ -244,7 +244,7 @@ function TreeItem({
   return html`
     <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}">
       ${isRenaming
-    ? html`
+      ? html`
           <${InlineInput}
             placeholder="Rename…"
             initialValue=${item.title}
@@ -252,20 +252,20 @@ function TreeItem({
             onConfirm=${handleRenameConfirm}
             onCancel=${() => setIsRenaming(false)}
           />`
-    : html`
+      : html`
           <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
             style="padding-left: ${paddingLeft}px" onClick=${handleClick}
             onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
             title=${item.title}>
             <span class="tree-chevron">
               ${isFolder
-    ? html`<${ChevronIcon} expanded=${isExpanded} />`
-    : html`<span class="tree-chevron-spacer"/>`}
+          ? html`<${ChevronIcon} expanded=${isExpanded} />`
+          : html`<span class="tree-chevron-spacer"/>`}
             </span>
             <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
               ${isFolder
-    ? html`<${FolderIcon} expanded=${isExpanded} />`
-    : html`<${FileIcon} />`}
+          ? html`<${FolderIcon} expanded=${isExpanded} />`
+          : html`<${FileIcon} />`}
             </span>
             <span class="tree-label">${item.title}</span>
 
@@ -296,7 +296,7 @@ function TreeItem({
             <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
               onConfirm=${(name) => { onAddSubfolder(itemId, name); setIsAddingChild(false); }}
               onCancel=${() => setIsAddingChild(false)} />`
-}
+      }
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
@@ -367,9 +367,9 @@ function CategoryItem({
             <${InlineInput} placeholder="Folder name…" paddingLeft=${24}
               onConfirm=${(name) => { onAddFolder(category.name, null, name); setIsAddingFolder(false); }}
               onCancel=${() => setIsAddingFolder(false)} />`
-}
+      }
           ${hasItems
-    ? category.items.map((item) => html`
+        ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
@@ -378,8 +378,8 @@ function CategoryItem({
                   onRename=${onRenameItem}
                   level=${0} />
               `)
-    : !isAddingFolder && html`<div class="no-items">No items yet</div>`
-}
+        : !isAddingFolder && html`<div class="no-items">No items yet</div>`
+      }
         </ul>
       `}
     </li>
@@ -410,6 +410,9 @@ function Sidebar() {
   const [currentUser, setCurrentUser] = useState(null);
 
   const inputRef = useRef(null);
+  // Ref that always holds the current isOpen value — used inside resize handler
+  // to avoid the stale-closure problem (resize useEffect has empty dep array).
+  const isOpenRef = useRef(isOpen);
 
   // ── Fetch current user on mount ─────────────────────────────────────────
   // Calls GET /api/auth/me (session cookie sent automatically).
@@ -460,10 +463,19 @@ function Sidebar() {
     return () => window.removeEventListener('toggle-sidebar', onToggle);
   }, [isOpen]);
 
+  // Keep ref in sync whenever isOpen changes
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
+
   useEffect(() => {
     applyBodyOffset(isOpen);
     const onResize = () => {
-      if (window.innerWidth >= 768 && !isOpen) { setIsOpen(true); applyBodyOffset(true); }
+      // Use ref instead of isOpen to avoid stale closure — the effect has [] deps
+      // so isOpen would always be the mount-time value (true), meaning the sidebar
+      // would never re-open when resizing from mobile back to desktop.
+      if (window.innerWidth >= 768 && !isOpenRef.current) {
+        setIsOpen(true);
+        applyBodyOffset(true);
+      }
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -692,7 +704,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
+        ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -704,8 +716,8 @@ function Sidebar() {
                     onRenameItem=${handleRenameItem}
                   />
                 `)
-    : html`<div class="no-results">No categories found</div>`
-}
+        : html`<div class="no-results">No categories found</div>`
+      }
           </ul>
         `}
       </div>
