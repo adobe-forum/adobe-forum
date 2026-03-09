@@ -343,7 +343,25 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const getEmptyStateContent = () => {
-    if (searchQuery || category || authorId) { // FRIEND: added authorId check
+    // My Posts — user hasn't created anything yet
+    if (authorId && !searchQuery && !category) {
+      return html`
+        <div class="cards-no-results">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <p>You haven't created any posts yet!</p>
+          <span>Share your thoughts with the community.</span>
+          <button
+            class="cards-create-btn"
+            onClick=${() => { window.location.href = '/create-post'; }}
+          >
+            Create your first post
+          </button>
+        </div>
+      `;
+    }
+    if (searchQuery || category) {
       return html`
         <div class="cards-no-results">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -361,7 +379,17 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   // If the title has {n}, render the number as a styled badge.
   // When authorId/category/search is active, skip the badge — just plain title.
   const renderTitle = () => {
-    if (!hasTitleToken || category || searchQuery || authorId) {
+    // My Posts — always show badge with total count
+    if (authorId) {
+      const countLabel = totalCount !== null ? totalCount : '…';
+      return html`
+        <h2 class="cards-title">
+          My Posts
+          <span class="cards-count-badge" aria-label="${countLabel} posts">${countLabel}</span>
+        </h2>
+      `;
+    }
+    if (!hasTitleToken || category || searchQuery) {
       return html`<h2 class="cards-title">${displayTitle}</h2>`;
     }
     const parts = initialTitle.split('{n}');

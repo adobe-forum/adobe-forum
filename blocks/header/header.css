@@ -297,7 +297,7 @@
 }
 
 .profile-avatar-btn:focus-visible {
-  outline: 2px solid #1473e6;
+  outline: 2px solid var(--spectrum-accent-color-900, #da1f26);
   outline-offset: 2px;
 }
 
@@ -498,8 +498,8 @@
 }
 
 .pp-input:focus {
-  border-color: #1473e6;
-  box-shadow: 0 0 0 3px rgb(20 115 230 / 20%);
+  border-color: var(--spectrum-accent-color-900, #da1f26);
+  box-shadow: 0 0 0 3px rgb(218 31 38 / 15%);
 }
 
 /* stylelint-disable-next-line selector-class-pattern */
@@ -558,7 +558,7 @@
 }
 
 .pp-pw-toggle:focus-visible {
-  outline: 2px solid #1473e6 !important;
+  outline: 2px solid var(--spectrum-accent-color-900, #da1f26) !important;
   outline-offset: 2px !important;
 }
 
@@ -639,7 +639,7 @@
 
 /* stylelint-disable-next-line selector-class-pattern */
 .pp-btn.pp-btn--primary {
-  background: #0d66d0 !important;
+  background: var(--spectrum-accent-color-900, #da1f26) !important;
   color: #fff !important;
   border: 1.5px solid transparent !important;
   transition: background 0.15s !important;
@@ -654,7 +654,7 @@
 
 /* stylelint-disable-next-line selector-class-pattern */
 .pp-btn.pp-btn--primary:hover:not(:disabled) {
-  background: #095aba !important;
+  background: var(--spectrum-accent-color-1000, #b71418) !important;
   color: #fff !important;
 }
 
@@ -722,13 +722,13 @@
 
 /* stylelint-disable-next-line selector-class-pattern */
 .pp-text-btn--blue {
-  color: #0d66d0 !important;
+  color: var(--spectrum-accent-color-900, #da1f26) !important;
 }
 
 /* stylelint-disable-next-line selector-class-pattern */
 .pp-text-btn--blue:hover {
-  background: rgb(13 102 208 / 8%) !important;
-  color: #0d66d0 !important;
+  background: rgb(218 31 38 / 8%) !important;
+  color: var(--spectrum-accent-color-900, #da1f26) !important;
 }
 
 /* stylelint-disable-next-line selector-class-pattern */
@@ -754,7 +754,7 @@
   gap: 4px;
   font-size: 13px;
   font-weight: 500;
-  color: #0d66d0 !important;
+  color: var(--spectrum-accent-color-900, #da1f26) !important;
   cursor: pointer;
   margin-bottom: 20px;
   border-radius: 4px;
@@ -768,7 +768,7 @@
 
 .pp-back:hover {
   text-decoration: underline !important;
-  color: #0d66d0 !important;
+  color: var(--spectrum-accent-color-900, #da1f26) !important;
   background: transparent !important;
 }
 
@@ -828,7 +828,7 @@
 }
 
 .profile-avatar-btn.is-active {
-  outline: 2px solid #1473e6;
+  outline: 2px solid var(--spectrum-accent-color-900, #da1f26);
   outline-offset: 2px;
 }
 
