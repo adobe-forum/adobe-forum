@@ -24,7 +24,7 @@
  *    --spectrum-border-width-200            = 2px    → tab underline, button border
  *    --spectrum-component-edge-to-text-100  = 12px   → input padding-inline
  *
- *  COLORS   (light theme)
+ *  COLORS   (light theme — Adobe red accent surface)
  *    --spectrum-gray-50    = #fff      → surfaces
  *    --spectrum-gray-100   = #f5f5f5  → subtle bg
  *    --spectrum-gray-300   = #d5d5d5  → dividers, card border
@@ -34,17 +34,17 @@
  *    --spectrum-gray-700   = #4b4b4b  → label text
  *    --spectrum-gray-800   = #2c2c2c  → input text, keyfocus border (S2 update)
  *    --spectrum-gray-900   = #1a1a1a  → primary text (S2 uses 1a, not 1d)
- *    --spectrum-blue-900   = #0d66d0  → accent, links, active tab
- *    --spectrum-blue-1000  = #095aba  → button hover
- *    --spectrum-blue-1100  = #0550a0  → button active/pressed
+ *    --spectrum-accent-900 = #da1f26  → Adobe red — primary actions, tabs, links
+ *    --spectrum-accent-1000= #b71418  → button hover
+ *    --spectrum-accent-1100= #960f13  → button active/pressed
  *    --spectrum-red-800    = #d7373f  → negative/error
  *    --spectrum-green-800  = #268e6c  → positive/success
  *
- *  FOCUS RINGS  (S2)
- *    Textfield default focus  → blue-800 border (#1473e6) + 2px blue ring
+ *  FOCUS RINGS  (S2 — red accent surface)
+ *    Textfield default focus  → red-900 border (#da1f26) + 2px red ring
  *    Textfield keyfocus (S2)  → gray-800 border (#2c2c2c)   ← S2 change
- *    Button focus             → 2px solid blue-800, offset 4px
- *    Link/quiet focus         → 2px solid blue-800, offset 2px
+ *    Button focus             → 2px solid red-900, offset 4px
+ *    Link/quiet focus         → 2px solid red-900, offset 2px
  *
  *  FONT WEIGHT
  *    --spectrum-regular-font-weight  = 400
@@ -110,18 +110,18 @@
   --af-gray-800: #2c2c2c;
   --af-gray-900: #1a1a1a;
 
-  /* Accent */
-  --af-blue-800:  #1473e6;
-  --af-blue-900:  #0d66d0;
-  --af-blue-1000: #095aba;
-  --af-blue-1100: #0550a0;
+  /* Accent — Adobe red (overrides Spectrum default blue on this surface) */
+  --af-blue-800:  #c9181e; /* maps to accent focus border  → red-900 equivalent */
+  --af-blue-900:  #da1f26; /* maps to accent primary color → spectrum-accent-color-900 */
+  --af-blue-1000: #b71418; /* maps to accent hover         → spectrum-accent-color-1000 */
+  --af-blue-1100: #960f13; /* maps to accent pressed       → spectrum-accent-color-1100 */
 
   /* Semantic */
   --af-red-800:   #d7373f;
   --af-green-800: #268e6c;
 
   /* Focus rings */
-  --af-focus-ring-blue: rgb(20 115 230 / 28%);
+  --af-focus-ring-blue: rgb(218 31 38 / 22%); /* red accent ring, same opacity pattern */
   --af-focus-ring-red:  rgb(215 55 63 / 22%);
 
   /* Animation */
@@ -313,7 +313,7 @@
 
 /* Keyboard focus — inset ring, no shape change */
 .auth-form-tab:focus-visible {
-  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #c9181e) !important;
   outline-offset: -2px !important;
   background: transparent !important;
   border-radius: 0 !important;
@@ -328,9 +328,9 @@
 
 /* Selected — S2 accent blue underline */
 .auth-form-tab[aria-selected="true"] {
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   font-weight: var(--af-font-weight-bold, 700) !important; /* S2: selected tab is bold */
-  border-bottom: var(--af-border-200, 2px) solid var(--af-blue-900, #0d66d0) !important;
+  border-bottom: var(--af-border-200, 2px) solid var(--af-blue-900, #da1f26) !important;
   background: transparent !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -338,7 +338,7 @@
 
 /* Selected + hover */
 .auth-form-tab[aria-selected="true"]:hover {
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   background: transparent !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -401,7 +401,7 @@
  *   bg             = gray-50 (#fff)
  *   placeholder    = gray-500 (#8e8e8e)
  *   hover border   = gray-800 (#2c2c2c)  ← S2 spec
- *   focus border   = blue-800 (#1473e6) + 2px ring
+ *   focus border   = red-900 (#da1f26) + 2px ring
  *   keyfocus border= gray-800 (#2c2c2c)  ← S2 spec change
  */
 .auth-form-input {
@@ -458,14 +458,14 @@
 
 /* Focus — blue ring (S2 pointer/mouse focus) */
 .auth-form-input:focus {
-  border-color: var(--af-blue-800, #1473e6) !important;
-  box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(20 115 230 / 28%)) !important;
+  border-color: var(--af-blue-800, #c9181e) !important;
+  box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(218 31 38 / 22%)) !important;
   background-color: var(--af-gray-50, #fff) !important;
 }
 
 .auth-form-input:focus-visible {
-  border-color: var(--af-blue-800, #1473e6) !important;
-  box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(20 115 230 / 28%)) !important;
+  border-color: var(--af-blue-800, #c9181e) !important;
+  box-shadow: 0 0 0 2px var(--af-focus-ring-blue, rgb(218 31 38 / 22%)) !important;
   background-color: var(--af-gray-50, #fff) !important;
 }
 
@@ -540,7 +540,7 @@
 }
 
 .auth-form-pw-btn:focus-visible {
-  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #c9181e) !important;
   outline-offset: 2px !important;
 }
 
@@ -589,7 +589,7 @@
   font-size: var(--af-font-size-75, 11px) !important;
   font-weight: var(--af-font-weight-regular, 400) !important;
   line-height: 1.3 !important;
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   text-decoration: none !important;
   cursor: pointer !important;
   background: none !important;
@@ -599,13 +599,13 @@
 
 /* S2 quiet link hover: underline appears */
 .auth-form-quiet-link:hover {
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   text-decoration: underline !important;
   background: none !important;
 }
 
 .auth-form-quiet-link:focus-visible {
-  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #c9181e) !important;
   outline-offset: 2px !important;
   border-radius: 2px !important;
 }
@@ -616,9 +616,9 @@
        height        = 32px (component-height-100, medium)
        font-size     = 14px (font-size-100)
        font-weight   = 700  (bold)
-       bg            = blue-900 (#0d66d0)
-       hover bg      = blue-1000 (#095aba)
-       active bg     = blue-1100 (#0550a0)
+       bg            = Adobe red-900 (#da1f26)
+       hover bg      = Adobe red-1000 (#b71418)
+       active bg     = Adobe red-1100 (#960f13)
        text          = white (#fff) — always
    ════════════════════════════════════════════════════════════════════════════ */
 .auth-form-btn {
@@ -637,7 +637,7 @@
   line-height: 1.3 !important;
   letter-spacing: 0 !important;
   color: #fff !important;
-  background-color: var(--af-blue-900, #0d66d0) !important;
+  background-color: var(--af-blue-900, #da1f26) !important;
   border: none !important;             /* S2 fill button has no border */
   border-radius: var(--af-radius-100, 4px) !important;
   box-shadow: none !important;
@@ -649,7 +649,7 @@
 
 /* Hover — one step darker blue, no shape/color shift */
 .auth-form-btn:hover {
-  background-color: var(--af-blue-1000, #095aba) !important;
+  background-color: var(--af-blue-1000, #b71418) !important;
   color: #fff !important;
   border: none !important;
   border-radius: var(--af-radius-100, 4px) !important;
@@ -658,14 +658,14 @@
 
 /* Pressed / active */
 .auth-form-btn:active {
-  background-color: var(--af-blue-1100, #0550a0) !important;
+  background-color: var(--af-blue-1100, #960f13) !important;
   color: #fff !important;
   box-shadow: none !important;
 }
 
 /* Keyboard focus ring */
 .auth-form-btn:focus-visible {
-  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #c9181e) !important;
   outline-offset: var(--af-sp-100, 4px) !important;
 }
 
@@ -738,7 +738,7 @@
   font-size: var(--af-font-size-100, 14px) !important;
   font-weight: var(--af-font-weight-medium, 500) !important;
   line-height: 1.3 !important;
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   text-decoration: none !important;
   cursor: pointer !important;
   background: none !important;
@@ -748,13 +748,13 @@
 
 /* S2 link hover: underline */
 .auth-form-back:hover {
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   text-decoration: underline !important;
   background: none !important;
 }
 
 .auth-form-back:focus-visible {
-  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #1473e6) !important;
+  outline: var(--af-border-200, 2px) solid var(--af-blue-800, #c9181e) !important;
   outline-offset: 2px !important;
   border-radius: 2px !important;
 }
@@ -808,12 +808,12 @@
 }
 
 .auth-form-legal a {
-  color: var(--af-blue-900, #0d66d0);
+  color: var(--af-blue-900, #da1f26);
   text-decoration: none;
 }
 
 .auth-form-legal a:hover {
-  color: var(--af-blue-900, #0d66d0) !important;
+  color: var(--af-blue-900, #da1f26) !important;
   text-decoration: underline;
 }
 
