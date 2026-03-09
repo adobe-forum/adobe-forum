@@ -510,10 +510,17 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     if (!block) return;
 
     if (block.tagName === 'PRE') {
-      // Exit code block: insert a new paragraph after it and move cursor there
+      // Toggle off: exit the code block.
+      // - Has content → keep the <pre>, insert a normal paragraph after it and
+      //   move cursor there so the user can continue typing outside the block.
+      // - Empty → remove the shell entirely, no orphaned <pre> left behind.
       const p = document.createElement('p');
       p.innerHTML = '<br>';
-      block.after(p);
+      if (block.textContent.trim()) {
+        block.after(p);
+      } else {
+        block.replaceWith(p);
+      }
       const newRange = document.createRange();
       newRange.setStart(p, 0);
       newRange.collapse(true);
@@ -759,7 +766,18 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const execFormat = (cmd, value) => {
     const editor = editorRef.current;
     if (!editor) return;
+    // Save selection before focus() — some browsers reset the cursor to the
+    // start of a contenteditable when focus() is called even if already focused.
+    const preSel = window.getSelection();
+    let savedRange = null;
+    if (preSel && preSel.rangeCount && editor.contains(preSel.anchorNode)) {
+      savedRange = preSel.getRangeAt(0).cloneRange();
+    }
     editor.focus();
+    if (savedRange && preSel) {
+      preSel.removeAllRanges();
+      preSel.addRange(savedRange);
+    }
 
     switch (cmd) {
       case 'bold':
@@ -874,6 +892,38 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
           code.remove();
         }
       });
+
+      // Remove any <pre> that was emptied by a deletion (e.g. Ctrl+A + Backspace).
+      // cursorNode is captured before DOM mutations so we can detect whether the
+      // cursor was inside the now-empty block and restore it to the nearest sibling.
+      editor.querySelectorAll('pre').forEach((pre) => {
+        if (pre.textContent.trim()) return; // still has content — leave it
+        const inPre = cursorNode && pre.contains(cursorNode);
+        const prev = pre.previousElementSibling;
+        const next = pre.nextElementSibling;
+        pre.remove();
+        if (!inPre) return;
+        if (!editor.children.length) {
+          const ep = document.createElement('p');
+          ep.innerHTML = '<br>';
+          editor.appendChild(ep);
+        }
+        const dest = prev || next || editor.firstElementChild;
+        if (!dest) return;
+        const r = document.createRange();
+        if (prev) {
+          const lc = prev.lastChild;
+          if (lc && lc.nodeType === 3) r.setStart(lc, lc.textContent.length);
+          else if (lc) r.setStartAfter(lc);
+          else r.setStart(prev, 0);
+        } else {
+          r.setStart(dest, 0);
+        }
+        r.collapse(true);
+        const s = window.getSelection();
+        if (s) { s.removeAllRanges(); s.addRange(r); }
+      });
+
       normalizeEmptyEditor();
       updatePlaceholder();
       clearImageResize();
@@ -1038,6 +1088,41 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
         return;
       }
 
+      // Backspace/Delete on an already-empty <pre> — remove it and place cursor
+      // in the nearest sibling paragraph (handles the "created block, pressed Backspace"
+      // case where the pre is empty before the browser even fires an input event).
+      if ((e.key === 'Backspace' || e.key === 'Delete') && block.nodeName === 'PRE'
+        && !block.textContent.trim()) {
+        e.preventDefault();
+        e.stopPropagation();
+        const prev = block.previousElementSibling;
+        const next = block.nextElementSibling;
+        block.remove();
+        if (!editor.children.length) {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          editor.appendChild(p);
+        }
+        const dest = prev || next || editor.firstElementChild;
+        if (dest) {
+          const nr = document.createRange();
+          if (prev) {
+            const lc = prev.lastChild;
+            if (lc && lc.nodeType === 3) nr.setStart(lc, lc.textContent.length);
+            else if (lc) nr.setStartAfter(lc);
+            else nr.setStart(prev, 0);
+          } else {
+            nr.setStart(dest, 0);
+          }
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+        }
+        emitChange();
+        normalizeEmptyEditor();
+        return;
+      }
+
       // Outside table cells
       if (!editor.querySelector('table')) return;
 
@@ -1150,11 +1235,41 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     };
     editor.addEventListener('keydown', onKeyDown, true);
 
+    // Paste handler — when cursor is inside a <pre> (code block), intercept the
+    // paste and insert plain text verbatim so newlines are preserved as \n text
+    // nodes rather than the <div>/<br> markup the browser would normally inject.
+    const onPaste = (e) => {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      let node = sel.anchorNode;
+      let pre = null;
+      while (node && node !== editor) {
+        if (node.nodeName === 'PRE') { pre = node; break; }
+        node = node.parentNode;
+      }
+      if (!pre) return; // not inside a code block — use browser default
+      e.preventDefault();
+      const text = e.clipboardData.getData('text/plain');
+      if (!text) return;
+      const range = sel.getRangeAt(0);
+      if (!range.collapsed) range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      emitChange();
+      updateCodeLineNumbers();
+    };
+    editor.addEventListener('paste', onPaste);
+
     return () => {
       editor.removeEventListener('input', onInput);
       editor.removeEventListener('focus', onFocus);
       editor.removeEventListener('click', onEditorClick);
       editor.removeEventListener('keydown', onKeyDown, true);
+      editor.removeEventListener('paste', onPaste);
       document.removeEventListener('selectionchange', onSelectionChange);
       document.removeEventListener('mousedown', onDocMouseDown);
     };
