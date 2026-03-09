@@ -247,6 +247,9 @@ function LoginPanel({ onForgot, active }) {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Show a success notice when redirected here after registration
+  const justRegistered = new URLSearchParams(window.location.search).get('registered') === '1';
+
   const clearErr = (key) => setErrors((e) => ({ ...e, [key]: undefined }));
 
   const handleBlurEmail = (v) => {
@@ -280,6 +283,16 @@ function LoginPanel({ onForgot, active }) {
   return html`
     <div id="auth-login" class=${`auth-panel${active ? ' is-active' : ''}`}
          role="tabpanel" aria-labelledby="tab-login">
+
+      ${justRegistered && html`
+        <div class="auth-form-success is-visible" aria-live="polite" style="margin-bottom:16px">
+          <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
+          <p class="auth-form-success-title">Account created!</p>
+          <p class="auth-form-success-desc">
+            Your account is ready. Sign in below to continue.
+          </p>
+        </div>
+      `}
 
       <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
 
@@ -369,9 +382,9 @@ function SignupPanel({ active }) {
 
     setLoading(true);
     try {
-      const data = await registerUser(f);
-      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
-      window.location.href = '/';
+      await registerUser(f);
+      // Registration successful — redirect to login so the user signs in explicitly
+      window.location.href = '/auth-form?registered=1';
     } catch (err) {
       setErrors({ email: err.message });
     } finally {

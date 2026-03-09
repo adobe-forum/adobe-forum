@@ -356,6 +356,29 @@
     font-size: var(--body-font-size-xs);
     color: var(--spectrum-gray-500);
   }
+
+  .cards-create-btn {
+    margin-top: var(--spectrum-spacing-300);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--spectrum-spacing-500);
+    height: 40px;
+    background: var(--spectrum-accent-color-900);
+    color: #fff;
+    font-size: var(--body-font-size-s);
+    font-family: var(--body-font-family);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--spectrum-border-radius-100);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .cards-create-btn:hover {
+    background: var(--spectrum-accent-color-1000, #a8151b);
+    transform: translateY(-1px);
+  }
   
   /* Empty / Error */
   .cards-empty,
@@ -467,3 +490,4 @@
     .cards-display { padding: var(--spectrum-spacing-400) 0; }
     .cards-title   { font-size: var(--heading-font-size-m); }
   }
+  
