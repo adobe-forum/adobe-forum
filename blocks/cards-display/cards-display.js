@@ -28,6 +28,13 @@ function extractImage(body) {
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
+
+  // YOUR FIX: Insert a space after every block-level element so that list items,
+  // paragraphs, headings etc. don't run together when textContent is read.
+  doc.querySelectorAll('p, li, div, h1, h2, h3, h4, h5, h6, br, td, th, dt, dd').forEach((el) => {
+    el.appendChild(doc.createTextNode(' '));
+  });
+
   const text = (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
@@ -76,7 +83,6 @@ function Card({ post, onClick }) {
 
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
-  // Extract the image, or fallback to the default Adobe logo
   const extractedImg = post.image || extractImage(post.body);
   const imgSrc = extractedImg || '../../icons/adobe_logo.svg';
   const isPlaceholder = !extractedImg;
@@ -91,14 +97,8 @@ function Card({ post, onClick }) {
   const excerpt = extractExcerpt(post.body || post.description || post.content || '');
 
   const rawCategory = post.category || '';
-
-  // Show only the deepest/last segment in the badge
   const displayCategory = rawCategory ? rawCategory.split(' > ').pop().trim() : '';
-
-  // Full path is the raw stored string — used in tooltip
   const fullCategoryPath = rawCategory.trim();
-
-  // Only show tooltip if the path has more than one segment
   const hasParent = rawCategory.includes(' > ');
 
   const handleKeyDown = (e) => {
@@ -224,17 +224,30 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [error, setError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(null); // {n} badge count
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
   const [refreshTick, setRefreshTick] = useState(0);
   // "My Posts" — read ?author= from URL once on mount
   const [authorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
 
+  // ── Resolve display title ─────────────────────────────────────────
+  // Priority: My Posts (authorId) > Category filter > Search > {n} token default
+  const hasTitleToken = initialTitle.includes('{n}');
+
   // Title: My Posts > Category filter > Search > default
   let displayTitle = initialTitle;
-  if (authorId) displayTitle = 'My Posts';
-  else if (category) displayTitle = `${category} Posts`;
-  else if (searchQuery) displayTitle = `Search Results: "${searchQuery}"`;
+  if (authorId) {
+    displayTitle = 'My Posts';
+  } else if (category) {
+    displayTitle = `${category} Posts`;
+  } else if (searchQuery) {
+    displayTitle = `Search Results: "${searchQuery}"`;
+  } else if (hasTitleToken) {
+    displayTitle = totalCount !== null
+      ? initialTitle.replace('{n}', totalCount)
+      : initialTitle.replace('{n}', '…');
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -254,7 +267,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           url.searchParams.append('page', currentPage);
           url.searchParams.append('limit', PAGE_SIZE);
           if (searchQuery) url.searchParams.append('search', searchQuery);
-          if (authorId) url.searchParams.append('author', authorId);
+          if (authorId) url.searchParams.append('author', authorId); // My Posts filter
         }
 
         const res = await fetch(url, { signal });
@@ -263,6 +276,10 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
         setPosts(normalizeApiData(data, category));
         setTotalPages(data.totalPages || 1);
+
+        // Supports common API field names for total count
+        const count = data.totalCount ?? data.total ?? data.count ?? data.totalItems ?? null;
+        setTotalCount(count);
       } catch (err) {
         if (err.name === 'AbortError') return;
         // eslint-disable-next-line no-console
@@ -326,7 +343,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const getEmptyStateContent = () => {
-    if (searchQuery || category || authorId) {
+    if (searchQuery || category || authorId) { // FRIEND: added authorId check
       return html`
         <div class="cards-no-results">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -340,9 +357,27 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     return html`<p class="cards-empty">No posts found.</p>`;
   };
 
+  // ── Split title into text + count parts for styled badge rendering ─────
+  // If the title has {n}, render the number as a styled badge.
+  // When authorId/category/search is active, skip the badge — just plain title.
+  const renderTitle = () => {
+    if (!hasTitleToken || category || searchQuery || authorId) {
+      return html`<h2 class="cards-title">${displayTitle}</h2>`;
+    }
+    const parts = initialTitle.split('{n}');
+    const countLabel = totalCount !== null ? totalCount : '…';
+    return html`
+      <h2 class="cards-title">
+        ${parts[0].trim()}
+        <span class="cards-count-badge" aria-label="${countLabel} posts">${countLabel}</span>
+        ${parts[1] ? parts[1].trim() : ''}
+      </h2>
+    `;
+  };
+
   return html`
     <div class="cards-header">
-      <h2 class="cards-title">${displayTitle}</h2>
+      ${renderTitle()}
       ${initialSubtitle && !searchQuery && !category && !authorId ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
     </div>
 
