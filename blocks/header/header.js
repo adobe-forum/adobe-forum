@@ -321,6 +321,15 @@ function ProfilePopup({ onClose }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    document.documentElement.classList.add('pp-scroll-lock');
+    document.body.classList.add('pp-scroll-lock');
+    return () => {
+      document.documentElement.classList.remove('pp-scroll-lock');
+      document.body.classList.remove('pp-scroll-lock');
+    };
+  }, []);
+
   const handleOverlay = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const handleLogout = () => {
