@@ -80,34 +80,12 @@ function SpectrumAlertDialog({
 // ICONS
 // ============================================
 
-const PlusIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <line x1="12" y1="5" x2="12" y2="19"/>
-    <line x1="5" y1="12" x2="19" y2="12"/>
-  </svg>
-`;
-
 const TrashIcon = () => html`
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
     <polyline points="3 6 5 6 21 6"/>
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
     <path d="M10 11v6M14 11v6"/>
     <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-  </svg>
-`;
-
-const EditIcon = () => html`
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-`;
-
-const FolderPlusIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    <line x1="12" y1="11" x2="12" y2="17"/>
-    <line x1="9" y1="14" x2="15" y2="14"/>
   </svg>
 `;
 
@@ -135,47 +113,6 @@ const FileIcon = () => html`
     <polyline points="14 2 14 8 20 8"/>
   </svg>
 `;
-
-// ============================================
-// INLINE INPUT (used for rename + new folder)
-// ============================================
-
-function InlineInput({
-  placeholder, initialValue = '', onConfirm, onCancel, paddingLeft = 12,
-}) {
-  const ref = useRef(null);
-  const [value, setValue] = useState(initialValue);
-  const doneRef = useRef(false);
-
-  useEffect(() => { if (ref.current) ref.current.focus(); }, []);
-
-  const confirm = () => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    const trimmed = value.trim();
-    if (trimmed) onConfirm(trimmed);
-    else onCancel();
-  };
-
-  const cancel = () => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    onCancel();
-  };
-
-  const onKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); confirm(); }
-    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
-  };
-
-  return html`
-    <div class="inline-input-wrapper" style="padding-left: ${paddingLeft}px">
-      <input ref=${ref} class="inline-input" type="text" placeholder=${placeholder}
-        value=${value} onInput=${(e) => setValue(e.target.value)}
-        onKeyDown=${onKeyDown} onBlur=${confirm} />
-    </div>
-  `;
-}
 
 // ============================================
 // OWNERSHIP HELPER
@@ -243,13 +180,13 @@ function TreeItem({
         title=${item.title}>
         <span class="tree-chevron">
           ${isFolder
-      ? html`<${ChevronIcon} expanded=${isExpanded} />`
-      : html`<span class="tree-chevron-spacer"/>`}
+    ? html`<${ChevronIcon} expanded=${isExpanded} />`
+    : html`<span class="tree-chevron-spacer"/>`}
         </span>
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
-      ? html`<${FolderIcon} expanded=${isExpanded} />`
-      : html`<${FileIcon} />`}
+    ? html`<${FolderIcon} expanded=${isExpanded} />`
+    : html`<${FileIcon} />`}
         </span>
         <span class="tree-label">${item.title}</span>
 
@@ -317,15 +254,15 @@ function CategoryItem({
       ${!isCollapsed && html`
         <ul class="tree-list">
           ${hasItems
-        ? category.items.map((item) => html`
+    ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
                   level=${0} />
               `)
-        : html`<div class="no-items">No items yet</div>`
-      }
+    : html`<div class="no-items">No items yet</div>`
+}
         </ul>
       `}
     </li>
@@ -465,7 +402,6 @@ function Sidebar() {
     };
   }, []);
 
-
   // ── Handlers ────────────────────────────────────────────────────────────
 
   const handleSubcategoryClick = (subcategoryId, postId) => {
@@ -482,24 +418,6 @@ function Sidebar() {
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
     postWrappers.forEach((el) => { el.style.display = 'block'; });
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId, sidebarItemId: subcategoryId } }));
-  };
-
-  const handleRenameItem = async (itemId, newTitle) => {
-    try {
-      const response = await fetch(`${API_BASE}/sidebar-items/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ title: newTitle }),
-      });
-      const data = await response.json();
-      if (data.success) await fetchCategories();
-      // eslint-disable-next-line no-console
-      else console.error('Failed to rename item:', data.error);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to rename item:', err);
-    }
   };
 
   const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
@@ -535,7 +453,6 @@ function Sidebar() {
       setDeleteError('Network error. Please try again.');
     }
   };
-
 
   // ── Search filter ───────────────────────────────────────────────────────
 
@@ -584,7 +501,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-        ? filteredCategories.map((category) => html`
+    ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -594,8 +511,8 @@ function Sidebar() {
                     onDeleteCategory=${handleDelete}
                   />
                 `)
-        : html`<div class="no-results">No categories found</div>`
-      }
+    : html`<div class="no-results">No categories found</div>`
+}
           </ul>
         `}
       </div>

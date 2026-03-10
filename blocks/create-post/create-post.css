@@ -1306,7 +1306,9 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px 20px 60px;
-  font-family: adobe-clean, 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--body-font-family);
+  font-size: 1rem;
+  line-height: 1.7;
 
   /* Local variables for code blocks */
   --post-code-bg: #1e1e1e;
@@ -1406,7 +1408,7 @@
 /* Body matches forum post */
 .preview-forum-post .post-body-raw {
   font-size: 1.125rem;
-  color: #1a1a1a;
+  color: var(--sp-gray-800);
   line-height: 1.7;
   overflow-wrap: break-word;
 }
@@ -1417,7 +1419,7 @@
   background: var(--post-code-bg);
   border-radius: 6px;
   margin: 24px 0;
-  font-family: monospace;
+  font-family: var(--post-code-font);
   font-size: 14px;
   line-height: 1.6;
   overflow: hidden;
