@@ -444,6 +444,7 @@ function Sidebar() {
       const data = await response.json();
       if (data.success) {
         await fetchCategories();
+        window.dispatchEvent(new CustomEvent('refresh-cards'));
       } else {
         setDeleteError(data.error || 'Delete failed.');
       }
