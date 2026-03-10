@@ -1467,46 +1467,48 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
   return html`
     <div className="tags-wrapper" ref=${wrapperRef}>
-      <div className="tags-input-container">
-        ${tags.map((tag) => html`
-          <span key=${tag} className="tag-chip">
-            ${tag}
-            <button
-              type="button"
-              className="tag-remove"
-              onClick=${() => removeTag(tag)}
-              aria-label=${`Remove ${tag}`}
-            >
-              ×
-            </button>
-          </span>
-        `)}
-        <input
-          ref=${inputRef}
-          type="text"
-          className="tags-input"
-          value=${inputValue}
-          onInput=${handleInputChange}
-          onKeyDown=${handleKeyDown}
-          onBlur=${handleBlur}
-          onFocus=${() => inputValue.trim() && setIsOpen(true)}
-          placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
-          disabled=${tags.length >= maxTags}
-        />
-      </div>
-      ${isOpen && suggestions.length > 0 && html`
-        <div className="tags-dropdown">
-          ${suggestions.map((tag) => html`
-            <div
-              key=${tag}
-              className="tag-option"
-              onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
-            >
+      <div className="tags-field">
+        <div className="tags-input-container">
+          ${tags.map((tag) => html`
+            <span key=${tag} className="tag-chip">
               ${tag}
-            </div>
+              <button
+                type="button"
+                className="tag-remove"
+                onClick=${() => removeTag(tag)}
+                aria-label=${`Remove ${tag}`}
+              >
+                ×
+              </button>
+            </span>
           `)}
+          <input
+            ref=${inputRef}
+            type="text"
+            className="tags-input"
+            value=${inputValue}
+            onInput=${handleInputChange}
+            onKeyDown=${handleKeyDown}
+            onBlur=${handleBlur}
+            onFocus=${() => inputValue.trim() && setIsOpen(true)}
+            placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
+            disabled=${tags.length >= maxTags}
+          />
         </div>
-      `}
+        ${isOpen && suggestions.length > 0 && html`
+          <div className="tags-dropdown">
+            ${suggestions.map((tag) => html`
+              <div
+                key=${tag}
+                className="tag-option"
+                onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
+              >
+                ${tag}
+              </div>
+            `)}
+          </div>
+        `}
+      </div>
       ${tags.length === 0 && html`
         <div className="tags-helper">
           Add at least 1 tag
