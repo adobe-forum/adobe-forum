@@ -180,13 +180,13 @@ function TreeItem({
         title=${item.title}>
         <span class="tree-chevron">
           ${isFolder
-    ? html`<${ChevronIcon} expanded=${isExpanded} />`
-    : html`<span class="tree-chevron-spacer"/>`}
+      ? html`<${ChevronIcon} expanded=${isExpanded} />`
+      : html`<span class="tree-chevron-spacer"/>`}
         </span>
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
-    ? html`<${FolderIcon} expanded=${isExpanded} />`
-    : html`<${FileIcon} />`}
+      ? html`<${FolderIcon} expanded=${isExpanded} />`
+      : html`<${FileIcon} />`}
         </span>
         <span class="tree-label">${item.title}</span>
 
@@ -254,15 +254,15 @@ function CategoryItem({
       ${!isCollapsed && html`
         <ul class="tree-list">
           ${hasItems
-    ? category.items.map((item) => html`
+        ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
                   level=${0} />
               `)
-    : html`<div class="no-items">No items yet</div>`
-}
+        : html`<div class="no-items">No items yet</div>`
+      }
         </ul>
       `}
     </li>
@@ -444,6 +444,7 @@ function Sidebar() {
       const data = await response.json();
       if (data.success) {
         await fetchCategories();
+        window.dispatchEvent(new CustomEvent('refresh-cards'));
       } else {
         setDeleteError(data.error || 'Delete failed.');
       }
@@ -501,7 +502,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
+        ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -511,8 +512,8 @@ function Sidebar() {
                     onDeleteCategory=${handleDelete}
                   />
                 `)
-    : html`<div class="no-results">No categories found</div>`
-}
+        : html`<div class="no-results">No categories found</div>`
+      }
           </ul>
         `}
       </div>
