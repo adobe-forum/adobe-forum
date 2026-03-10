@@ -1,5 +1,14 @@
 /* stylelint-disable selector-class-pattern */
 
+/* ── Scroll lock when modal is open ──────────────────────────────────────── */
+html.fm-scroll-lock,
+html.fm-scroll-lock body,
+body.fm-scroll-lock {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  height: 100% !important;
+}
+
 .fm-overlay {
   position: fixed;
   inset: 0;
@@ -11,6 +20,8 @@
   padding: 16px;
   opacity: 0;
   transition: opacity 0.18s ease;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* Modal — defined before compound selector to satisfy no-descending-specificity */
@@ -782,15 +793,22 @@
   }
 
   &.fm-foot-btn--ok {
-    background: var(--link-color, #1473e6);
+    background: #da1f26;
     color: #fff;
 
-    &:hover {
-      background: var(--link-hover-color, #0d66d0);
+    &:disabled {
+      background: #e8e8e8;
+      color: #aaa;
+      cursor: not-allowed;
+      border-color: #e0e0e0;
     }
 
-    &:active {
-      background: #0a58b8;
+    &:hover:not(:disabled) {
+      background: #b71418;
+    }
+
+    &:active:not(:disabled) {
+      background: #960f13;
     }
   }
 }
@@ -1030,4 +1048,32 @@
   font-size: 11px;
   color: #bbb;
   margin: 0 1px;
+}
+
+/* ── Subfolder depth limit warning ───────────────────────────────────────────── */
+.fm-limit-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 16px 4px;
+  padding: 10px 14px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #7a5c00;
+  line-height: 1.5;
+  animation: fm-hint-in 0.18s ease;
+
+  & svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #f59e0b;
+    stroke: #f59e0b;
+  }
+
+  & strong {
+    font-weight: 700;
+    margin-right: 4px;
+  }
 }

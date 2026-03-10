@@ -5,6 +5,8 @@ import {
 
 const API_BASE = 'http://localhost:5000/api';
 
+const MAX_DEPTH = 10; // max folder nesting depth (breadcrumb levels, root = level 1)
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const timeAgo = (ts) => {
@@ -77,7 +79,7 @@ const flattenTree = (nodes, ancestors = []) => {
 };
 
 const sortNodes = (nodes) => [...nodes].sort(
-  (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }),
 );
 
 // REQ 6: ownership check — mirrors sidebar's isOwner()
@@ -219,7 +221,7 @@ function NameInput({
 // REQ 6: delete visible ONLY to creator
 
 function CtxMenu({
-  x, y, node, currentUser, onRename, onDelete, onAddSub, onClose,
+  x, y, node, nodeDepth, currentUser, onRename, onDelete, onAddSub, onClose,
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -228,8 +230,13 @@ function CtxMenu({
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const canRename = !node.isCategoryRoot;
-  const canDelete = isOwner(node, currentUser); // REQ 6
+  // Subfolder count for Add Subfolder limit check
+  const subAtLimit = nodeDepth >= MAX_DEPTH - 1;
+
+  // Rename: only owner, not category root
+  const canRename = !node.isCategoryRoot && isOwner(node, currentUser);
+  // Delete: only owner
+  const canDelete = isOwner(node, currentUser);
 
   const left = x + 170 > window.innerWidth ? x - 170 : x;
   const top = y + 150 > window.innerHeight ? y - 150 : y;
@@ -237,9 +244,12 @@ function CtxMenu({
   return html`
     <div class="fm-ctx" ref=${ref} style=${{ left: `${left}px`, top: `${top}px` }}
       onClick=${(e) => e.stopPropagation()}>
-      <button type="button" class="fm-ctx-btn"
-        onClick=${() => { onAddSub(node); onClose(); }}>
+      <button type="button" class=${`fm-ctx-btn${subAtLimit ? ' fm-ctx-btn--disabled' : ''}`}
+        disabled=${subAtLimit}
+        title=${subAtLimit ? `Maximum of ${MAX_DEPTH} subfolders reached` : ''}
+        onClick=${() => { if (!subAtLimit) { onAddSub(node); onClose(); } }}>
         <${IcoFolderPlus}/> Add Subfolder
+        ${subAtLimit && html`<span class="fm-ctx-limit"> (limit reached)</span>`}
       </button>
       ${canRename && html`
         <button type="button" class="fm-ctx-btn"
@@ -295,7 +305,7 @@ function SearchResults({ results, onNavigate }) {
 // REQ 4: only renders folder-type nodes (files already stripped upstream)
 
 function GridPanel({
-  nodes, isRoot, selected, adding, renamingId, currentUser,
+  nodes, isRoot, selected, adding, renamingId, currentUser, atDepthLimit,
   onSelect, onOpen, onCtx, onCommitAdd, onCancelAdd, onCommitRename, onCancelRename,
 }) {
   // Detect touch device once
@@ -308,11 +318,13 @@ function GridPanel({
   );
   const empty = sortedNodes.length === 0 && !adding;
 
-  // Case-insensitive duplicate check against siblings
+  // Case-insensitive duplicate check + name length + subfolder limit
   const validateAdd = (name) => {
     const lower = name.toLowerCase();
     const dup = sortedNodes.some((n) => n.name.toLowerCase() === lower);
-    return dup ? `A folder named "${name}" already exists here.` : null;
+    if (dup) return `A folder named "${name}" already exists here.`;
+    if (!isRoot && atDepthLimit) return `Folder limit reached — subfolders can only be nested ${MAX_DEPTH} levels deep.`;
+    return null;
   };
 
   const makeValidateRename = (currentName) => (name) => {
@@ -322,13 +334,19 @@ function GridPanel({
     return dup ? `A folder named "${name}" already exists here.` : null;
   };
 
+  const atLimit = !isRoot && atDepthLimit;
+
+  let emptyHint = 'Use "+ Add Folder" above to add a subfolder.';
+  if (isRoot) emptyHint = 'Click "+ Add Folder" to get started.';
+  else if (atDepthLimit) emptyHint = 'Maximum nesting depth reached.';
+
   return html`
     <div class="fm-panel" onClick=${() => onSelect(null)}>
       ${empty && html`
         <div class="fm-empty">
           <${IcoEmptyBox}/>
           <p>${isRoot ? 'No folders yet' : 'Empty folder'}</p>
-          <span>${isRoot ? 'Click "+ Add Folder" to get started.' : 'Use "+ Add Folder" above to add a subfolder.'}</span>
+          <span>${emptyHint}</span>
         </div>`}
       <div class="fm-tiles-grid">
         ${sortedNodes.map((node) => {
@@ -353,6 +371,7 @@ function GridPanel({
               onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
               onKeyDown=${(e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(node); }
+    if (e.key === 'Escape') { e.preventDefault(); onSelect(null); }
   }}
               onContextMenu=${(e) => { e.preventDefault(); e.stopPropagation(); onCtx(e, node); }}>
               <div class="fm-tile-ico">
@@ -392,6 +411,17 @@ function GridPanel({
             </div>
           </div>`}
       </div>
+      ${atLimit && html`
+        <div class="fm-limit-warning">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>
+            <strong>Subfolder limit reached.</strong>
+            Folders can only be nested ${MAX_DEPTH} levels deep. Delete a subfolder or go back to a higher level to add more.
+          </span>
+        </div>`}
     </div>`;
 }
 
@@ -453,10 +483,20 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     if (isOpen) {
       setStack([]); setSelected(null); setSearchQ('');
       setAdding(false); setRenamingId(null); setCtx(null); setFolderError(null);
-      if (treeCache.current) setTree(treeCache.current); // instant display
+      if (treeCache.current) setTree(treeCache.current);
       requestAnimationFrame(() => setVisible(true));
-      fetchFolders(true); // background refresh
-    } else { setVisible(false); }
+      fetchFolders(true);
+      document.documentElement.classList.add('fm-scroll-lock');
+      document.body.classList.add('fm-scroll-lock');
+    } else {
+      setVisible(false);
+      document.documentElement.classList.remove('fm-scroll-lock');
+      document.body.classList.remove('fm-scroll-lock');
+    }
+    return () => {
+      document.documentElement.classList.remove('fm-scroll-lock');
+      document.body.classList.remove('fm-scroll-lock');
+    };
   }, [isOpen]);
 
   // Sync with sidebar refreshes (REQ 2: linked data source)
@@ -496,6 +536,11 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const goCrumb = (i) => nav(stack.slice(0, i + 1));
   const goBack = () => nav(stack.slice(0, -1));
   const goInto = (node) => {
+    // Block navigation if already at max depth — just select the folder instead
+    if (stack.length >= MAX_DEPTH - 1) {
+      setSelected(node.id);
+      return;
+    }
     const ancestors = findAncestors(tree, node.id) || [];
     nav([...ancestors.map((a) => a.id), node.id]);
   };
@@ -504,6 +549,13 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   // Duplicate check is done client-side in GridPanel's validateAdd (case-insensitive)
   const handleCommitAdd = async (name) => {
     setAdding(false); setFolderError(null);
+
+    // Hard guard: block if nesting depth would exceed MAX_DEPTH
+    if (stack.length > 0 && stack.length >= MAX_DEPTH - 1) {
+      setFolderError(`Subfolder limit reached — folders can only be nested ${MAX_DEPTH} levels deep. Go back to add more.`);
+      return;
+    }
+
     try {
       let res;
       if (stack.length === 0) {
@@ -591,32 +643,33 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-  const handleAddSub = (node) => { goInto(node); setTimeout(() => setAdding(true), 0); };
+  const handleAddSub = (node) => {
+    // stack.length + 1 = depth after entering this node
+    if (stack.length + 1 >= MAX_DEPTH) {
+      setFolderError(`Subfolder limit reached — folders can only be nested ${MAX_DEPTH} levels deep.`);
+      return;
+    }
+    goInto(node);
+    setTimeout(() => setAdding(true), 0);
+  };
 
   const doOk = () => {
     const node = selectedNode;
-    if (node) {
-      const ancestors = findAncestors(tree, selected) || [];
-      const path = [...ancestors.map((a) => a.name), node.name].join(' > ');
-      onSelect(node.name, path, node.isCategoryRoot ? null : node.id);
-    } else if (stack.length > 0) {
-      const currentId = stack[stack.length - 1];
-      const currentNode = findNode(tree, currentId);
-      if (currentNode) {
-        const ancestors = findAncestors(tree, currentId) || [];
-        const path = [...ancestors.map((a) => a.name), currentNode.name].join(' > ');
-        onSelect(currentNode.name, path, currentNode.isCategoryRoot ? null : currentNode.id);
-      }
-    }
+    if (!node) return;
+    const ancestors = findAncestors(tree, selected) || [];
+    const path = [...ancestors.map((a) => a.name), node.name].join(' > ');
+    onSelect(node.name, path, node.isCategoryRoot ? null : node.id);
     onClose();
   };
 
-  const canSelect = !!(selected || stack.length > 0);
+  const canSelect = !!selected; // only active when user explicitly clicks a folder
+  const depthAtLimit = !isRoot && stack.length >= MAX_DEPTH - 1;
+  const addAtLimit = depthAtLimit;
 
   return html`
     <div class=${`fm-overlay${visible && isOpen ? ' fm-overlay--in' : ''}`}
       onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div class="fm-modal" onClick=${() => { setSelected(null); setCtx(null); }}>
+      <div class="fm-modal" onClick=${() => { setCtx(null); }}>
 
         <div class="fm-header">
           <div class="fm-nav">
@@ -639,7 +692,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
                 <span class="fm-crumb fm-crumb--cur fm-crumb--search">Search results</span>`}
             </div>
           </div>
-          ${currentUser && html`
+          ${currentUser && !addAtLimit && html`
             <div class="fm-actions">
               <button type="button" class="fm-btn"
                 onClick=${() => { setAdding(true); setRenamingId(null); setSearchQ(''); }}>
@@ -694,7 +747,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     ? html`<${SearchResults} results=${searchResults}
                 onNavigate=${(node, ancestors) => {
       setStack(ancestors.map((a) => a.id));
-      setSelected(null); setSearchQ('');
+      setSelected(node.id); setSearchQ('');
     }}/>`
     : html`<${GridPanel}
                 nodes=${nodes}
@@ -703,6 +756,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
                 adding=${adding}
                 renamingId=${renamingId}
                 currentUser=${currentUser}
+                atDepthLimit=${depthAtLimit}
                 onSelect=${(id) => setSelected((p) => (p === id ? null : id))}
                 onOpen=${goInto}
                 onCtx=${(e, node) => { e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, node }); }}
@@ -715,8 +769,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         <div class="fm-footer">
           <button type="button" class="fm-foot-btn fm-foot-btn--cancel" onClick=${onClose}>Cancel</button>
           <button type="button" class="fm-foot-btn fm-foot-btn--ok" onClick=${doOk}
-            disabled=${!canSelect}
-            style=${{ opacity: canSelect ? 1 : 0.45, cursor: canSelect ? 'pointer' : 'not-allowed' }}>
+            disabled=${!canSelect}>
             Select
           </button>
         </div>
@@ -726,6 +779,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         <${CtxMenu}
           x=${ctx.x} y=${ctx.y}
           node=${ctx.node}
+          nodeDepth=${stack.length}
           currentUser=${currentUser}
           onRename=${(node) => setRenamingId(node.id)}
           onDelete=${handleDelete}
