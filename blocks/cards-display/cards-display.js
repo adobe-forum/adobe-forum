@@ -126,10 +126,15 @@ function Card({ post, onClick }) {
         />
         ${displayCategory ? html`
           <span class="card-category-badge">
-            ${displayCategory}
-            ${hasParent ? html`
-              <span class="card-category-tooltip" role="tooltip">${fullCategoryPath}</span>
-            ` : ''}
+            <span class="card-category-text">${displayCategory}</span>
+          </span>
+          <span class="card-category-tooltip" role="tooltip">
+            ${hasParent ? html`<span class="card-category-tooltip-label">Path</span>` : ''}
+            <span class="card-category-breadcrumb">
+              ${fullCategoryPath.split(' > ').map((part, i, arr) => html`
+                <span class="card-category-crumb" title="${part}">${part}</span>${i < arr.length - 1 ? html`<span class="card-category-sep" aria-hidden="true">›</span>` : ''}
+              `)}
+            </span>
           </span>
         ` : ''}
       </div>
