@@ -3,22 +3,67 @@
   --nav-width: 256px;
   --header-height: 64px;
 
-  /* --- Spectrum Colors (Adobe Red Theme) --- */
-  --spectrum-gray-50: #fff;
-  --spectrum-gray-75: #fafafa;
-  --spectrum-gray-100: #f5f5f5;
-  --spectrum-gray-200: #e1e1e1;
-  --spectrum-gray-300: #d3d3d3;
-  --spectrum-gray-400: #bcbcbc;
-  --spectrum-gray-500: #a0a0a0;
-  --spectrum-gray-600: #7b7b7b;
-  --spectrum-gray-700: #5a5a5a;
-  --spectrum-gray-800: #3e3e3e;
-  --spectrum-gray-900: #2c2c2c;
+  /* =============================================
+     SPECTRUM DESIGN TOKENS — light theme, medium scale
+     Shared across all blocks (sidebar, forum-post, etc.)
+     https://spectrum.adobe.com/
+     ============================================= */
+
+  /* Spectrum gray palette */
+  --sp-gray-50: #fff;
+  --sp-gray-75: #fafafa;
+  --sp-gray-100: #f5f5f5;
+  --sp-gray-200: #eaeaea;
+  --sp-gray-300: #d3d3d3;
+  --sp-gray-400: #b3b3b3;
+  --sp-gray-500: #909090;
+  --sp-gray-600: #6e6e6e;
+  --sp-gray-700: #4b4b4b;
+  --sp-gray-800: #2c2c2c;
+  --sp-gray-900: #1c1c1c;
+
+  /* Spectrum blue (accent-color) */
+  --sp-blue-100: #e0f0ff;
+  --sp-blue-400: #4b9cf5;
+  --sp-blue-500: #2680eb;
+  --sp-blue-600: #1473e6;
+  --sp-blue-700: #0d66d0;
+  --sp-blue-900: #0265dc;
+
+  /* Spectrum negative (red) */
+  --sp-red-400: #e34850;
+  --sp-red-500: #e34850;
+  --sp-red-600: #d7373f;
+  --sp-red-700: #c9252d;
+  --sp-red-900: #c9252d;
+
+  /* Spectrum geometry (medium scale) */
+  --sp-radius-sm: 2px;
+  --sp-radius-md: 4px;
+  --sp-radius-lg: 8px;
+  --sp-height-sm: 32px;
+  --sp-height-md: 40px;
+
+  /* --- Legacy Spectrum aliases (kept for backward compat) --- */
+  --spectrum-gray-50: var(--sp-gray-50);
+  --spectrum-gray-75: var(--sp-gray-75);
+  --spectrum-gray-100: var(--sp-gray-100);
+  --spectrum-gray-200: var(--sp-gray-200);
+  --spectrum-gray-300: var(--sp-gray-300);
+  --spectrum-gray-400: var(--sp-gray-400);
+  --spectrum-gray-500: var(--sp-gray-500);
+  --spectrum-gray-600: var(--sp-gray-600);
+  --spectrum-gray-700: var(--sp-gray-700);
+  --spectrum-gray-800: var(--sp-gray-800);
+  --spectrum-gray-900: var(--sp-gray-900);
 
   /* Brand Colors */
-  --spectrum-accent-color-900: #DA1F26; /* Adobe Red */
-  --spectrum-accent-color-1000: #B81219; /* Darker Red */
+  --spectrum-accent-color-900: #DA1F26;
+
+  /* Adobe Red */
+  --spectrum-accent-color-1000: #B81219;
+
+  /* Darker Red */
   --nav-active-bg: #F5F5F5;
 
   /* --- Spacing & Borders --- */
@@ -28,14 +73,15 @@
   --spectrum-spacing-400: 16px;
   --spectrum-spacing-500: 20px;
   --spectrum-spacing-600: 24px;
-  --spectrum-border-radius-100: 4px;
-  --spectrum-border-radius-200: 8px;
+  --spectrum-border-radius-100: var(--sp-radius-md);
+  --spectrum-border-radius-200: var(--sp-radius-lg);
   --spectrum-border-width-100: 1px;
   --spectrum-border-width-200: 2px;
 
   /* --- Typography --- */
   --body-font-family: "adobe-clean", "Source Sans Pro", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
   --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
+  --post-code-font: monaco, 'Courier New', monospace;
 
   /* Font Sizes */
   --body-font-size-m: 18px;
@@ -49,9 +95,9 @@
   --heading-font-size-xs: 18px;
 
   /* Misc Colors */
-  --light-color: #f5f5f5;
-  --background-color: var(--spectrum-gray-75);
-  --text-color: var(--spectrum-gray-900);
+  --light-color: var(--sp-gray-100);
+  --background-color: var(--sp-gray-75);
+  --text-color: var(--sp-gray-900);
   --link-color: var(--spectrum-accent-color-900);
   --link-hover-color: var(--spectrum-accent-color-1000);
 }
@@ -77,10 +123,16 @@
 
 /* ── Kill horizontal scroll at the root ── */
 html {
-  overflow-x: hidden;        /* FIX: prevents page-level horizontal scroll */
+  overflow-x: hidden;
+
+  /* FIX: prevents page-level horizontal scroll */
   max-width: 100%;
-  scrollbar-width: none;     /* Firefox */
-  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;
+
+  /* Firefox */
+  -ms-overflow-style: none;
+
+  /* IE/Edge */
 }
 
 /* Hide scrollbar but keep functionality */
@@ -99,20 +151,20 @@ body {
 
   /* --- FIX APPLIED HERE --- */
   width: 100%;
-  overflow-x: hidden;        /* FIX: belt-and-suspenders at body level too */
-  display: grid;
-  grid-template: 
-      "header" var(--header-height) 
-      "content" 1fr 
-      "footer" auto 
-      / minmax(0, 1fr); /* Switched from 1fr */
+  overflow-x: hidden;
 
-  @media (width >= 768px) {
-    grid-template: 
-        "header header" var(--header-height) 
-        "sidebar content" 1fr 
-        "footer footer" auto 
-        / var(--nav-width) minmax(0, 1fr); /* Switched from 1fr */
+  /* FIX: belt-and-suspenders at body level too */
+  display: grid;
+  grid-template:
+    "header" var(--header-height) "content" 1fr "footer" auto / minmax(0, 1fr);
+
+  /* Switched from 1fr */
+
+  @media (width >=768px) {
+    grid-template:
+      "header header" var(--header-height) "sidebar content" 1fr "footer footer" auto / var(--nav-width) minmax(0, 1fr);
+
+    /* Switched from 1fr */
   }
 }
 
@@ -132,7 +184,7 @@ aside.sidebar-wrapper {
   height: 100%;
   display: none;
 
-  @media (width >= 768px) {
+  @media (width >=768px) {
     display: block;
   }
 }
@@ -142,17 +194,28 @@ main {
   background-color: var(--background-color);
   padding: 20px;
   position: relative;
-  overflow: hidden auto;     /* FIX: was "auto hidden" which allowed scroll */
-  max-width: 100%;
-  min-width: 0;              /* prevent grid blowout */
+  overflow: hidden auto;
 
-  @media (width >= 768px) {
+  /* FIX: was "auto hidden" which allowed scroll */
+  max-width: 100%;
+  min-width: 0;
+
+  /* prevent grid blowout */
+
+  @media (width >=768px) {
     padding: 40px;
-    max-width: calc(100vw - var(--nav-width)); /* Hard cap width */
+    max-width: calc(100vw - var(--nav-width));
+
+    /* Hard cap width */
   }
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin-top: 0.8em;
   margin-bottom: 0.25em;
   font-family: var(--heading-font-family);
@@ -162,28 +225,68 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-color);
 }
 
-h1 { font-size: var(--heading-font-size-l); }
-h2 { font-size: var(--heading-font-size-m); }
-h3 { font-size: var(--heading-font-size-s); }
-h4 { font-size: var(--heading-font-size-xs); }
-h5 { font-size: var(--body-font-size-m); }
-h6 { font-size: var(--body-font-size-s); }
-
-@media (width >= 768px) {
-  h1 { font-size: var(--heading-font-size-xxl); }
-  h2 { font-size: var(--heading-font-size-xl); }
-  h3 { font-size: var(--heading-font-size-l); }
-  h4 { font-size: var(--heading-font-size-m); }
-  h5 { font-size: var(--heading-font-size-s); }
-  h6 { font-size: var(--heading-font-size-xs); }
+h1 {
+  font-size: var(--heading-font-size-l);
 }
 
-p, dl, ol, ul, pre, blockquote {
+h2 {
+  font-size: var(--heading-font-size-m);
+}
+
+h3 {
+  font-size: var(--heading-font-size-s);
+}
+
+h4 {
+  font-size: var(--heading-font-size-xs);
+}
+
+h5 {
+  font-size: var(--body-font-size-m);
+}
+
+h6 {
+  font-size: var(--body-font-size-s);
+}
+
+@media (width >=768px) {
+  h1 {
+    font-size: var(--heading-font-size-xxl);
+  }
+
+  h2 {
+    font-size: var(--heading-font-size-xl);
+  }
+
+  h3 {
+    font-size: var(--heading-font-size-l);
+  }
+
+  h4 {
+    font-size: var(--heading-font-size-m);
+  }
+
+  h5 {
+    font-size: var(--heading-font-size-s);
+  }
+
+  h6 {
+    font-size: var(--heading-font-size-xs);
+  }
+}
+
+p,
+dl,
+ol,
+ul,
+pre,
+blockquote {
   margin-top: 0.8em;
   margin-bottom: 0.25em;
 }
 
-code, pre {
+code,
+pre {
   font-size: var(--body-font-size-s);
 }
 
@@ -193,7 +296,9 @@ pre {
   background-color: var(--light-color);
   overflow-x: auto;
   white-space: pre;
-  max-width: 100%;           /* FIX: code blocks can't blow out their container */
+  max-width: 100%;
+
+  /* FIX: code blocks can't blow out their container */
 }
 
 a {
@@ -207,7 +312,8 @@ a:hover {
   text-decoration: underline;
 }
 
-a.button, button {
+a.button,
+button {
   box-sizing: border-box;
   display: inline-block;
   max-width: 100%;
@@ -229,18 +335,22 @@ a.button, button {
   white-space: nowrap;
 }
 
-a.button:hover, a.button:focus,
-button:hover, button:focus {
+a.button:hover,
+a.button:focus,
+button:hover,
+button:focus {
   background-color: var(--link-hover-color);
   cursor: pointer;
 }
 
-button:disabled, button:disabled:hover {
+button:disabled,
+button:disabled:hover {
   background-color: var(--light-color);
   cursor: unset;
 }
 
-a.button.secondary, button.secondary {
+a.button.secondary,
+button.secondary {
   background-color: unset;
   border: 2px solid currentcolor;
   color: var(--text-color);
@@ -263,31 +373,45 @@ main img {
   width: 100%;
 }
 
-main > .section {
-  max-width: 100%;           /* FIX: never wider than main */
+main>.section {
+  max-width: 100%;
+
+  /* FIX: never wider than main */
   margin: 0;
   padding: 0;
   background-color: var(--light-color);
-  overflow: hidden;          /* FIX: clips any block child that tries to overflow */
+  overflow: hidden;
+
+  /* FIX: clips any block child that tries to overflow */
 }
 
-main > .section > div {
+main>.section>div {
   max-width: 1200px;
-  width: 100%;               /* FIX: explicit width */
+  width: 100%;
+
+  /* FIX: explicit width */
   margin: auto;
   padding: 0 24px;
-  box-sizing: border-box;    /* FIX: padding doesn't add to width */
-  overflow: hidden;          /* FIX: clips rogue content inside blocks */
+  box-sizing: border-box;
+
+  /* FIX: padding doesn't add to width */
+  overflow: hidden;
+
+  /* FIX: clips rogue content inside blocks */
 }
 
-main > .section:first-of-type {
+main>.section:first-of-type {
   margin-top: 0;
 }
 
 main .block {
   margin: 0;
-  max-width: 100%;           /* FIX: blocks can never be wider than their container */
-  overflow-x: hidden;        /* FIX: block-level safety net */
+  max-width: 100%;
+
+  /* FIX: blocks can never be wider than their container */
+  overflow-x: hidden;
+
+  /* FIX: block-level safety net */
 }
 
 footer {
@@ -299,7 +423,7 @@ footer {
   z-index: 20;
 }
 
-@media (width >= 900px) {
+@media (width >=900px) {
   :root {
     --body-font-size-m: 18px;
     --body-font-size-s: 16px;
@@ -312,7 +436,7 @@ footer {
     --heading-font-size-xs: 18px;
   }
 
-  main > .section > div {
+  main>.section>div {
     padding: 0 32px;
   }
 }

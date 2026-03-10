@@ -30,6 +30,19 @@ function normalizeItems(items) {
 function SpectrumAlertDialog({
   isOpen, title, message, confirmLabel = 'Delete', onConfirm, onCancel,
 }) {
+  // Lock body scroll while dialog is open
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleBackdropClick = (e) => {
@@ -67,34 +80,12 @@ function SpectrumAlertDialog({
 // ICONS
 // ============================================
 
-const PlusIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <line x1="12" y1="5" x2="12" y2="19"/>
-    <line x1="5" y1="12" x2="19" y2="12"/>
-  </svg>
-`;
-
 const TrashIcon = () => html`
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
     <polyline points="3 6 5 6 21 6"/>
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
     <path d="M10 11v6M14 11v6"/>
     <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-  </svg>
-`;
-
-const EditIcon = () => html`
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-`;
-
-const FolderPlusIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    <line x1="12" y1="11" x2="12" y2="17"/>
-    <line x1="9" y1="14" x2="15" y2="14"/>
   </svg>
 `;
 
@@ -124,47 +115,6 @@ const FileIcon = () => html`
 `;
 
 // ============================================
-// INLINE INPUT (used for rename + new folder)
-// ============================================
-
-function InlineInput({
-  placeholder, initialValue = '', onConfirm, onCancel, paddingLeft = 12,
-}) {
-  const ref = useRef(null);
-  const [value, setValue] = useState(initialValue);
-  const doneRef = useRef(false);
-
-  useEffect(() => { if (ref.current) ref.current.focus(); }, []);
-
-  const confirm = () => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    const trimmed = value.trim();
-    if (trimmed) onConfirm(trimmed);
-    else onCancel();
-  };
-
-  const cancel = () => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    onCancel();
-  };
-
-  const onKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); confirm(); }
-    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
-  };
-
-  return html`
-    <div class="inline-input-wrapper" style="padding-left: ${paddingLeft}px">
-      <input ref=${ref} class="inline-input" type="text" placeholder=${placeholder}
-        value=${value} onInput=${(e) => setValue(e.target.value)}
-        onKeyDown=${onKeyDown} onBlur=${confirm} />
-    </div>
-  `;
-}
-
-// ============================================
 // OWNERSHIP HELPER
 // ============================================
 
@@ -187,12 +137,10 @@ function isOwner(item, currentUser) {
 // ============================================
 
 function TreeItem({
-  item, activeItem, currentUser, onItemClick, onAddSubfolder, onDelete, onRename, level = 0,
+  item, activeItem, currentUser, onItemClick, onDelete, level = 0,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isAddingChild, setIsAddingChild] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);
 
   const hasChildren = item.children && item.children.length > 0;
   // IMPORTANT: trust the server's isFolder flag exclusively.
@@ -207,7 +155,6 @@ function TreeItem({
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
-    if (isRenaming) return;
     if (isFolder) setIsExpanded((prev) => !prev);
     let targetPostId = null;
     if (item.postId) {
@@ -220,88 +167,46 @@ function TreeItem({
     if (targetPostId && !isFolder) onItemClick(itemId, targetPostId);
   };
 
-  const handleAddSubfolder = (e) => {
-    e.stopPropagation();
-    setIsExpanded(true);
-    setIsAddingChild(true);
-  };
-
   const handleDelete = (e) => {
     e.stopPropagation();
     onDelete(itemId, item.title);
   };
 
-  const handleRenameClick = (e) => {
-    e.stopPropagation();
-    setIsRenaming(true);
-  };
-
-  const handleRenameConfirm = (newTitle) => {
-    setIsRenaming(false);
-    if (newTitle !== item.title) onRename(itemId, newTitle);
-  };
-
   return html`
     <li class="tree-item ${isFolder ? 'is-folder' : 'is-file'}">
-      ${isRenaming
-    ? html`
-          <${InlineInput}
-            placeholder="Rename…"
-            initialValue=${item.title}
-            paddingLeft=${paddingLeft}
-            onConfirm=${handleRenameConfirm}
-            onCancel=${() => setIsRenaming(false)}
-          />`
-    : html`
-          <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
-            style="padding-left: ${paddingLeft}px" onClick=${handleClick}
-            onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
-            title=${item.title}>
-            <span class="tree-chevron">
-              ${isFolder
+      <div class="tree-item-content ${activeItem === itemId ? 'active' : ''}"
+        style="padding-left: ${paddingLeft}px" onClick=${handleClick}
+        onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
+        title=${item.title}>
+        <span class="tree-chevron">
+          ${isFolder
     ? html`<${ChevronIcon} expanded=${isExpanded} />`
     : html`<span class="tree-chevron-spacer"/>`}
-            </span>
-            <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
-              ${isFolder
+        </span>
+        <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
+          ${isFolder
     ? html`<${FolderIcon} expanded=${isExpanded} />`
     : html`<${FileIcon} />`}
-            </span>
-            <span class="tree-label">${item.title}</span>
+        </span>
+        <span class="tree-label">${item.title}</span>
 
-            ${isHovered && canEdit && html`
-              <span class="item-actions">
-                ${isFolder && html`
-                  <button class="item-action-btn" title="Add subfolder"
-                    onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddSubfolder}>
-                    <${FolderPlusIcon} />
-                  </button>
-                `}
-                <button class="item-action-btn" title="Rename"
-                  onMouseDown=${(e) => e.preventDefault()} onClick=${handleRenameClick}>
-                  <${EditIcon} />
-                </button>
-                <button class="item-action-btn item-action-btn-delete" title="Delete"
-                  onMouseDown=${(e) => e.preventDefault()} onClick=${handleDelete}>
-                  <${TrashIcon} />
-                </button>
-              </span>
-            `}
-          </div>
+        ${isHovered && canEdit && html`
+          <span class="item-actions">
+            <button class="item-action-btn item-action-btn-delete" title="Delete"
+              onMouseDown=${(e) => e.preventDefault()} onClick=${handleDelete}>
+              <${TrashIcon} />
+            </button>
+          </span>
         `}
+      </div>
 
       ${isExpanded && html`
         <ul class="tree-children">
-          ${isAddingChild && html`
-            <${InlineInput} placeholder="Folder name…" paddingLeft=${paddingLeft + 20}
-              onConfirm=${(name) => { onAddSubfolder(itemId, name); setIsAddingChild(false); }}
-              onCancel=${() => setIsAddingChild(false)} />`
-}
           ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
-              onItemClick=${onItemClick} onAddSubfolder=${onAddSubfolder}
-              onDelete=${onDelete} onRename=${onRename} level=${level + 1} />
+              onItemClick=${onItemClick}
+              onDelete=${onDelete} level=${level + 1} />
           `)}
         </ul>
       `}
@@ -314,25 +219,16 @@ function TreeItem({
 // ============================================
 
 function CategoryItem({
-  category, activeSubcategory, currentUser, onSubcategoryClick, onAddFolder,
-  onDeleteCategory, onRenameItem,
+  category, activeSubcategory, currentUser, onSubcategoryClick,
+  onDeleteCategory,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
-  const [isAddingFolder, setIsAddingFolder] = useState(false);
 
   const hasItems = category.items && category.items.length > 0;
 
-  // Show add-folder to any logged-in user; show delete only to the category creator.
-  const isLoggedIn = !!currentUser;
   // eslint-disable-next-line no-underscore-dangle
   const canDeleteCategory = isOwner({ createdBy: category.createdBy }, currentUser);
-
-  const handleAddFolder = (e) => {
-    e.stopPropagation();
-    setIsCollapsed(false);
-    setIsAddingFolder(true);
-  };
 
   const handleDeleteCategory = (e) => {
     e.stopPropagation();
@@ -346,39 +242,26 @@ function CategoryItem({
         <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
         <span class="category-icon"><${FolderIcon} expanded=${!isCollapsed} /></span>
         <span class="category-name">${category.name}</span>
-        ${isHovered && isLoggedIn && html`
+        ${isHovered && canDeleteCategory && html`
           <span class="item-actions">
-            <button class="item-action-btn" title="Add folder"
-              onMouseDown=${(e) => e.preventDefault()} onClick=${handleAddFolder}>
-              <${FolderPlusIcon} />
+            <button class="item-action-btn item-action-btn-delete" title="Delete category"
+              onMouseDown=${(e) => e.preventDefault()} onClick=${handleDeleteCategory}>
+              <${TrashIcon} />
             </button>
-            ${canDeleteCategory && html`
-              <button class="item-action-btn item-action-btn-delete" title="Delete category"
-                onMouseDown=${(e) => e.preventDefault()} onClick=${handleDeleteCategory}>
-                <${TrashIcon} />
-              </button>
-            `}
           </span>
         `}
       </div>
       ${!isCollapsed && html`
         <ul class="tree-list">
-          ${isAddingFolder && html`
-            <${InlineInput} placeholder="Folder name…" paddingLeft=${24}
-              onConfirm=${(name) => { onAddFolder(category.name, null, name); setIsAddingFolder(false); }}
-              onCancel=${() => setIsAddingFolder(false)} />`
-}
           ${hasItems
     ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
-                  onAddSubfolder=${(parentId, name) => onAddFolder(category.name, parentId, name)}
                   onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
-                  onRename=${onRenameItem}
                   level=${0} />
               `)
-    : !isAddingFolder && html`<div class="no-items">No items yet</div>`
+    : html`<div class="no-items">No items yet</div>`
 }
         </ul>
       `}
@@ -397,9 +280,6 @@ function Sidebar() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [creationError, setCreationError] = useState('');
   const [deleteDialog, setDeleteDialog] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
 
@@ -409,7 +289,6 @@ function Sidebar() {
   // {...} = checked, logged in user object
   const [currentUser, setCurrentUser] = useState(null);
 
-  const inputRef = useRef(null);
   // Ref that always holds the current isOpen value — used inside resize handler
   // to avoid the stale-closure problem (resize useEffect has empty dep array).
   const isOpenRef = useRef(isOpen);
@@ -523,10 +402,6 @@ function Sidebar() {
     };
   }, []);
 
-  useEffect(() => {
-    if (isCreating && inputRef.current) inputRef.current.focus();
-  }, [isCreating]);
-
   // ── Handlers ────────────────────────────────────────────────────────────
 
   const handleSubcategoryClick = (subcategoryId, postId) => {
@@ -543,44 +418,6 @@ function Sidebar() {
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
     postWrappers.forEach((el) => { el.style.display = 'block'; });
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId, sidebarItemId: subcategoryId } }));
-  };
-
-  const handleAddFolder = async (categoryId, parentId, name) => {
-    try {
-      const response = await fetch(`${API_BASE}/sidebar-items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // sends session cookie
-        body: JSON.stringify({
-          title: name, category: categoryId, parentId: parentId || null, isFolder: true,
-        }),
-      });
-      const data = await response.json();
-      if (data.success) await fetchCategories();
-      // eslint-disable-next-line no-console
-      else console.error('Failed to add folder:', data.error);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to add folder:', err);
-    }
-  };
-
-  const handleRenameItem = async (itemId, newTitle) => {
-    try {
-      const response = await fetch(`${API_BASE}/sidebar-items/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ title: newTitle }),
-      });
-      const data = await response.json();
-      if (data.success) await fetchCategories();
-      // eslint-disable-next-line no-console
-      else console.error('Failed to rename item:', data.error);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to rename item:', err);
-    }
   };
 
   const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
@@ -617,28 +454,6 @@ function Sidebar() {
     }
   };
 
-  const cancelCreating = () => { setIsCreating(false); setNewCatName(''); setCreationError(''); };
-
-  const handleCreateKeyDown = async (e) => {
-    if (e.key === 'Escape') { cancelCreating(); return; }
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    const trimmedName = newCatName.trim();
-    if (!trimmedName) { setCreationError('Name cannot be empty'); return; }
-    const exists = categories.some((c) => c.name.toLowerCase() === trimmedName.toLowerCase());
-    if (exists) { setCreationError('Category already exists'); return; }
-    try {
-      const response = await fetch(`${API_BASE}/sidebar/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name: trimmedName }),
-      });
-      const data = await response.json();
-      if (data.success) { await fetchCategories(); cancelCreating(); } else setCreationError(data.error || 'Failed to create category');
-    } catch { setCreationError('Network error'); }
-  };
-
   // ── Search filter ───────────────────────────────────────────────────────
 
   const filterItems = (items, term) => items.reduce((acc, item) => {
@@ -673,25 +488,7 @@ function Sidebar() {
 
         <div class="explorer-header">
           <span class="explorer-header-label">Topics</span>
-          ${currentUser && html`
-            <button class="add-category" title="New Category"
-              onClick=${() => { setIsCreating(true); setNewCatName(''); setCreationError(''); }}>
-              <${PlusIcon} />
-            </button>
-          `}
         </div>
-
-        ${isCreating && html`
-          <div class="new-category-form">
-            <input ref=${inputRef} type="text"
-              class="new-category-input ${creationError ? 'error' : ''}"
-              placeholder="Category name…" value=${newCatName}
-              onKeyDown=${handleCreateKeyDown}
-              onInput=${(e) => { setNewCatName(e.target.value); if (creationError) setCreationError(''); }}
-              onBlur=${cancelCreating} />
-            ${creationError && html`<div class="error-msg">${creationError}</div>`}
-          </div>
-        `}
 
         ${loading && html`<div class="loading">Loading…</div>`}
         ${error && html`
@@ -711,9 +508,7 @@ function Sidebar() {
                     activeSubcategory=${activeSubcategory}
                     currentUser=${currentUser}
                     onSubcategoryClick=${handleSubcategoryClick}
-                    onAddFolder=${handleAddFolder}
                     onDeleteCategory=${handleDelete}
-                    onRenameItem=${handleRenameItem}
                   />
                 `)
     : html`<div class="no-results">No categories found</div>`
