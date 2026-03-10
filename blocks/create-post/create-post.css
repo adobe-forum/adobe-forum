@@ -67,7 +67,7 @@
     margin: 0 0 10px;
   }
 
-  & input[type="text"] {
+  & input[type="text"]:not(.tags-input) {
     width: 100%;
     padding: 10px 14px;
     border: 1.5px solid var(--cp-border);
@@ -620,6 +620,11 @@
 
 /* ---- Tags ---- */
 .tags-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.tags-field {
   position: relative;
 }
 
@@ -628,10 +633,9 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1.5px solid #dde1e7;
   border-radius: 10px;
-  min-height: 44px;
   box-sizing: border-box;
   background: #fff;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -640,6 +644,11 @@
     border-color: #da1f26;
     box-shadow: 0 0 0 3px rgb(218 31 38 / 12%);
   }
+}
+
+.tags-field:has(.tags-dropdown) .tags-input-container {
+  border-radius: 10px 10px 0 0;
+  border-bottom-color: transparent;
 }
 
 .tag-chip {
@@ -681,7 +690,6 @@
   flex: 1;
   min-width: 120px;
   font-size: 14px;
-  padding: 4px 0;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
@@ -697,7 +705,7 @@
 
 .tags-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% - 1.5px);
   left: 0;
   right: 0;
   background: #fff;
