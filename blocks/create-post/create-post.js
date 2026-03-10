@@ -1467,46 +1467,48 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
   return html`
     <div className="tags-wrapper" ref=${wrapperRef}>
-      <div className="tags-input-container">
-        ${tags.map((tag) => html`
-          <span key=${tag} className="tag-chip">
-            ${tag}
-            <button
-              type="button"
-              className="tag-remove"
-              onClick=${() => removeTag(tag)}
-              aria-label=${`Remove ${tag}`}
-            >
-              ×
-            </button>
-          </span>
-        `)}
-        <input
-          ref=${inputRef}
-          type="text"
-          className="tags-input"
-          value=${inputValue}
-          onInput=${handleInputChange}
-          onKeyDown=${handleKeyDown}
-          onBlur=${handleBlur}
-          onFocus=${() => inputValue.trim() && setIsOpen(true)}
-          placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
-          disabled=${tags.length >= maxTags}
-        />
-      </div>
-      ${isOpen && suggestions.length > 0 && html`
-        <div className="tags-dropdown">
-          ${suggestions.map((tag) => html`
-            <div
-              key=${tag}
-              className="tag-option"
-              onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
-            >
+      <div className="tags-field">
+        <div className="tags-input-container">
+          ${tags.map((tag) => html`
+            <span key=${tag} className="tag-chip">
               ${tag}
-            </div>
+              <button
+                type="button"
+                className="tag-remove"
+                onClick=${() => removeTag(tag)}
+                aria-label=${`Remove ${tag}`}
+              >
+                ×
+              </button>
+            </span>
           `)}
+          <input
+            ref=${inputRef}
+            type="text"
+            className="tags-input"
+            value=${inputValue}
+            onInput=${handleInputChange}
+            onKeyDown=${handleKeyDown}
+            onBlur=${handleBlur}
+            onFocus=${() => inputValue.trim() && setIsOpen(true)}
+            placeholder=${tags.length === 0 ? 'e.g. (sql-server objective-c ajax)' : ''}
+            disabled=${tags.length >= maxTags}
+          />
         </div>
-      `}
+        ${isOpen && suggestions.length > 0 && html`
+          <div className="tags-dropdown">
+            ${suggestions.map((tag) => html`
+              <div
+                key=${tag}
+                className="tag-option"
+                onMouseDown=${(e) => { e.preventDefault(); addTag(tag); }}
+              >
+                ${tag}
+              </div>
+            `)}
+          </div>
+        `}
+      </div>
       ${tags.length === 0 && html`
         <div className="tags-helper">
           Add at least 1 tag
@@ -1656,21 +1658,40 @@ function CreatePost() {
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
-  // On mount: check sessionStorage for an edit draft (set by forum-post when Edit is clicked)
+  // On mount: check sessionStorage for an edit draft (set by forum-post when Edit is clicked).
+  // Falls back to localStorage so a page refresh doesn't wipe the form.
   useEffect(() => {
     const raw = sessionStorage.getItem('edit-post-draft');
-    if (!raw) return;
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        // Move to localStorage so refresh can restore it, then clear sessionStorage
+        localStorage.setItem('edit-post-draft', raw);
+        sessionStorage.removeItem('edit-post-draft');
+        setEditId(draft.id || null);
+        setEditSidebarItemId(draft.sidebarItemId || null);
+        setTitle(draft.title || '');
+        setBody(draft.body || '');
+        setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
+        setCategory(draft.category || '');
+        setOriginalCategory(draft.category || '');
+        setOriginalFolderId(null);
+      } catch { /* ignore corrupted draft */ }
+      return;
+    }
+    // No sessionStorage draft — check localStorage (i.e. user refreshed the page)
+    const saved = localStorage.getItem('edit-post-draft');
+    if (!saved) return;
     try {
-      const draft = JSON.parse(raw);
-      sessionStorage.removeItem('edit-post-draft'); // clear so refresh doesn't re-trigger
+      const draft = JSON.parse(saved);
       setEditId(draft.id || null);
       setEditSidebarItemId(draft.sidebarItemId || null);
       setTitle(draft.title || '');
       setBody(draft.body || '');
       setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
       setCategory(draft.category || '');
-      setOriginalCategory(draft.category || ''); // remember starting location
-      setOriginalFolderId(null); // folderId not persisted in draft; starts unknown
+      setOriginalCategory(draft.category || '');
+      setOriginalFolderId(null);
     } catch { /* ignore corrupted draft */ }
   }, []);
 
@@ -1738,6 +1759,8 @@ function CreatePost() {
               showToast('Location update failed — network error.', 'error');
             }
           }
+          // Clear the persisted draft on successful save
+          localStorage.removeItem('edit-post-draft');
           // Notify forum-post to refresh its view
           window.dispatchEvent(new CustomEvent('edit-post:saved', {
             detail: {
@@ -1809,6 +1832,7 @@ function CreatePost() {
 
   const handleCancel = () => {
     showToast('Are you sure you want to discard this post?', 'warning', () => {
+      localStorage.removeItem('edit-post-draft');
       window.location.href = '/';
     });
   };
