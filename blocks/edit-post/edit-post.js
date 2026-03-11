@@ -9,1274 +9,1274 @@ const html = htm.bind(h);
 let folderReady = false;
 
 async function ensureFolder() {
-    if (folderReady) return;
-    const wrapper = document.createElement('div');
-    const block = document.createElement('div');
-    block.classList.add('folder');
-    wrapper.appendChild(block);
-    document.body.appendChild(wrapper);
-    decorateBlock(block);
-    await loadBlock(block);
-    folderReady = true;
+  if (folderReady) return;
+  const wrapper = document.createElement('div');
+  const block = document.createElement('div');
+  block.classList.add('folder');
+  wrapper.appendChild(block);
+  document.body.appendChild(wrapper);
+  decorateBlock(block);
+  await loadBlock(block);
+  folderReady = true;
 }
 
 // DOM TO JSON CONVERTER
 
 function domToJson(element) {
-    if (!element || element.nodeType !== 1) {
-        return null;
-    }
-    const obj = {
-        tag: element.tagName.toLowerCase(),
-    };
-    if (element.attributes.length > 0) {
-        obj.attributes = {};
-        Array.from(element.attributes).forEach((attr) => {
-            obj.attributes[attr.name] = attr.value;
-        });
-    }
-    const children = [];
-    Array.from(element.childNodes).forEach((node) => {
-        if (node.nodeType === 1) {
-            const childObj = domToJson(node);
-            if (childObj) children.push(childObj);
-        } else if (node.nodeType === 3) {
-            const text = node.nodeValue.trim();
-            if (text) {
-                children.push({ text });
-            }
-        }
+  if (!element || element.nodeType !== 1) {
+    return null;
+  }
+  const obj = {
+    tag: element.tagName.toLowerCase(),
+  };
+  if (element.attributes.length > 0) {
+    obj.attributes = {};
+    Array.from(element.attributes).forEach((attr) => {
+      obj.attributes[attr.name] = attr.value;
     });
-    if (children.length > 0) {
-        obj.children = children;
+  }
+  const children = [];
+  Array.from(element.childNodes).forEach((node) => {
+    if (node.nodeType === 1) {
+      const childObj = domToJson(node);
+      if (childObj) children.push(childObj);
+    } else if (node.nodeType === 3) {
+      const text = node.nodeValue.trim();
+      if (text) {
+        children.push({ text });
+      }
     }
-    return obj;
+  });
+  if (children.length > 0) {
+    obj.children = children;
+  }
+  return obj;
 }
 
 // TOOLBAR ICONS (loaded from /icons/ folder)
 // Map toolbar commands to icon filenames
 const ICON_FILES = {
-    bold: 'bold',
-    italic: 'italic',
-    strike: 'strikethrough',
-    code: 'code',
-    codeBlock: 'code-block',
-    link: 'link',
-    image: 'image',
-    blockquote: 'quote',
-    orderedList: 'ordered-list',
-    bulletList: 'unordered-list',
-    outdent: 'outdent',
-    indent: 'indent',
-    table: 'table',
-    clean: 'clean',
+  bold: 'bold',
+  italic: 'italic',
+  strike: 'strikethrough',
+  code: 'code',
+  codeBlock: 'code-block',
+  link: 'link',
+  image: 'image',
+  blockquote: 'quote',
+  orderedList: 'ordered-list',
+  bulletList: 'unordered-list',
+  outdent: 'outdent',
+  indent: 'indent',
+  table: 'table',
+  clean: 'clean',
 };
 
 // Shared icon cache — survives component re-renders
 const iconCache = {};
 
 async function loadIcons() {
-    if (Object.keys(iconCache).length > 0) return iconCache;
-    const entries = await Promise.all(
-        Object.entries(ICON_FILES).map(async ([cmd, file]) => {
-            try {
-                const resp = await fetch(`/icons/${file}.svg`);
-                if (resp.ok) return [cmd, await resp.text()];
-            } catch (e) {
-                // eslint-disable-next-line no-console
-                console.error(`Failed to load icon: ${file}.svg`, e);
-            }
-            return [cmd, ''];
-        }),
-    );
-    entries.forEach(([cmd, svg]) => { iconCache[cmd] = svg; });
-    return iconCache;
+  if (Object.keys(iconCache).length > 0) return iconCache;
+  const entries = await Promise.all(
+    Object.entries(ICON_FILES).map(async ([cmd, file]) => {
+      try {
+        const resp = await fetch(`/icons/${file}.svg`);
+        if (resp.ok) return [cmd, await resp.text()];
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to load icon: ${file}.svg`, e);
+      }
+      return [cmd, ''];
+    }),
+  );
+  entries.forEach(([cmd, svg]) => { iconCache[cmd] = svg; });
+  return iconCache;
 }
 
 // Block format tags for the heading / paragraph dropdown
 const BLOCK_FORMATS = {
-    p: 'p',
-    h1: 'h1',
-    h2: 'h2',
-    h3: 'h3',
-    h4: 'h4',
-    h5: 'h5',
-    h6: 'h6',
+  p: 'p',
+  h1: 'h1',
+  h2: 'h2',
+  h3: 'h3',
+  h4: 'h4',
+  h5: 'h5',
+  h6: 'h6',
 };
 
 // RICH TEXT EDITOR COMPONENT
 // ============================================
 
 function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
-    const containerRef = useRef(null);
-    const editorRef = useRef(null);
-    const activeCellRef = useRef(null);
-    const resizeRef = useRef(null);
-    const fileInputRef = useRef(null);
-    const [showTableTools, setShowTableTools] = useState(false);
-    const [icons, setIcons] = useState(iconCache);
-    const [activeFormats, setActiveFormats] = useState({});
-    const [charCount, setCharCount] = useState(0);
+  const containerRef = useRef(null);
+  const editorRef = useRef(null);
+  const activeCellRef = useRef(null);
+  const resizeRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [showTableTools, setShowTableTools] = useState(false);
+  const [icons, setIcons] = useState(iconCache);
+  const [activeFormats, setActiveFormats] = useState({});
+  const [charCount, setCharCount] = useState(0);
 
-    // Load icons from /icons/ folder on mount
-    useEffect(() => {
-        loadIcons().then((loaded) => setIcons({ ...loaded }));
-    }, []);
+  // Load icons from /icons/ folder on mount
+  useEffect(() => {
+    loadIcons().then((loaded) => setIcons({ ...loaded }));
+  }, []);
 
-    const emitChange = () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        const textLength = editor.textContent.replace(/\u200B/g, '').trim().length;
-        setCharCount(textLength);
-        const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
-        const jsonContent = domToJson(editor);
-        onChange(htmlContent, jsonContent);
+  const emitChange = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const textLength = editor.textContent.replace(/\u200B/g, '').trim().length;
+    setCharCount(textLength);
+    const htmlContent = editor.innerHTML.replace(/\u200B/g, '');
+    const jsonContent = domToJson(editor);
+    onChange(htmlContent, jsonContent);
+  };
+
+  // Image resize overlay
+
+  const clearImageResize = () => {
+    if (!resizeRef.current) return;
+    const { overlay } = resizeRef.current;
+    if (overlay && overlay.parentNode) overlay.remove();
+    resizeRef.current = null;
+  };
+
+  const showImageResize = (img) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // Don't re-create overlay for the same image
+    if (resizeRef.current && resizeRef.current.img === img) return;
+    clearImageResize();
+
+    const ceContainer = containerRef.current;
+    if (!ceContainer) return;
+
+    // Prevent native browser image drag
+    img.setAttribute('draggable', 'false');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'img-resize-overlay';
+
+    const corners = ['nw', 'ne', 'sw', 'se'];
+    corners.forEach((pos) => {
+      const handle = document.createElement('div');
+      handle.className = `img-resize-handle img-resize-handle-${pos}`;
+      handle.dataset.pos = pos;
+      overlay.appendChild(handle);
+    });
+
+    ceContainer.appendChild(overlay);
+    resizeRef.current = { img, overlay };
+
+    // Position overlay on top of the image, accounting for editor scroll
+    const positionOverlay = () => {
+      const cRect = ceContainer.getBoundingClientRect();
+      const iRect = img.getBoundingClientRect();
+      overlay.style.top = `${iRect.top - cRect.top + editor.scrollTop}px`;
+      overlay.style.left = `${iRect.left - cRect.left + editor.scrollLeft}px`;
+      overlay.style.width = `${iRect.width}px`;
+      overlay.style.height = `${iRect.height}px`;
     };
+    positionOverlay();
 
-    // Image resize overlay
+    // Attach drag logic directly on each handle
+    corners.forEach((pos) => {
+      const handle = overlay.querySelector(`.img-resize-handle-${pos}`);
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
 
-    const clearImageResize = () => {
-        if (!resizeRef.current) return;
-        const { overlay } = resizeRef.current;
-        if (overlay && overlay.parentNode) overlay.remove();
-        resizeRef.current = null;
-    };
+        const startX = e.clientX;
+        const startW = img.getBoundingClientRect().width;
+        const startH = img.getBoundingClientRect().height;
+        const ratio = startH / startW;
+        const maxW = ceContainer.clientWidth;
 
-    const showImageResize = (img) => {
-        const editor = editorRef.current;
-        if (!editor) return;
+        const onMouseMove = (ev) => {
+          ev.preventDefault();
+          const isLeft = pos.endsWith('w');
+          const dx = isLeft ? startX - ev.clientX : ev.clientX - startX;
+          let newW = Math.round(startW + dx);
+          if (newW < 50) newW = 50;
+          if (newW > maxW) newW = maxW;
+          const newH = Math.round(newW * ratio);
 
-        // Don't re-create overlay for the same image
-        if (resizeRef.current && resizeRef.current.img === img) return;
-        clearImageResize();
+          img.style.width = `${newW}px`;
+          img.style.height = `${newH}px`;
+          overlay.style.width = `${newW}px`;
+          overlay.style.height = `${newH}px`;
 
-        const ceContainer = containerRef.current;
-        if (!ceContainer) return;
-
-        // Prevent native browser image drag
-        img.setAttribute('draggable', 'false');
-
-        const overlay = document.createElement('div');
-        overlay.className = 'img-resize-overlay';
-
-        const corners = ['nw', 'ne', 'sw', 'se'];
-        corners.forEach((pos) => {
-            const handle = document.createElement('div');
-            handle.className = `img-resize-handle img-resize-handle-${pos}`;
-            handle.dataset.pos = pos;
-            overlay.appendChild(handle);
-        });
-
-        ceContainer.appendChild(overlay);
-        resizeRef.current = { img, overlay };
-
-        // Position overlay on top of the image, accounting for editor scroll
-        const positionOverlay = () => {
-            const cRect = ceContainer.getBoundingClientRect();
-            const iRect = img.getBoundingClientRect();
-            overlay.style.top = `${iRect.top - cRect.top + editor.scrollTop}px`;
-            overlay.style.left = `${iRect.left - cRect.left + editor.scrollLeft}px`;
-            overlay.style.width = `${iRect.width}px`;
-            overlay.style.height = `${iRect.height}px`;
+          // Re-position overlay
+          const cRect = ceContainer.getBoundingClientRect();
+          const iRect = img.getBoundingClientRect();
+          overlay.style.top = `${iRect.top - cRect.top + editor.scrollTop}px`;
+          overlay.style.left = `${iRect.left - cRect.left + editor.scrollLeft}px`;
         };
-        positionOverlay();
 
-        // Attach drag logic directly on each handle
-        corners.forEach((pos) => {
-            const handle = overlay.querySelector(`.img-resize-handle-${pos}`);
-            handle.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          document.body.style.userSelect = '';
 
-                const startX = e.clientX;
-                const startW = img.getBoundingClientRect().width;
-                const startH = img.getBoundingClientRect().height;
-                const ratio = startH / startW;
-                const maxW = ceContainer.clientWidth;
+          const finalW = img.getBoundingClientRect().width;
+          img.setAttribute('width', Math.round(finalW));
+          img.removeAttribute('height');
+          img.style.height = 'auto';
 
-                const onMouseMove = (ev) => {
-                    ev.preventDefault();
-                    const isLeft = pos.endsWith('w');
-                    const dx = isLeft ? startX - ev.clientX : ev.clientX - startX;
-                    let newW = Math.round(startW + dx);
-                    if (newW < 50) newW = 50;
-                    if (newW > maxW) newW = maxW;
-                    const newH = Math.round(newW * ratio);
+          positionOverlay();
+          emitChange();
+        };
 
-                    img.style.width = `${newW}px`;
-                    img.style.height = `${newH}px`;
-                    overlay.style.width = `${newW}px`;
-                    overlay.style.height = `${newH}px`;
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    });
+  };
 
-                    // Re-position overlay
-                    const cRect = ceContainer.getBoundingClientRect();
-                    const iRect = img.getBoundingClientRect();
-                    overlay.style.top = `${iRect.top - cRect.top + editor.scrollTop}px`;
-                    overlay.style.left = `${iRect.left - cRect.left + editor.scrollLeft}px`;
-                };
+  const detectTableContext = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+      const anchor = selection.anchorNode?.nodeType === 3
+        ? selection.anchorNode.parentElement
+        : selection.anchorNode;
+      const cell = anchor?.closest('td, th');
+      activeCellRef.current = cell || null;
+      setShowTableTools(!!cell);
+    } else {
+      activeCellRef.current = null;
+      setShowTableTools(false);
+    }
+  };
 
-                const onMouseUp = () => {
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
-                    document.body.style.userSelect = '';
+  // Table operations
 
-                    const finalW = img.getBoundingClientRect().width;
-                    img.setAttribute('width', Math.round(finalW));
-                    img.removeAttribute('height');
-                    img.style.height = 'auto';
+  const addRow = (position) => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    if (!row) return;
+    const colCount = row.cells.length;
+    const newRow = document.createElement('tr');
+    Array.from({ length: colCount }).forEach(() => {
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      newRow.appendChild(td);
+    });
+    if (position === 'above') {
+      row.parentNode.insertBefore(newRow, row);
+    } else {
+      row.parentNode.insertBefore(newRow, row.nextSibling);
+    }
+    emitChange();
+  };
 
-                    positionOverlay();
-                    emitChange();
-                };
+  const addColumn = (position) => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const colIndex = cell.cellIndex;
+    Array.from(table.rows).forEach((row) => {
+      const newCell = document.createElement('td');
+      newCell.innerHTML = '<br>';
+      const insertIndex = position === 'left' ? colIndex : colIndex + 1;
+      if (insertIndex >= row.cells.length) {
+        row.appendChild(newCell);
+      } else {
+        row.insertBefore(newCell, row.cells[insertIndex]);
+      }
+    });
+    emitChange();
+  };
 
-                document.body.style.userSelect = 'none';
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
-        });
-    };
+  const deleteRow = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    const table = cell.closest('table');
+    if (!row || !table) return;
+    if (table.rows.length <= 1) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      table.parentNode.insertBefore(p, table);
+      table.remove();
+    } else {
+      row.remove();
+    }
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
 
-    const detectTableContext = () => {
-        const selection = window.getSelection();
-        if (selection.rangeCount) {
-            const anchor = selection.anchorNode?.nodeType === 3
-                ? selection.anchorNode.parentElement
-                : selection.anchorNode;
-            const cell = anchor?.closest('td, th');
-            activeCellRef.current = cell || null;
-            setShowTableTools(!!cell);
-        } else {
-            activeCellRef.current = null;
-            setShowTableTools(false);
+  const deleteColumn = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const colIndex = cell.cellIndex;
+    const firstRowCells = table.rows[0]?.cells.length || 0;
+    if (firstRowCells <= 1) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      table.parentNode.insertBefore(p, table);
+      table.remove();
+    } else {
+      Array.from(table.rows).forEach((row) => {
+        if (row.cells[colIndex]) {
+          row.cells[colIndex].remove();
         }
-    };
+      });
+    }
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
 
-    // Table operations
+  const mergeCellRight = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const nextCell = cell.nextElementSibling;
+    if (!nextCell) return;
+    const currentSpan = parseInt(cell.getAttribute('colspan') || '1', 10);
+    const nextSpan = parseInt(nextCell.getAttribute('colspan') || '1', 10);
+    cell.setAttribute('colspan', currentSpan + nextSpan);
+    if (nextCell.textContent.trim()) {
+      cell.innerHTML += ` ${nextCell.innerHTML}`;
+    }
+    nextCell.remove();
+    emitChange();
+  };
 
-    const addRow = (position) => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const row = cell.closest('tr');
-        if (!row) return;
-        const colCount = row.cells.length;
-        const newRow = document.createElement('tr');
-        Array.from({ length: colCount }).forEach(() => {
-            const td = document.createElement('td');
-            td.innerHTML = '<br>';
-            newRow.appendChild(td);
-        });
-        if (position === 'above') {
-            row.parentNode.insertBefore(newRow, row);
-        } else {
-            row.parentNode.insertBefore(newRow, row.nextSibling);
-        }
-        emitChange();
-    };
+  const mergeCellDown = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const row = cell.closest('tr');
+    const nextRow = row?.nextElementSibling;
+    if (!nextRow) return;
+    const colIndex = cell.cellIndex;
+    const belowCell = nextRow.cells[colIndex];
+    if (!belowCell) return;
+    const currentSpan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+    const belowSpan = parseInt(belowCell.getAttribute('rowspan') || '1', 10);
+    cell.setAttribute('rowspan', currentSpan + belowSpan);
+    if (belowCell.textContent.trim()) {
+      cell.innerHTML += ` ${belowCell.innerHTML}`;
+    }
+    belowCell.remove();
+    emitChange();
+  };
 
-    const addColumn = (position) => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const table = cell.closest('table');
-        if (!table) return;
-        const colIndex = cell.cellIndex;
-        Array.from(table.rows).forEach((row) => {
-            const newCell = document.createElement('td');
-            newCell.innerHTML = '<br>';
-            const insertIndex = position === 'left' ? colIndex : colIndex + 1;
-            if (insertIndex >= row.cells.length) {
-                row.appendChild(newCell);
-            } else {
-                row.insertBefore(newCell, row.cells[insertIndex]);
-            }
-        });
-        emitChange();
-    };
+  const deleteTable = () => {
+    const cell = activeCellRef.current;
+    if (!cell) return;
+    const table = cell.closest('table');
+    if (!table) return;
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    table.parentNode.insertBefore(p, table);
+    table.remove();
+    activeCellRef.current = null;
+    setShowTableTools(false);
+    emitChange();
+  };
 
-    const deleteRow = () => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const row = cell.closest('tr');
-        const table = cell.closest('table');
-        if (!row || !table) return;
-        if (table.rows.length <= 1) {
-            const p = document.createElement('p');
-            p.innerHTML = '<br>';
-            table.parentNode.insertBefore(p, table);
-            table.remove();
-        } else {
-            row.remove();
-        }
-        activeCellRef.current = null;
-        setShowTableTools(false);
-        emitChange();
-    };
+  // Helper functions
 
-    const deleteColumn = () => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const table = cell.closest('table');
-        if (!table) return;
-        const colIndex = cell.cellIndex;
-        const firstRowCells = table.rows[0]?.cells.length || 0;
-        if (firstRowCells <= 1) {
-            const p = document.createElement('p');
-            p.innerHTML = '<br>';
-            table.parentNode.insertBefore(p, table);
-            table.remove();
-        } else {
-            Array.from(table.rows).forEach((row) => {
-                if (row.cells[colIndex]) {
-                    row.cells[colIndex].remove();
-                }
-            });
-        }
-        activeCellRef.current = null;
-        setShowTableTools(false);
-        emitChange();
-    };
+  const updateCodeLineNumbers = () => {
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const pres = editor.querySelectorAll('pre');
+      pres.forEach((pre) => {
+        const lineArr = pre.textContent.split('\n');
+        if (lineArr[lineArr.length - 1] === '') lineArr.pop();
+        const lineCount = lineArr.length || 1;
+        const nums = Array.from(
+          { length: lineCount },
+          (_, i) => i + 1,
+        ).join('\\a ');
+        pre.style.setProperty('--line-nums', `"${nums}"`);
+      });
+    });
+  };
 
-    const mergeCellRight = () => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const nextCell = cell.nextElementSibling;
-        if (!nextCell) return;
-        const currentSpan = parseInt(cell.getAttribute('colspan') || '1', 10);
-        const nextSpan = parseInt(nextCell.getAttribute('colspan') || '1', 10);
-        cell.setAttribute('colspan', currentSpan + nextSpan);
-        if (nextCell.textContent.trim()) {
-            cell.innerHTML += ` ${nextCell.innerHTML}`;
-        }
-        nextCell.remove();
-        emitChange();
-    };
-
-    const mergeCellDown = () => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const row = cell.closest('tr');
-        const nextRow = row?.nextElementSibling;
-        if (!nextRow) return;
-        const colIndex = cell.cellIndex;
-        const belowCell = nextRow.cells[colIndex];
-        if (!belowCell) return;
-        const currentSpan = parseInt(cell.getAttribute('rowspan') || '1', 10);
-        const belowSpan = parseInt(belowCell.getAttribute('rowspan') || '1', 10);
-        cell.setAttribute('rowspan', currentSpan + belowSpan);
-        if (belowCell.textContent.trim()) {
-            cell.innerHTML += ` ${belowCell.innerHTML}`;
-        }
-        belowCell.remove();
-        emitChange();
-    };
-
-    const deleteTable = () => {
-        const cell = activeCellRef.current;
-        if (!cell) return;
-        const table = cell.closest('table');
-        if (!table) return;
-        const p = document.createElement('p');
-        p.innerHTML = '<br>';
-        table.parentNode.insertBefore(p, table);
-        table.remove();
-        activeCellRef.current = null;
-        setShowTableTools(false);
-        emitChange();
-    };
-
-    // Helper functions
-
-    const updateCodeLineNumbers = () => {
-        requestAnimationFrame(() => {
-            const editor = editorRef.current;
-            if (!editor) return;
-            const pres = editor.querySelectorAll('pre');
-            pres.forEach((pre) => {
-                const lineArr = pre.textContent.split('\n');
-                if (lineArr[lineArr.length - 1] === '') lineArr.pop();
-                const lineCount = lineArr.length || 1;
-                const nums = Array.from(
-                    { length: lineCount },
-                    (_, i) => i + 1,
-                ).join('\\a ');
-                pre.style.setProperty('--line-nums', `"${nums}"`);
-            });
-        });
-    };
-
-    const ensureLeadingParagraph = () => {
-        requestAnimationFrame(() => {
-            const editor = editorRef.current;
-            if (!editor) return;
-            const first = editor.firstElementChild;
-            if (!first) return;
-            const tag = first.tagName;
-            const needsLeading = tag === 'TABLE'
+  const ensureLeadingParagraph = () => {
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const first = editor.firstElementChild;
+      if (!first) return;
+      const tag = first.tagName;
+      const needsLeading = tag === 'TABLE'
                 || tag === 'PRE'
                 || tag === 'BLOCKQUOTE';
-            if (!needsLeading) return;
-            const p = document.createElement('p');
-            p.innerHTML = '<br>';
-            editor.insertBefore(p, first);
-        });
-    };
+      if (!needsLeading) return;
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      editor.insertBefore(p, first);
+    });
+  };
 
-    // Remove phantom extra-empty blocks that browsers silently inject into
-    // contenteditable divs. Only fires when there is no real user content.
-    const normalizeEmptyEditor = () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        const hasRealContent = editor.textContent.replace(/\u200B/g, '').trim().length > 0
+  // Remove phantom extra-empty blocks that browsers silently inject into
+  // contenteditable divs. Only fires when there is no real user content.
+  const normalizeEmptyEditor = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const hasRealContent = editor.textContent.replace(/\u200B/g, '').trim().length > 0
             || editor.querySelector('table, img, iframe, pre, blockquote');
-        if (hasRealContent) return;
-        // Already a single clean node — nothing to do
-        if (editor.children.length <= 1 && editor.childNodes.length <= 1) return;
-        editor.innerHTML = '<p><br></p>';
-        // Restore cursor inside the normalised paragraph
-        const p = editor.firstElementChild;
-        if (p) {
-            const r = document.createRange();
-            r.setStart(p, 0);
-            r.collapse(true);
-            const sel = window.getSelection();
-            if (sel) {
-                sel.removeAllRanges();
-                sel.addRange(r);
-            }
-        }
-    };
+    if (hasRealContent) return;
+    // Already a single clean node — nothing to do
+    if (editor.children.length <= 1 && editor.childNodes.length <= 1) return;
+    editor.innerHTML = '<p><br></p>';
+    // Restore cursor inside the normalised paragraph
+    const p = editor.firstElementChild;
+    if (p) {
+      const r = document.createRange();
+      r.setStart(p, 0);
+      r.collapse(true);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    }
+  };
 
-    const updatePlaceholder = () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        const hasContent = editor.textContent.trim().length > 0
+  const updatePlaceholder = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const hasContent = editor.textContent.trim().length > 0
             || editor.querySelector('table, img, iframe');
-        editor.classList.toggle('is-empty', !hasContent);
-    };
+    editor.classList.toggle('is-empty', !hasContent);
+  };
 
-    // Format commands
+  // Format commands
 
-    const handleInlineCode = () => {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return;
-        const range = sel.getRangeAt(0);
-        const editor = editorRef.current;
+  const handleInlineCode = () => {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const editor = editorRef.current;
 
-        let parent = range.commonAncestorContainer;
-        if (parent.nodeType === 3) parent = parent.parentElement;
-        const existingCode = parent.closest('code');
+    let parent = range.commonAncestorContainer;
+    if (parent.nodeType === 3) parent = parent.parentElement;
+    const existingCode = parent.closest('code');
 
-        if (existingCode && editor.contains(existingCode)) {
-            // Toggle OFF: insert a spacer text node after <code> so browser
-            // clearly sees the cursor as "outside code" when Enter is pressed
-            const spacer = document.createTextNode('\u200B');
-            existingCode.after(spacer);
-            const newRange = document.createRange();
-            newRange.setStart(spacer, 1);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-            // Removing empty code elements left behind
-            if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
-        } else if (!range.collapsed) {
-            // Wrap selected text in <code>
-            const code = document.createElement('code');
-            range.surroundContents(code);
-            const newRange = document.createRange();
-            newRange.selectNodeContents(code);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-        } else {
-            // Toggle ON: create empty <code> at cursor and place cursor inside
-            const code = document.createElement('code');
-            code.textContent = '\u200B';
-            range.insertNode(code);
-            const newRange = document.createRange();
-            newRange.setStart(code.firstChild, 1);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-        }
-    };
+    if (existingCode && editor.contains(existingCode)) {
+      // Toggle OFF: insert a spacer text node after <code> so browser
+      // clearly sees the cursor as "outside code" when Enter is pressed
+      const spacer = document.createTextNode('\u200B');
+      existingCode.after(spacer);
+      const newRange = document.createRange();
+      newRange.setStart(spacer, 1);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      // Removing empty code elements left behind
+      if (!existingCode.textContent.replace(/\u200B/g, '')) existingCode.remove();
+    } else if (!range.collapsed) {
+      // Wrap selected text in <code>
+      const code = document.createElement('code');
+      range.surroundContents(code);
+      const newRange = document.createRange();
+      newRange.selectNodeContents(code);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    } else {
+      // Toggle ON: create empty <code> at cursor and place cursor inside
+      const code = document.createElement('code');
+      code.textContent = '\u200B';
+      range.insertNode(code);
+      const newRange = document.createRange();
+      newRange.setStart(code.firstChild, 1);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    }
+  };
 
-    const handleCodeBlock = () => {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return;
-        const editor = editorRef.current;
+  const handleCodeBlock = () => {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const editor = editorRef.current;
 
-        let block = sel.anchorNode;
-        while (block && block.parentNode !== editor) {
-            block = block.parentNode;
-        }
-        if (!block) return;
+    let block = sel.anchorNode;
+    while (block && block.parentNode !== editor) {
+      block = block.parentNode;
+    }
+    if (!block) return;
 
-        if (block.tagName === 'PRE') {
-            // Toggle off: exit the code block.
-            // - Has content → keep the <pre>, insert a normal paragraph after it and
-            //   move cursor there so the user can continue typing outside the block.
-            // - Empty → remove the shell entirely, no orphaned <pre> left behind.
-            const p = document.createElement('p');
-            p.innerHTML = '<br>';
-            if (block.textContent.trim()) {
-                block.after(p);
-            } else {
-                block.replaceWith(p);
-            }
-            const newRange = document.createRange();
-            newRange.setStart(p, 0);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-        } else {
-            const pre = document.createElement('pre');
-            pre.textContent = block.textContent || '';
-            block.replaceWith(pre);
-            const newRange = document.createRange();
-            newRange.setStart(pre, 0);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-        }
-        updateCodeLineNumbers();
-    };
+    if (block.tagName === 'PRE') {
+      // Toggle off: exit the code block.
+      // - Has content → keep the <pre>, insert a normal paragraph after it and
+      //   move cursor there so the user can continue typing outside the block.
+      // - Empty → remove the shell entirely, no orphaned <pre> left behind.
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      if (block.textContent.trim()) {
+        block.after(p);
+      } else {
+        block.replaceWith(p);
+      }
+      const newRange = document.createRange();
+      newRange.setStart(p, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    } else {
+      const pre = document.createElement('pre');
+      pre.textContent = block.textContent || '';
+      block.replaceWith(pre);
+      const newRange = document.createRange();
+      newRange.setStart(pre, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    }
+    updateCodeLineNumbers();
+  };
 
-    const handleBlockquote = () => {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return;
-        const editor = editorRef.current;
+  const handleBlockquote = () => {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const editor = editorRef.current;
 
-        let block = sel.anchorNode;
-        while (block && block.parentNode !== editor) {
-            block = block.parentNode;
-        }
-        if (!block) return;
+    let block = sel.anchorNode;
+    while (block && block.parentNode !== editor) {
+      block = block.parentNode;
+    }
+    if (!block) return;
 
-        if (block.tagName === 'BLOCKQUOTE') {
-            const p = document.createElement('p');
-            p.innerHTML = block.innerHTML || '<br>';
-            block.replaceWith(p);
-        } else {
-            const bq = document.createElement('blockquote');
-            bq.innerHTML = block.innerHTML || '<br>';
-            block.replaceWith(bq);
-        }
-    };
+    if (block.tagName === 'BLOCKQUOTE') {
+      const p = document.createElement('p');
+      p.innerHTML = block.innerHTML || '<br>';
+      block.replaceWith(p);
+    } else {
+      const bq = document.createElement('blockquote');
+      bq.innerHTML = block.innerHTML || '<br>';
+      block.replaceWith(bq);
+    }
+  };
 
-    const handleTableInsert = () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        const table = document.createElement('table');
-        Array.from({ length: 3 }).forEach(() => {
-            const tr = document.createElement('tr');
-            Array.from({ length: 3 }).forEach(() => {
-                const td = document.createElement('td');
-                td.innerHTML = '<br>';
-                tr.appendChild(td);
-            });
-            table.appendChild(tr);
-        });
+  const handleTableInsert = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const table = document.createElement('table');
+    Array.from({ length: 3 }).forEach(() => {
+      const tr = document.createElement('tr');
+      Array.from({ length: 3 }).forEach(() => {
+        const td = document.createElement('td');
+        td.innerHTML = '<br>';
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
 
-        const trailing = document.createElement('p');
-        trailing.innerHTML = '<br>';
+    const trailing = document.createElement('p');
+    trailing.innerHTML = '<br>';
 
-        let insertAfter = null;
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount) {
-            let node = sel.anchorNode;
-            while (node && node !== editor
+    let insertAfter = null;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      let node = sel.anchorNode;
+      while (node && node !== editor
                 && node.parentNode !== editor) {
-                node = node.parentNode;
-            }
-            if (node && node.parentNode === editor) {
-                insertAfter = node;
-            }
-        }
+        node = node.parentNode;
+      }
+      if (node && node.parentNode === editor) {
+        insertAfter = node;
+      }
+    }
 
-        if (insertAfter && insertAfter.nextSibling) {
-            editor.insertBefore(trailing, insertAfter.nextSibling);
-            editor.insertBefore(table, trailing);
-        } else {
-            editor.appendChild(table);
-            editor.appendChild(trailing);
-        }
+    if (insertAfter && insertAfter.nextSibling) {
+      editor.insertBefore(trailing, insertAfter.nextSibling);
+      editor.insertBefore(table, trailing);
+    } else {
+      editor.appendChild(table);
+      editor.appendChild(trailing);
+    }
 
-        const firstCell = table.querySelector('td');
-        if (firstCell) {
-            const domRange = document.createRange();
-            domRange.setStart(firstCell, 0);
-            domRange.collapse(true);
-            if (sel) {
-                sel.removeAllRanges();
-                sel.addRange(domRange);
-            }
-        }
+    const firstCell = table.querySelector('td');
+    if (firstCell) {
+      const domRange = document.createRange();
+      domRange.setStart(firstCell, 0);
+      domRange.collapse(true);
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(domRange);
+      }
+    }
 
-        updatePlaceholder();
-        emitChange();
-        detectTableContext();
-    };
+    updatePlaceholder();
+    emitChange();
+    detectTableContext();
+  };
 
-    const handleBlockFormat = (tag) => {
-        if (!BLOCK_FORMATS[tag]) return;
-        const sel = window.getSelection();
-        const editor = editorRef.current;
-        if (!sel || !sel.rangeCount || !editor) return;
+  const handleBlockFormat = (tag) => {
+    if (!BLOCK_FORMATS[tag]) return;
+    const sel = window.getSelection();
+    const editor = editorRef.current;
+    if (!sel || !sel.rangeCount || !editor) return;
 
-        const range = sel.getRangeAt(0);
+    const range = sel.getRangeAt(0);
 
-        // Find the direct-child block of the editor
-        let block = sel.anchorNode;
-        while (block && block.parentNode !== editor) {
-            block = block.parentNode;
-        }
+    // Find the direct-child block of the editor
+    let block = sel.anchorNode;
+    while (block && block.parentNode !== editor) {
+      block = block.parentNode;
+    }
 
-        // Check if selection is partial (some text selected, but not the full block)
-        const isPartial = !range.collapsed && block
+    // Check if selection is partial (some text selected, but not the full block)
+    const isPartial = !range.collapsed && block
             && range.toString().trim() !== block.textContent.trim();
 
-        if (!isPartial) {
-            // Full block or collapsed cursor: use native formatBlock
-            // First unwrap any inline heading spans in this block
-            if (block) {
-                block.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
-                    span.replaceWith(...span.childNodes);
-                });
-            }
-            document.execCommand('formatBlock', false, tag);
-            return;
+    if (!isPartial) {
+      // Full block or collapsed cursor: use native formatBlock
+      // First unwrap any inline heading spans in this block
+      if (block) {
+        block.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
+          span.replaceWith(...span.childNodes);
+        });
+      }
+      document.execCommand('formatBlock', false, tag);
+      return;
+    }
+
+    // --- Partial selection: inline heading span approach ---
+
+    // "Paragraph" selected → unwrap any inline heading span around cursor
+    if (tag === 'p') {
+      let nd = sel.anchorNode;
+      while (nd && nd !== editor) {
+        if (nd.nodeType === 1 && /^ce-inline-h[1-6]$/.test(nd.className)) {
+          nd.replaceWith(...nd.childNodes);
+          break;
         }
+        nd = nd.parentNode;
+      }
+      return;
+    }
 
-        // --- Partial selection: inline heading span approach ---
+    // If already inside an inline heading span, just change its class
+    let existing = sel.anchorNode;
+    while (existing && existing !== editor) {
+      if (existing.nodeType === 1 && /^ce-inline-h[1-6]$/.test(existing.className)) {
+        existing.className = `ce-inline-${tag}`;
+        return;
+      }
+      existing = existing.parentNode;
+    }
 
-        // "Paragraph" selected → unwrap any inline heading span around cursor
-        if (tag === 'p') {
-            let nd = sel.anchorNode;
-            while (nd && nd !== editor) {
-                if (nd.nodeType === 1 && /^ce-inline-h[1-6]$/.test(nd.className)) {
-                    nd.replaceWith(...nd.childNodes);
-                    break;
-                }
-                nd = nd.parentNode;
-            }
-            return;
-        }
+    // Wrap the selected text in a new inline heading span
+    const span = document.createElement('span');
+    span.className = `ce-inline-${tag}`;
+    const contents = range.extractContents();
+    span.appendChild(contents);
+    range.insertNode(span);
 
-        // If already inside an inline heading span, just change its class
-        let existing = sel.anchorNode;
-        while (existing && existing !== editor) {
-            if (existing.nodeType === 1 && /^ce-inline-h[1-6]$/.test(existing.className)) {
-                existing.className = `ce-inline-${tag}`;
-                return;
-            }
-            existing = existing.parentNode;
-        }
+    // Restore selection around the new span
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
+  };
 
-        // Wrap the selected text in a new inline heading span
-        const span = document.createElement('span');
-        span.className = `ce-inline-${tag}`;
-        const contents = range.extractContents();
-        span.appendChild(contents);
-        range.insertNode(span);
+  const handleImageFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      document.execCommand('insertImage', false, reader.result);
+      updatePlaceholder();
+      emitChange();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
-        // Restore selection around the new span
-        sel.removeAllRanges();
-        const newRange = document.createRange();
-        newRange.selectNodeContents(span);
-        sel.addRange(newRange);
+  const handleLinkInsert = () => {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    // eslint-disable-next-line no-alert
+    const url = prompt('Enter URL:');
+    if (!url) return;
+    document.execCommand('createLink', false, url);
+  };
+
+  const updateActiveFormats = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    if (!editor.contains(sel.anchorNode)) return;
+
+    const fmt = {
+      bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
+      strike: document.queryCommandState('strikeThrough'),
+      orderedList: document.queryCommandState('insertOrderedList'),
+      bulletList: document.queryCommandState('insertUnorderedList'),
     };
 
-    const handleImageFile = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            const editor = editorRef.current;
-            if (!editor) return;
-            editor.focus();
-            document.execCommand('insertImage', false, reader.result);
-            updatePlaceholder();
-            emitChange();
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
-    };
+    // Walk up from cursor to detect block-level and inline elements
+    let node = sel.anchorNode;
+    while (node && node !== editor) {
+      const tag = node.nodeName;
+      if (tag === 'PRE') fmt.codeBlock = true;
+      if (tag === 'CODE' && node.parentNode?.nodeName !== 'PRE') fmt.code = true;
+      if (tag === 'BLOCKQUOTE') fmt.blockquote = true;
+      node = node.parentNode;
+    }
 
-    const handleLinkInsert = () => {
-        const sel = window.getSelection();
-        if (!sel.rangeCount) return;
-        // eslint-disable-next-line no-alert
-        const url = prompt('Enter URL:');
-        if (!url) return;
-        document.execCommand('createLink', false, url);
-    };
-
-    const updateActiveFormats = () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        const sel = window.getSelection();
-        if (!sel || !sel.rangeCount) return;
-        if (!editor.contains(sel.anchorNode)) return;
-
-        const fmt = {
-            bold: document.queryCommandState('bold'),
-            italic: document.queryCommandState('italic'),
-            strike: document.queryCommandState('strikeThrough'),
-            orderedList: document.queryCommandState('insertOrderedList'),
-            bulletList: document.queryCommandState('insertUnorderedList'),
-        };
-
-        // Walk up from cursor to detect block-level and inline elements
-        let node = sel.anchorNode;
-        while (node && node !== editor) {
-            const tag = node.nodeName;
-            if (tag === 'PRE') fmt.codeBlock = true;
-            if (tag === 'CODE' && node.parentNode?.nodeName !== 'PRE') fmt.code = true;
-            if (tag === 'BLOCKQUOTE') fmt.blockquote = true;
-            node = node.parentNode;
+    // Detect inline heading spans (ce-inline-h1 etc.)
+    let inlineNode = sel.anchorNode;
+    while (inlineNode && inlineNode !== editor) {
+      if (inlineNode.nodeType === 1 && inlineNode.className) {
+        const hMatch = inlineNode.className.match(/^ce-inline-(h[1-6])$/);
+        if (hMatch) {
+          [, fmt.blockFormat] = hMatch;
+          break;
         }
+      }
+      inlineNode = inlineNode.parentNode;
+    }
 
-        // Detect inline heading spans (ce-inline-h1 etc.)
-        let inlineNode = sel.anchorNode;
-        while (inlineNode && inlineNode !== editor) {
-            if (inlineNode.nodeType === 1 && inlineNode.className) {
-                const hMatch = inlineNode.className.match(/^ce-inline-(h[1-6])$/);
-                if (hMatch) {
-                    [, fmt.blockFormat] = hMatch;
-                    break;
-                }
-            }
-            inlineNode = inlineNode.parentNode;
-        }
+    // Detect current block format (p, h1-h6) — only if no inline heading was found
+    if (!fmt.blockFormat) {
+      let block = sel.anchorNode;
+      while (block && block.parentNode !== editor) {
+        block = block.parentNode;
+      }
+      if (block) {
+        const bn = block.nodeName.toLowerCase();
+        if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
+        else fmt.blockFormat = 'p';
+      }
+    }
 
-        // Detect current block format (p, h1-h6) — only if no inline heading was found
-        if (!fmt.blockFormat) {
-            let block = sel.anchorNode;
-            while (block && block.parentNode !== editor) {
-                block = block.parentNode;
-            }
-            if (block) {
-                const bn = block.nodeName.toLowerCase();
-                if (BLOCK_FORMATS[bn]) fmt.blockFormat = bn;
-                else fmt.blockFormat = 'p';
-            }
-        }
+    setActiveFormats(fmt);
+  };
 
-        setActiveFormats(fmt);
-    };
+  const execFormat = (cmd, value) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    // Save selection before focus() — some browsers reset the cursor to the
+    // start of a contenteditable when focus() is called even if already focused.
+    const preSel = window.getSelection();
+    let savedRange = null;
+    if (preSel && preSel.rangeCount && editor.contains(preSel.anchorNode)) {
+      savedRange = preSel.getRangeAt(0).cloneRange();
+    }
+    editor.focus();
+    if (savedRange && preSel) {
+      preSel.removeAllRanges();
+      preSel.addRange(savedRange);
+    }
 
-    const execFormat = (cmd, value) => {
-        const editor = editorRef.current;
-        if (!editor) return;
-        // Save selection before focus() — some browsers reset the cursor to the
-        // start of a contenteditable when focus() is called even if already focused.
-        const preSel = window.getSelection();
-        let savedRange = null;
-        if (preSel && preSel.rangeCount && editor.contains(preSel.anchorNode)) {
-            savedRange = preSel.getRangeAt(0).cloneRange();
-        }
-        editor.focus();
-        if (savedRange && preSel) {
-            preSel.removeAllRanges();
-            preSel.addRange(savedRange);
-        }
+    switch (cmd) {
+      case 'bold':
+        document.execCommand('bold', false, null);
+        break;
+      case 'italic':
+        document.execCommand('italic', false, null);
+        break;
+      case 'strike':
+        document.execCommand('strikeThrough', false, null);
+        break;
+      case 'orderedList':
+        document.execCommand('insertOrderedList', false, null);
+        break;
+      case 'bulletList':
+        document.execCommand('insertUnorderedList', false, null);
+        break;
+      case 'indent':
+        document.execCommand('indent', false, null);
+        break;
+      case 'outdent':
+        document.execCommand('outdent', false, null);
+        break;
+      case 'link':
+        handleLinkInsert();
+        break;
+      case 'image':
+        if (fileInputRef.current) fileInputRef.current.click();
+        return; // Don't emit change yet — wait for file input
+      case 'blockFormat':
+        handleBlockFormat(value);
+        break;
+      case 'code':
+        handleInlineCode();
+        break;
+      case 'codeBlock':
+        handleCodeBlock();
+        break;
+      case 'blockquote':
+        handleBlockquote();
+        break;
+      case 'table':
+        handleTableInsert();
+        return; // Already calls emitChange
+      case 'clean':
+        document.execCommand('removeFormat', false, null);
+        document.execCommand('unlink', false, null);
+        // Also strip inline heading spans
+        editor.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
+          span.replaceWith(...span.childNodes);
+        });
+        break;
+      default:
+        break;
+    }
 
-        switch (cmd) {
-            case 'bold':
-                document.execCommand('bold', false, null);
-                break;
-            case 'italic':
-                document.execCommand('italic', false, null);
-                break;
-            case 'strike':
-                document.execCommand('strikeThrough', false, null);
-                break;
-            case 'orderedList':
-                document.execCommand('insertOrderedList', false, null);
-                break;
-            case 'bulletList':
-                document.execCommand('insertUnorderedList', false, null);
-                break;
-            case 'indent':
-                document.execCommand('indent', false, null);
-                break;
-            case 'outdent':
-                document.execCommand('outdent', false, null);
-                break;
-            case 'link':
-                handleLinkInsert();
-                break;
-            case 'image':
-                if (fileInputRef.current) fileInputRef.current.click();
-                return; // Don't emit change yet — wait for file input
-            case 'blockFormat':
-                handleBlockFormat(value);
-                break;
-            case 'code':
-                handleInlineCode();
-                break;
-            case 'codeBlock':
-                handleCodeBlock();
-                break;
-            case 'blockquote':
-                handleBlockquote();
-                break;
-            case 'table':
-                handleTableInsert();
-                return; // Already calls emitChange
-            case 'clean':
-                document.execCommand('removeFormat', false, null);
-                document.execCommand('unlink', false, null);
-                // Also strip inline heading spans
-                editor.querySelectorAll('[class^="ce-inline-h"]').forEach((span) => {
-                    span.replaceWith(...span.childNodes);
-                });
-                break;
-            default:
-                break;
-        }
+    emitChange();
+    updateActiveFormats();
+  };
 
-        emitChange();
-        updateActiveFormats();
-    };
+  // useEffect: initialise editor and attach events
 
-    // useEffect: initialise editor and attach events
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return undefined;
 
-    useEffect(() => {
-        const editor = editorRef.current;
-        if (!editor) return undefined;
+    // Restore content or start with one empty paragraph
+    if (initialValue) {
+      editor.innerHTML = initialValue;
+    } else if (!editor.innerHTML.trim()) {
+      editor.innerHTML = '<p><br></p>';
+    }
+    normalizeEmptyEditor();
+    updatePlaceholder();
 
-        // Restore content or start with one empty paragraph
-        if (initialValue) {
-            editor.innerHTML = initialValue;
-        } else if (!editor.innerHTML.trim()) {
-            editor.innerHTML = '<p><br></p>';
-        }
-        normalizeEmptyEditor();
-        updatePlaceholder();
-
-        // Input handler
-        const onInput = () => {
-            // Clean up inline <code> artifacts
-            const sel = window.getSelection();
-            const cursorNode = sel?.anchorNode;
-            const cursorOffset = sel?.anchorOffset;
-            editor.querySelectorAll('code').forEach((code) => {
-                if (code.closest('pre')) return; // Don't touch code inside pre blocks
-                // Strip ZWS from codes that have real content, preserving cursor
-                if (code.textContent.includes('\u200B') && code.textContent.length > 1) {
-                    code.childNodes.forEach((child) => {
-                        if (child.nodeType === 3 && child.nodeValue.includes('\u200B')) {
-                            const old = child.nodeValue;
-                            child.nodeValue = old.replace(/\u200B/g, '');
-                            // Restore cursor at the correct offset
-                            if (sel && child === cursorNode) {
-                                const zwsBefore = (old.substring(0, cursorOffset).match(/\u200B/g) || []).length;
-                                const adjusted = cursorOffset - zwsBefore;
-                                const newOff = Math.max(0, Math.min(adjusted, child.nodeValue.length));
-                                const r = document.createRange();
-                                r.setStart(child, newOff);
-                                r.collapse(true);
-                                sel.removeAllRanges();
-                                sel.addRange(r);
-                            }
-                        }
-                    });
-                }
-                // Unwrap <code> that only contains <br> (browser clones this on Enter)
-                if (code.childNodes.length === 1 && code.firstChild.nodeName === 'BR') {
-                    code.parentNode.insertBefore(code.firstChild, code);
-                    code.remove();
-                    return;
-                }
-                // Remove completely empty <code> elements
-                if (!code.childNodes.length) {
-                    code.remove();
-                }
-            });
-
-            // Remove any <pre> that was emptied by a deletion (e.g. Ctrl+A + Backspace).
-            // cursorNode is captured before DOM mutations so we can detect whether the
-            // cursor was inside the now-empty block and restore it to the nearest sibling.
-            editor.querySelectorAll('pre').forEach((pre) => {
-                if (pre.textContent.trim()) return; // still has content — leave it
-                const inPre = cursorNode && pre.contains(cursorNode);
-                const prev = pre.previousElementSibling;
-                const next = pre.nextElementSibling;
-                pre.remove();
-                if (!inPre) return;
-                if (!editor.children.length) {
-                    const ep = document.createElement('p');
-                    ep.innerHTML = '<br>';
-                    editor.appendChild(ep);
-                }
-                const dest = prev || next || editor.firstElementChild;
-                if (!dest) return;
+    // Input handler
+    const onInput = () => {
+      // Clean up inline <code> artifacts
+      const sel = window.getSelection();
+      const cursorNode = sel?.anchorNode;
+      const cursorOffset = sel?.anchorOffset;
+      editor.querySelectorAll('code').forEach((code) => {
+        if (code.closest('pre')) return; // Don't touch code inside pre blocks
+        // Strip ZWS from codes that have real content, preserving cursor
+        if (code.textContent.includes('\u200B') && code.textContent.length > 1) {
+          code.childNodes.forEach((child) => {
+            if (child.nodeType === 3 && child.nodeValue.includes('\u200B')) {
+              const old = child.nodeValue;
+              child.nodeValue = old.replace(/\u200B/g, '');
+              // Restore cursor at the correct offset
+              if (sel && child === cursorNode) {
+                const zwsBefore = (old.substring(0, cursorOffset).match(/\u200B/g) || []).length;
+                const adjusted = cursorOffset - zwsBefore;
+                const newOff = Math.max(0, Math.min(adjusted, child.nodeValue.length));
                 const r = document.createRange();
-                if (prev) {
-                    const lc = prev.lastChild;
-                    if (lc && lc.nodeType === 3) r.setStart(lc, lc.textContent.length);
-                    else if (lc) r.setStartAfter(lc);
-                    else r.setStart(prev, 0);
-                } else {
-                    r.setStart(dest, 0);
-                }
+                r.setStart(child, newOff);
                 r.collapse(true);
-                const s = window.getSelection();
-                if (s) { s.removeAllRanges(); s.addRange(r); }
-            });
+                sel.removeAllRanges();
+                sel.addRange(r);
+              }
+            }
+          });
+        }
+        // Unwrap <code> that only contains <br> (browser clones this on Enter)
+        if (code.childNodes.length === 1 && code.firstChild.nodeName === 'BR') {
+          code.parentNode.insertBefore(code.firstChild, code);
+          code.remove();
+          return;
+        }
+        // Remove completely empty <code> elements
+        if (!code.childNodes.length) {
+          code.remove();
+        }
+      });
 
-            normalizeEmptyEditor();
-            updatePlaceholder();
-            clearImageResize();
-            emitChange();
-            detectTableContext();
-            updateCodeLineNumbers();
-            ensureLeadingParagraph();
-            updateActiveFormats();
-        };
-        editor.addEventListener('input', onInput);
+      // Remove any <pre> that was emptied by a deletion (e.g. Ctrl+A + Backspace).
+      // cursorNode is captured before DOM mutations so we can detect whether the
+      // cursor was inside the now-empty block and restore it to the nearest sibling.
+      editor.querySelectorAll('pre').forEach((pre) => {
+        if (pre.textContent.trim()) return; // still has content — leave it
+        const inPre = cursorNode && pre.contains(cursorNode);
+        const prev = pre.previousElementSibling;
+        const next = pre.nextElementSibling;
+        pre.remove();
+        if (!inPre) return;
+        if (!editor.children.length) {
+          const ep = document.createElement('p');
+          ep.innerHTML = '<br>';
+          editor.appendChild(ep);
+        }
+        const dest = prev || next || editor.firstElementChild;
+        if (!dest) return;
+        const r = document.createRange();
+        if (prev) {
+          const lc = prev.lastChild;
+          if (lc && lc.nodeType === 3) r.setStart(lc, lc.textContent.length);
+          else if (lc) r.setStartAfter(lc);
+          else r.setStart(prev, 0);
+        } else {
+          r.setStart(dest, 0);
+        }
+        r.collapse(true);
+        const s = window.getSelection();
+        if (s) { s.removeAllRanges(); s.addRange(r); }
+      });
 
-        const onFocus = () => { normalizeEmptyEditor(); };
-        editor.addEventListener('focus', onFocus);
+      normalizeEmptyEditor();
+      updatePlaceholder();
+      clearImageResize();
+      emitChange();
+      detectTableContext();
+      updateCodeLineNumbers();
+      ensureLeadingParagraph();
+      updateActiveFormats();
+    };
+    editor.addEventListener('input', onInput);
 
-        // Selection change
-        const onSelectionChange = () => {
-            if (document.activeElement === editor
+    const onFocus = () => { normalizeEmptyEditor(); };
+    editor.addEventListener('focus', onFocus);
+
+    // Selection change
+    const onSelectionChange = () => {
+      if (document.activeElement === editor
                 || editor.contains(document.activeElement)) {
-                detectTableContext();
-                updateActiveFormats();
-            }
-        };
-        document.addEventListener('selectionchange', onSelectionChange);
+        detectTableContext();
+        updateActiveFormats();
+      }
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
 
-        // Click handler for images
-        const onEditorClick = (e) => {
-            detectTableContext();
-            updateActiveFormats();
-            if (e.target.tagName === 'IMG') {
-                showImageResize(e.target);
-            } else if (!e.target.closest('.img-resize-overlay')) {
-                clearImageResize();
-            }
-        };
-        editor.addEventListener('click', onEditorClick);
+    // Click handler for images
+    const onEditorClick = (e) => {
+      detectTableContext();
+      updateActiveFormats();
+      if (e.target.tagName === 'IMG') {
+        showImageResize(e.target);
+      } else if (!e.target.closest('.img-resize-overlay')) {
+        clearImageResize();
+      }
+    };
+    editor.addEventListener('click', onEditorClick);
 
-        // Clear resize overlay when clicking outside the editor
-        const onDocMouseDown = (e) => {
-            if (resizeRef.current
+    // Clear resize overlay when clicking outside the editor
+    const onDocMouseDown = (e) => {
+      if (resizeRef.current
                 && !containerRef.current.contains(e.target)) {
-                clearImageResize();
-            }
-        };
-        document.addEventListener('mousedown', onDocMouseDown);
+        clearImageResize();
+      }
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
 
-        // Keyboard handler for tables and structural keys
-        const onKeyDown = (e) => {
-            if (e.key !== 'Backspace' && e.key !== 'Delete'
+    // Keyboard handler for tables and structural keys
+    const onKeyDown = (e) => {
+      if (e.key !== 'Backspace' && e.key !== 'Delete'
                 && e.key !== 'Enter') return;
 
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return;
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
 
-            // Inside a table cell
-            let nd = sel.anchorNode;
-            let insideTd = false;
-            while (nd && nd !== editor) {
-                if (nd.nodeName === 'TD') { insideTd = true; break; }
-                nd = nd.parentNode;
-            }
+      // Inside a table cell
+      let nd = sel.anchorNode;
+      let insideTd = false;
+      while (nd && nd !== editor) {
+        if (nd.nodeName === 'TD') { insideTd = true; break; }
+        nd = nd.parentNode;
+      }
 
-            if (insideTd) {
-                e.stopPropagation();
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const range = sel.getRangeAt(0);
-                    range.deleteContents();
-                    const br = document.createElement('br');
-                    range.insertNode(br);
-                    range.setStartAfter(br);
-                    range.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                    emitChange();
-                }
-                return;
-            }
+      if (insideTd) {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const br = document.createElement('br');
+          range.insertNode(br);
+          range.setStartAfter(br);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          emitChange();
+        }
+        return;
+      }
 
-            // Find the direct-child block of the editor
-            let block = sel.anchorNode;
-            while (block && block.parentNode !== editor) {
-                block = block.parentNode;
-            }
-            if (!block) return;
+      // Find the direct-child block of the editor
+      let block = sel.anchorNode;
+      while (block && block.parentNode !== editor) {
+        block = block.parentNode;
+      }
+      if (!block) return;
 
-            // Enter inside a code block (always handle, even without a table)
-            if (e.key === 'Enter' && block.nodeName === 'PRE') {
-                e.preventDefault();
-                e.stopPropagation();
-                const range = sel.getRangeAt(0);
-                if (!range.collapsed) range.deleteContents();
-                const nl = document.createTextNode('\n');
-                range.insertNode(nl);
-                range.setStartAfter(nl);
-                range.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(range);
-                emitChange();
-                updateCodeLineNumbers();
-                return;
-            }
+      // Enter inside a code block (always handle, even without a table)
+      if (e.key === 'Enter' && block.nodeName === 'PRE') {
+        e.preventDefault();
+        e.stopPropagation();
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) range.deleteContents();
+        const nl = document.createTextNode('\n');
+        range.insertNode(nl);
+        range.setStartAfter(nl);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        emitChange();
+        updateCodeLineNumbers();
+        return;
+      }
 
-            // Enter inside inline <code> — exit code formatting for the new line
-            if (e.key === 'Enter') {
-                let codeNode = sel.anchorNode;
-                while (codeNode && codeNode !== editor) {
-                    if (codeNode.nodeName === 'CODE'
+      // Enter inside inline <code> — exit code formatting for the new line
+      if (e.key === 'Enter') {
+        let codeNode = sel.anchorNode;
+        while (codeNode && codeNode !== editor) {
+          if (codeNode.nodeName === 'CODE'
                         && codeNode.parentNode?.nodeName !== 'PRE') break;
-                    codeNode = codeNode.parentNode;
-                }
-                if (codeNode && codeNode.nodeName === 'CODE') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const range = sel.getRangeAt(0);
-                    // Split: keep text before cursor in <code>, text after goes to new <p>
-                    const afterRange = document.createRange();
-                    afterRange.setStart(range.startContainer, range.startOffset);
-                    afterRange.setEndAfter(codeNode);
-                    const trailing = afterRange.extractContents().textContent;
-                    // Remove empty code elements
-                    if (!codeNode.textContent.replace(/\u200B/g, '')) codeNode.remove();
-                    const newP = document.createElement('p');
-                    newP.textContent = trailing.replace(/\u200B/g, '') || '';
-                    if (!newP.textContent) newP.innerHTML = '<br>';
-                    block.after(newP);
-                    const nr = document.createRange();
-                    nr.setStart(newP, 0);
-                    nr.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(nr);
-                    emitChange();
-                    updateActiveFormats();
-                    return;
-                }
-            }
+          codeNode = codeNode.parentNode;
+        }
+        if (codeNode && codeNode.nodeName === 'CODE') {
+          e.preventDefault();
+          e.stopPropagation();
+          const range = sel.getRangeAt(0);
+          // Split: keep text before cursor in <code>, text after goes to new <p>
+          const afterRange = document.createRange();
+          afterRange.setStart(range.startContainer, range.startOffset);
+          afterRange.setEndAfter(codeNode);
+          const trailing = afterRange.extractContents().textContent;
+          // Remove empty code elements
+          if (!codeNode.textContent.replace(/\u200B/g, '')) codeNode.remove();
+          const newP = document.createElement('p');
+          newP.textContent = trailing.replace(/\u200B/g, '') || '';
+          if (!newP.textContent) newP.innerHTML = '<br>';
+          block.after(newP);
+          const nr = document.createRange();
+          nr.setStart(newP, 0);
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+          emitChange();
+          updateActiveFormats();
+          return;
+        }
+      }
 
-            // Enter inside a heading — next line becomes a regular paragraph
-            if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
-                e.preventDefault();
-                e.stopPropagation();
-                const range = sel.getRangeAt(0);
-                if (!range.collapsed) range.deleteContents();
-                // Extract content after cursor
-                const afterRange = document.createRange();
-                afterRange.setStart(
-                    range.startContainer,
-                    range.startOffset,
-                );
-                afterRange.setEnd(block, block.childNodes.length);
-                const fragment = afterRange.extractContents();
-                const newP = document.createElement('p');
-                newP.appendChild(fragment);
-                if (!newP.textContent.trim()) newP.innerHTML = '<br>';
-                block.after(newP);
-                const nr = document.createRange();
-                nr.setStart(newP, 0);
-                nr.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(nr);
-                emitChange();
-                updateActiveFormats();
-                return;
-            }
+      // Enter inside a heading — next line becomes a regular paragraph
+      if (e.key === 'Enter' && /^H[1-6]$/.test(block.nodeName)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) range.deleteContents();
+        // Extract content after cursor
+        const afterRange = document.createRange();
+        afterRange.setStart(
+          range.startContainer,
+          range.startOffset,
+        );
+        afterRange.setEnd(block, block.childNodes.length);
+        const fragment = afterRange.extractContents();
+        const newP = document.createElement('p');
+        newP.appendChild(fragment);
+        if (!newP.textContent.trim()) newP.innerHTML = '<br>';
+        block.after(newP);
+        const nr = document.createRange();
+        nr.setStart(newP, 0);
+        nr.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(nr);
+        emitChange();
+        updateActiveFormats();
+        return;
+      }
 
-            // Backspace/Delete on an already-empty <pre> — remove it and place cursor
-            // in the nearest sibling paragraph (handles the "created block, pressed Backspace"
-            // case where the pre is empty before the browser even fires an input event).
-            if ((e.key === 'Backspace' || e.key === 'Delete') && block.nodeName === 'PRE'
+      // Backspace/Delete on an already-empty <pre> — remove it and place cursor
+      // in the nearest sibling paragraph (handles the "created block, pressed Backspace"
+      // case where the pre is empty before the browser even fires an input event).
+      if ((e.key === 'Backspace' || e.key === 'Delete') && block.nodeName === 'PRE'
                 && !block.textContent.trim()) {
-                e.preventDefault();
-                e.stopPropagation();
-                const prev = block.previousElementSibling;
-                const next = block.nextElementSibling;
-                block.remove();
-                if (!editor.children.length) {
-                    const p = document.createElement('p');
-                    p.innerHTML = '<br>';
-                    editor.appendChild(p);
-                }
-                const dest = prev || next || editor.firstElementChild;
-                if (dest) {
-                    const nr = document.createRange();
-                    if (prev) {
-                        const lc = prev.lastChild;
-                        if (lc && lc.nodeType === 3) nr.setStart(lc, lc.textContent.length);
-                        else if (lc) nr.setStartAfter(lc);
-                        else nr.setStart(prev, 0);
-                    } else {
-                        nr.setStart(dest, 0);
-                    }
-                    nr.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(nr);
-                }
-                emitChange();
-                normalizeEmptyEditor();
-                return;
-            }
+        e.preventDefault();
+        e.stopPropagation();
+        const prev = block.previousElementSibling;
+        const next = block.nextElementSibling;
+        block.remove();
+        if (!editor.children.length) {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          editor.appendChild(p);
+        }
+        const dest = prev || next || editor.firstElementChild;
+        if (dest) {
+          const nr = document.createRange();
+          if (prev) {
+            const lc = prev.lastChild;
+            if (lc && lc.nodeType === 3) nr.setStart(lc, lc.textContent.length);
+            else if (lc) nr.setStartAfter(lc);
+            else nr.setStart(prev, 0);
+          } else {
+            nr.setStart(dest, 0);
+          }
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+        }
+        emitChange();
+        normalizeEmptyEditor();
+        return;
+      }
 
-            // Outside table cells
-            if (!editor.querySelector('table')) return;
+      // Outside table cells
+      if (!editor.querySelector('table')) return;
 
-            e.stopPropagation();
+      e.stopPropagation();
 
-            const range = sel.getRangeAt(0);
+      const range = sel.getRangeAt(0);
 
-            // Backspace
-            if (e.key === 'Backspace') {
-                if (!range.collapsed) return;
+      // Backspace
+      if (e.key === 'Backspace') {
+        if (!range.collapsed) return;
 
-                const preRange = document.createRange();
-                preRange.setStart(block, 0);
-                preRange.setEnd(range.startContainer, range.startOffset);
-                const atStart = preRange.toString().length === 0;
+        const preRange = document.createRange();
+        preRange.setStart(block, 0);
+        preRange.setEnd(range.startContainer, range.startOffset);
+        const atStart = preRange.toString().length === 0;
 
-                if (atStart) {
-                    e.preventDefault();
-                    const prev = block.previousElementSibling;
-                    if (!prev || prev.tagName === 'TABLE') return;
+        if (atStart) {
+          e.preventDefault();
+          const prev = block.previousElementSibling;
+          if (!prev || prev.tagName === 'TABLE') return;
 
-                    if (prev.lastChild && prev.lastChild.nodeName === 'BR'
+          if (prev.lastChild && prev.lastChild.nodeName === 'BR'
                         && !prev.textContent.trim()) {
-                        prev.removeChild(prev.lastChild);
-                    }
-                    const mergeNode = prev.lastChild;
-                    const mergeOff = mergeNode && mergeNode.nodeType === 3
-                        ? mergeNode.textContent.length : 0;
-                    const isEmpty = !block.textContent.trim()
+            prev.removeChild(prev.lastChild);
+          }
+          const mergeNode = prev.lastChild;
+          const mergeOff = mergeNode && mergeNode.nodeType === 3
+            ? mergeNode.textContent.length : 0;
+          const isEmpty = !block.textContent.trim()
                         && block.childNodes.length <= 1;
-                    if (!isEmpty) {
-                        while (block.firstChild) {
-                            prev.appendChild(block.firstChild);
-                        }
-                    }
-                    block.remove();
-                    const nr = document.createRange();
-                    if (mergeNode && mergeNode.nodeType === 3) {
-                        nr.setStart(mergeNode, mergeOff);
-                    } else if (mergeNode) {
-                        nr.setStartAfter(mergeNode);
-                    } else {
-                        nr.setStart(prev, 0);
-                    }
-                    nr.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(nr);
-                    emitChange();
-                }
-                return;
+          if (!isEmpty) {
+            while (block.firstChild) {
+              prev.appendChild(block.firstChild);
             }
+          }
+          block.remove();
+          const nr = document.createRange();
+          if (mergeNode && mergeNode.nodeType === 3) {
+            nr.setStart(mergeNode, mergeOff);
+          } else if (mergeNode) {
+            nr.setStartAfter(mergeNode);
+          } else {
+            nr.setStart(prev, 0);
+          }
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+          emitChange();
+        }
+        return;
+      }
 
-            // Delete
-            if (e.key === 'Delete') {
-                if (!range.collapsed) return;
+      // Delete
+      if (e.key === 'Delete') {
+        if (!range.collapsed) return;
 
-                const postRange = document.createRange();
-                postRange.setStart(range.endContainer, range.endOffset);
-                postRange.setEnd(block, block.childNodes.length);
-                const atEnd = postRange.toString().length === 0;
+        const postRange = document.createRange();
+        postRange.setStart(range.endContainer, range.endOffset);
+        postRange.setEnd(block, block.childNodes.length);
+        const atEnd = postRange.toString().length === 0;
 
-                if (atEnd) {
-                    e.preventDefault();
-                    const next = block.nextElementSibling;
-                    if (!next || next.tagName === 'TABLE') return;
-                    const isNextEmpty = !next.textContent.trim()
+        if (atEnd) {
+          e.preventDefault();
+          const next = block.nextElementSibling;
+          if (!next || next.tagName === 'TABLE') return;
+          const isNextEmpty = !next.textContent.trim()
                         && next.childNodes.length <= 1;
-                    if (!isNextEmpty) {
-                        while (next.firstChild) {
-                            block.appendChild(next.firstChild);
-                        }
-                    }
-                    next.remove();
-                    emitChange();
-                }
-                return;
+          if (!isNextEmpty) {
+            while (next.firstChild) {
+              block.appendChild(next.firstChild);
             }
+          }
+          next.remove();
+          emitChange();
+        }
+        return;
+      }
 
-            // Enter
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (!range.collapsed) range.deleteContents();
+      // Enter
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!range.collapsed) range.deleteContents();
 
-                const newP = document.createElement('p');
-                const afterRange = document.createRange();
-                afterRange.setStart(range.startContainer, range.startOffset);
-                afterRange.setEnd(block, block.childNodes.length);
-                const frag = afterRange.extractContents();
+        const newP = document.createElement('p');
+        const afterRange = document.createRange();
+        afterRange.setStart(range.startContainer, range.startOffset);
+        afterRange.setEnd(block, block.childNodes.length);
+        const frag = afterRange.extractContents();
 
-                if (frag.textContent.trim() || frag.querySelector('img')) {
-                    newP.appendChild(frag);
-                } else {
-                    newP.innerHTML = '<br>';
-                }
-                if (!block.textContent && !block.querySelector('img')) {
-                    block.innerHTML = '<br>';
-                }
-                if (block.nextSibling) {
-                    editor.insertBefore(newP, block.nextSibling);
-                } else {
-                    editor.appendChild(newP);
-                }
-                const nr = document.createRange();
-                nr.setStart(newP, 0);
-                nr.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(nr);
-                emitChange();
-            }
-        };
-        editor.addEventListener('keydown', onKeyDown, true);
+        if (frag.textContent.trim() || frag.querySelector('img')) {
+          newP.appendChild(frag);
+        } else {
+          newP.innerHTML = '<br>';
+        }
+        if (!block.textContent && !block.querySelector('img')) {
+          block.innerHTML = '<br>';
+        }
+        if (block.nextSibling) {
+          editor.insertBefore(newP, block.nextSibling);
+        } else {
+          editor.appendChild(newP);
+        }
+        const nr = document.createRange();
+        nr.setStart(newP, 0);
+        nr.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(nr);
+        emitChange();
+      }
+    };
+    editor.addEventListener('keydown', onKeyDown, true);
 
-        // Paste handler — when cursor is inside a <pre> (code block), intercept the
-        // paste and insert plain text verbatim so newlines are preserved as \n text
-        // nodes rather than the <div>/<br> markup the browser would normally inject.
-        const onPaste = (e) => {
-            const sel = window.getSelection();
-            if (!sel || !sel.rangeCount) return;
-            let node = sel.anchorNode;
-            let pre = null;
-            while (node && node !== editor) {
-                if (node.nodeName === 'PRE') { pre = node; break; }
-                node = node.parentNode;
-            }
-            if (!pre) return; // not inside a code block — use browser default
-            e.preventDefault();
-            const text = e.clipboardData.getData('text/plain');
-            if (!text) return;
-            const range = sel.getRangeAt(0);
-            if (!range.collapsed) range.deleteContents();
-            const textNode = document.createTextNode(text);
-            range.insertNode(textNode);
-            range.setStartAfter(textNode);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-            emitChange();
-            updateCodeLineNumbers();
-        };
-        editor.addEventListener('paste', onPaste);
+    // Paste handler — when cursor is inside a <pre> (code block), intercept the
+    // paste and insert plain text verbatim so newlines are preserved as \n text
+    // nodes rather than the <div>/<br> markup the browser would normally inject.
+    const onPaste = (e) => {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      let node = sel.anchorNode;
+      let pre = null;
+      while (node && node !== editor) {
+        if (node.nodeName === 'PRE') { pre = node; break; }
+        node = node.parentNode;
+      }
+      if (!pre) return; // not inside a code block — use browser default
+      e.preventDefault();
+      const text = e.clipboardData.getData('text/plain');
+      if (!text) return;
+      const range = sel.getRangeAt(0);
+      if (!range.collapsed) range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      emitChange();
+      updateCodeLineNumbers();
+    };
+    editor.addEventListener('paste', onPaste);
 
-        return () => {
-            editor.removeEventListener('input', onInput);
-            editor.removeEventListener('focus', onFocus);
-            editor.removeEventListener('click', onEditorClick);
-            editor.removeEventListener('keydown', onKeyDown, true);
-            editor.removeEventListener('paste', onPaste);
-            document.removeEventListener('selectionchange', onSelectionChange);
-            document.removeEventListener('mousedown', onDocMouseDown);
-        };
-    }, []);
+    return () => {
+      editor.removeEventListener('input', onInput);
+      editor.removeEventListener('focus', onFocus);
+      editor.removeEventListener('click', onEditorClick);
+      editor.removeEventListener('keydown', onKeyDown, true);
+      editor.removeEventListener('paste', onPaste);
+      document.removeEventListener('selectionchange', onSelectionChange);
+      document.removeEventListener('mousedown', onDocMouseDown);
+    };
+  }, []);
 
-    // Toolbar button helper
-    const tbBtn = (cmd, title) => html`
+  // Toolbar button helper
+  const tbBtn = (cmd, title) => html`
     <button type="button"
       className=${`ce-toolbar-btn${activeFormats[cmd] ? ' active' : ''}`}
       title=${title}
@@ -1284,7 +1284,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       dangerouslySetInnerHTML=${{ __html: icons[cmd] || '' }}
     />`;
 
-    return html`
+  return html`
     <div className="ce-editor-wrapper">
       <div className="ce-toolbar">
         <span className="ce-toolbar-group">
@@ -1391,81 +1391,81 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
 
 // TAGS INPUT
 function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
-    const [inputValue, setInputValue] = useState('');
-    const [suggestions, setSuggestions] = useState([]);
-    const [isOpen, setIsOpen] = useState(false);
-    const inputRef = useRef(null);
-    const wrapperRef = useRef(null);
+  const [inputValue, setInputValue] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const inputRef = useRef(null);
+  const wrapperRef = useRef(null);
 
-    // Mock tag suggestions -
-    // replace with your actual data
-    const TAG_SUGGESTIONS = [
-        'sql-server', 'objective-c', 'ajax', 'javascript', 'python',
-        'java', 'react', 'node.js', 'css', 'html', 'angular',
-        'vue', 'typescript', 'mongodb', 'postgresql',
-    ];
+  // Mock tag suggestions -
+  // replace with your actual data
+  const TAG_SUGGESTIONS = [
+    'sql-server', 'objective-c', 'ajax', 'javascript', 'python',
+    'java', 'react', 'node.js', 'css', 'html', 'angular',
+    'vue', 'typescript', 'mongodb', 'postgresql',
+  ];
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleInputChange = (e) => {
-        const { value } = e.target;
-        setInputValue(value);
-
-        if (value.trim()) {
-            const filtered = TAG_SUGGESTIONS.filter(
-                (tag) => tag.toLowerCase().includes(
-                    value.toLowerCase(),
-                ) && !tags.includes(tag),
-            );
-            setSuggestions(filtered);
-            setIsOpen(true);
-        } else {
-            setSuggestions([]);
-            setIsOpen(false);
-        }
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
     };
 
-    const addTag = (tag) => {
-        if (tags.length < maxTags && !tags.includes(tag)) {
-            onTagsChange([...tags, tag]);
-            setInputValue('');
-            setIsOpen(false);
-            inputRef.current?.focus();
-        }
-    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const removeTag = (tagToRemove) => {
-        onTagsChange(tags.filter((tag) => tag !== tagToRemove));
-    };
+  const handleInputChange = (e) => {
+    const { value } = e.target;
+    setInputValue(value);
 
-    const handleKeyDown = (e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && inputValue.trim()) {
-            e.preventDefault();
-            e.stopPropagation();
-            addTag(inputValue.trim().replace(/\s+/g, '-'));
-        } else if (e.key === ' ' && !inputValue.trim()) {
-            e.preventDefault();
-        } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-            removeTag(tags[tags.length - 1]);
-        }
-    };
+    if (value.trim()) {
+      const filtered = TAG_SUGGESTIONS.filter(
+        (tag) => tag.toLowerCase().includes(
+          value.toLowerCase(),
+        ) && !tags.includes(tag),
+      );
+      setSuggestions(filtered);
+      setIsOpen(true);
+    } else {
+      setSuggestions([]);
+      setIsOpen(false);
+    }
+  };
 
-    const handleBlur = () => {
-        if (inputValue.trim()) {
-            addTag(inputValue.trim().replace(/\s+/g, '-'));
-        }
-    };
+  const addTag = (tag) => {
+    if (tags.length < maxTags && !tags.includes(tag)) {
+      onTagsChange([...tags, tag]);
+      setInputValue('');
+      setIsOpen(false);
+      inputRef.current?.focus();
+    }
+  };
 
-    return html`
+  const removeTag = (tagToRemove) => {
+    onTagsChange(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleKeyDown = (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && inputValue.trim()) {
+      e.preventDefault();
+      e.stopPropagation();
+      addTag(inputValue.trim().replace(/\s+/g, '-'));
+    } else if (e.key === ' ' && !inputValue.trim()) {
+      e.preventDefault();
+    } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
+      removeTag(tags[tags.length - 1]);
+    }
+  };
+
+  const handleBlur = () => {
+    if (inputValue.trim()) {
+      addTag(inputValue.trim().replace(/\s+/g, '-'));
+    }
+  };
+
+  return html`
     <div className="tags-wrapper" ref=${wrapperRef}>
       <div className="tags-field">
         <div className="tags-input-container">
@@ -1520,40 +1520,40 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
 
 // INLINE PREVIEW
 function InlinePreview({
-    title, category, body, tags, onBack, onPost,
+  title, category, body, tags, onBack, onPost,
 }) {
-    const bodyRef = useRef(null);
+  const bodyRef = useRef(null);
 
-    // Scroll to top and add line numbers to code blocks on mount
-    useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (!bodyRef.current) return;
-        // Add line numbers to code blocks
-        bodyRef.current.querySelectorAll('pre').forEach((pre) => {
-            if (pre.classList.contains('formatted-code-block')) return;
-            const codeText = pre.textContent;
-            const lines = codeText.split('\n');
-            if (lines[lines.length - 1] === '') lines.pop();
-            const gutter = document.createElement('div');
-            gutter.className = 'code-gutter';
-            lines.forEach((_, i) => {
-                const span = document.createElement('span');
-                span.textContent = i + 1;
-                gutter.appendChild(span);
-            });
-            const codeContent = document.createElement('div');
-            codeContent.className = 'code-content';
-            codeContent.textContent = codeText;
-            pre.innerHTML = '';
-            pre.classList.add('formatted-code-block');
-            pre.appendChild(gutter);
-            pre.appendChild(codeContent);
-        });
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [body]);
+  // Scroll to top and add line numbers to code blocks on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!bodyRef.current) return;
+    // Add line numbers to code blocks
+    bodyRef.current.querySelectorAll('pre').forEach((pre) => {
+      if (pre.classList.contains('formatted-code-block')) return;
+      const codeText = pre.textContent;
+      const lines = codeText.split('\n');
+      if (lines[lines.length - 1] === '') lines.pop();
+      const gutter = document.createElement('div');
+      gutter.className = 'code-gutter';
+      lines.forEach((_, i) => {
+        const span = document.createElement('span');
+        span.textContent = i + 1;
+        gutter.appendChild(span);
+      });
+      const codeContent = document.createElement('div');
+      codeContent.className = 'code-content';
+      codeContent.textContent = codeText;
+      pre.innerHTML = '';
+      pre.classList.add('formatted-code-block');
+      pre.appendChild(gutter);
+      pre.appendChild(codeContent);
+    });
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [body]);
 
-    return html`
+  return html`
     <div className="preview-inline">
 
       <div className="preview-forum-post">
@@ -1600,192 +1600,190 @@ function InlinePreview({
 
 // EDIT POST
 function EditPost() {
-    const [title, setTitle] = useState('');
-    const [category, setCategory] = useState('');
-    const [folderId, setFolderId] = useState(null);
-    const [body, setBody] = useState('');
-    const [bodyJson, setBodyJson] = useState(null);
-    const [tags, setTags] = useState([]);
-    const [showPreview, setShowPreview] = useState(false);
-    const [toast, setToast] = useState(null);
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('');
+  const [folderId, setFolderId] = useState(null);
+  const [body, setBody] = useState('');
+  const [bodyJson, setBodyJson] = useState(null);
+  const [tags, setTags] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [toast, setToast] = useState(null);
 
-    const [editId, setEditId] = useState(null);
-    const [editSidebarItemId, setEditSidebarItemId] = useState(null);
-    const [originalCategory, setOriginalCategory] = useState('');
-    const [originalFolderId, setOriginalFolderId] = useState(null);
-    const [originalDraft, setOriginalDraft] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [editSidebarItemId, setEditSidebarItemId] = useState(null);
+  const [originalCategory, setOriginalCategory] = useState('');
+  const [originalDraft, setOriginalDraft] = useState(null);
 
-    const showToast = (message, type = 'success', onConfirm = null) => {
-        setToast({ message, type, onConfirm });
-        if (!onConfirm) {
-            setTimeout(() => setToast(null), 4000);
-        }
+  const showToast = (message, type = 'success', onConfirm = null) => {
+    setToast({ message, type, onConfirm });
+    if (!onConfirm) {
+      setTimeout(() => setToast(null), 4000);
+    }
+  };
+
+  // Single mutable ref that always holds the latest post JSON
+  const postDataRef = useRef({
+    title: '', category: '', body: null, tags: [],
+  });
+
+  const handleBodyChange = (htmlContent, jsonContent) => {
+    setBody(htmlContent);
+    setBodyJson(jsonContent);
+  };
+
+  // Update the single ref in-place whenever any field changes
+  useEffect(() => {
+    postDataRef.current = {
+      title,
+      category,
+      body: bodyJson,
+      tags,
+      created_at: new Date().toISOString(), // eslint-disable-line camelcase
+    };
+    /* eslint-disable no-console */
+    console.clear();
+    console.log('Live post JSON:', postDataRef.current);
+    /* eslint-enable no-console */
+  }, [title, category, bodyJson, tags]);
+
+  // Listen for folder selection via custom event (no page navigation needed)
+  useEffect(() => {
+    const onSelected = (e) => {
+      const { path, name, folderId: fi } = e.detail || {};
+      setCategory(path || name || '');
+      // fi is the MongoDB ObjectId of the selected subfolder, or null for a root category
+      setFolderId(fi || null);
+    };
+    window.addEventListener('folder:selected', onSelected);
+    return () => window.removeEventListener('folder:selected', onSelected);
+  }, []);
+
+  // On mount: check localStorage for the draft passed from the forum-post block
+  useEffect(() => {
+    const saved = localStorage.getItem('edit-post-draft');
+    if (!saved) {
+      window.location.href = '/';
+      return;
+    }
+    try {
+      const draft = JSON.parse(saved);
+      if (!draft.id) {
+        window.location.href = '/';
+        return;
+      }
+      setEditId(draft.id);
+      setEditSidebarItemId(draft.sidebarItemId || null);
+      setTitle(draft.title || '');
+      setBody(draft.body || '');
+      setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
+      setCategory(draft.category || '');
+      setOriginalCategory(draft.category || '');
+      setOriginalDraft({
+        title: draft.title || '',
+        body: draft.body || '',
+        tags: (draft.tags || []).map((tag) => tag.replace(/^#/, '')),
+        category: draft.category || '',
+      });
+    } catch {
+      window.location.href = '/';
+    }
+  }, []);
+
+  const openFolder = async () => {
+    await ensureFolder();
+    window.dispatchEvent(new CustomEvent('folder:open'));
+  };
+
+  const missingFields = [];
+  if (title.trim().length > 150) missingFields.push('Title (max 150 characters)');
+  if (!category) missingFields.push('Category');
+  if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
+  if (tags.length === 0) missingFields.push('Tags (at least 1)');
+  const isFormValid = missingFields.length === 0;
+
+  const isDirty = (() => {
+    if (!originalDraft) return true;
+    const currentTagsStr = [...tags].sort().join(',');
+    const originalTagsStr = [...originalDraft.tags].sort().join(',');
+    return title.trim() !== originalDraft.title.trim()
+            || category !== originalDraft.category
+            || body !== originalDraft.body
+            || currentTagsStr !== originalTagsStr;
+  })();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+    setShowPreview(true);
+  };
+
+  const handlePost = async () => {
+    // Prepend # to each tag before sending to the backend
+    const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
+
+    // ── EDIT MODE (PUT) ──────────────────────────────────────────────
+    const postData = {
+      title: title.trim(),
+      category,
+      body,
+      tags: tagsWithHash,
     };
 
-    // Single mutable ref that always holds the latest post JSON
-    const postDataRef = useRef({
-        title: '', category: '', body: null, tags: [],
-    });
+    try {
+      const response = await fetch(`http://localhost:5000/api/posts/${editId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(postData),
+      });
 
-    const handleBodyChange = (htmlContent, jsonContent) => {
-        setBody(htmlContent);
-        setBodyJson(jsonContent);
-    };
+      const result = await response.json();
 
-    // Update the single ref in-place whenever any field changes
-    useEffect(() => {
-        postDataRef.current = {
-            title,
-            category,
-            body: bodyJson,
-            tags,
-            created_at: new Date().toISOString(), // eslint-disable-line camelcase
-        };
-        /* eslint-disable no-console */
-        console.clear();
-        console.log('Live post JSON:', postDataRef.current);
-        /* eslint-enable no-console */
-    }, [title, category, bodyJson, tags]);
-
-    // Listen for folder selection via custom event (no page navigation needed)
-    useEffect(() => {
-        const onSelected = (e) => {
-            const { path, name, folderId: fi } = e.detail || {};
-            setCategory(path || name || '');
-            // fi is the MongoDB ObjectId of the selected subfolder, or null for a root category
-            setFolderId(fi || null);
-        };
-        window.addEventListener('folder:selected', onSelected);
-        return () => window.removeEventListener('folder:selected', onSelected);
-    }, []);
-
-    // On mount: check localStorage for the draft passed from the forum-post block
-    useEffect(() => {
-        const saved = localStorage.getItem('edit-post-draft');
-        if (!saved) {
-            window.location.href = '/';
-            return;
-        }
-        try {
-            const draft = JSON.parse(saved);
-            if (!draft.id) {
-                window.location.href = '/';
-                return;
-            }
-            setEditId(draft.id);
-            setEditSidebarItemId(draft.sidebarItemId || null);
-            setTitle(draft.title || '');
-            setBody(draft.body || '');
-            setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
-            setCategory(draft.category || '');
-            setOriginalCategory(draft.category || '');
-            setOriginalFolderId(null);
-            setOriginalDraft({
-                title: draft.title || '',
-                body: draft.body || '',
-                tags: (draft.tags || []).map((tag) => tag.replace(/^#/, '')),
-                category: draft.category || ''
-            });
-        } catch {
-            window.location.href = '/';
-        }
-    }, []);
-
-    const openFolder = async () => {
-        await ensureFolder();
-        window.dispatchEvent(new CustomEvent('folder:open'));
-    };
-
-    const missingFields = [];
-    if (title.trim().length > 150) missingFields.push('Title (max 150 characters)');
-    if (!category) missingFields.push('Category');
-    if (body.replace(/<[^>]*>/g, '').length < 20) missingFields.push('Body (min 20 characters)');
-    if (tags.length === 0) missingFields.push('Tags (at least 1)');
-    const isFormValid = missingFields.length === 0;
-
-    const isDirty = (() => {
-        if (!originalDraft) return true;
-        const currentTagsStr = [...tags].sort().join(',');
-        const originalTagsStr = [...originalDraft.tags].sort().join(',');
-        return title.trim() !== originalDraft.title.trim() ||
-            category !== originalDraft.category ||
-            body !== originalDraft.body ||
-            currentTagsStr !== originalTagsStr;
-    })();
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!isFormValid) return;
-        setShowPreview(true);
-    };
-
-    const handlePost = async () => {
-        // Prepend # to each tag before sending to the backend
-        const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
-
-        // ── EDIT MODE (PUT) ──────────────────────────────────────────────
-        const postData = {
+      if (response.ok) {
+        // If category changed, update sidebar item
+        if (category !== originalCategory && editSidebarItemId) {
+          const smartPayload = {
             title: title.trim(),
-            category,
-            body,
-            tags: tagsWithHash,
-        };
-
-        try {
-            const response = await fetch(`http://localhost:5000/api/posts/${editId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify(postData),
+            category: category.split(' > ')[0], // Use root category name
+            postId: editId,
+            parentId: folderId || null,
+          };
+          try {
+            await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(smartPayload),
             });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                // If category changed, update sidebar item
-                if (category !== originalCategory && editSidebarItemId) {
-                    const smartPayload = {
-                        title: title.trim(),
-                        category: category.split(' > ')[0], // Use root category name
-                        postId: editId,
-                        parentId: folderId || null,
-                    };
-                    try {
-                        await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify(smartPayload),
-                        });
-                    } catch (sidebarErr) { /* sidebar update failed silently */ }
-                }
-                localStorage.removeItem('edit-post-draft');
-                window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-                window.dispatchEvent(new CustomEvent('refresh-cards'));
-                window.history.back();
-            } else {
-                showToast(result.error || 'Failed to update post', 'error');
-            }
-        } catch (error) {
-            showToast('Network error: Unable to connect to the server.', 'error');
+          } catch (sidebarErr) { /* sidebar update failed silently */ }
         }
-    };
+        localStorage.removeItem('edit-post-draft');
+        window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+        window.dispatchEvent(new CustomEvent('refresh-cards'));
+        window.history.back();
+      } else {
+        showToast(result.error || 'Failed to update post', 'error');
+      }
+    } catch (error) {
+      showToast('Network error: Unable to connect to the server.', 'error');
+    }
+  };
 
-    const handleCancel = () => {
-        if (!isDirty) {
-            localStorage.removeItem('edit-post-draft');
-            window.location.href = '/';
-            return;
-        }
-        showToast('Are you sure you want to discard your unsaved changes?', 'warning', () => {
-            localStorage.removeItem('edit-post-draft');
-            window.location.href = '/';
-        });
-    };
+  const handleCancel = () => {
+    if (!isDirty) {
+      localStorage.removeItem('edit-post-draft');
+      window.location.href = '/';
+      return;
+    }
+    showToast('Are you sure you want to discard your unsaved changes?', 'warning', () => {
+      localStorage.removeItem('edit-post-draft');
+      window.location.href = '/';
+    });
+  };
 
-    return html`
+  return html`
     <div className="edit-post">
       ${showPreview ? html`
         <${InlinePreview}
@@ -1942,6 +1940,6 @@ function EditPost() {
 }
 
 export default function decorate(block) {
-    const app = html`<${EditPost} />`;
-    render(app, block);
+  const app = html`<${EditPost} />`;
+  render(app, block);
 }

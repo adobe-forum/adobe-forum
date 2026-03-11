@@ -198,7 +198,9 @@ const ForumPost = ({ blockEl }) => {
 
             // Check if current user explicitly likes this post
             const cu = getCurrentUser();
+            // eslint-disable-next-line no-underscore-dangle
             if (cu && cu._id) {
+              // eslint-disable-next-line no-underscore-dangle
               setHasLiked(fetchedLikes.includes(String(cu._id)));
             } else {
               setHasLiked(false);
@@ -273,24 +275,24 @@ const ForumPost = ({ blockEl }) => {
     // Optimistic UI Update
     const originallyLiked = hasLiked;
     setHasLiked(!originallyLiked);
-    setLikesCount(prev => originallyLiked ? prev - 1 : prev + 1);
+    setLikesCount((prev) => (originallyLiked ? prev - 1 : prev + 1));
 
     try {
       const response = await fetch(`${API_BASE}/posts/${post.id}/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!response.ok) {
         // Revert on failure
         setHasLiked(originallyLiked);
-        setLikesCount(prev => originallyLiked ? prev + 1 : prev - 1);
+        setLikesCount((prev) => (originallyLiked ? prev + 1 : prev - 1));
       }
     } catch (error) {
       // Revert on failure
       setHasLiked(originallyLiked);
-      setLikesCount(prev => originallyLiked ? prev + 1 : prev - 1);
+      setLikesCount((prev) => (originallyLiked ? prev + 1 : prev - 1));
     }
   };
 
