@@ -136,6 +136,77 @@
     & .meta-separator {
       color: var(--sp-gray-300);
     }
+
+    & .views-count {
+      color: var(--sp-gray-600);
+    }
+
+    & .like-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-left: auto;
+      height: var(--sp-height-sm);
+      padding: 0 16px;
+      border-radius: var(--sp-radius-md);
+      font-family: var(--body-font-family);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--sp-gray-800);
+      background: var(--sp-gray-50);
+      border: 1px solid var(--sp-gray-300);
+      cursor: pointer;
+      transition: background 0.13s, border-color 0.13s;
+      outline: none;
+
+      &:hover {
+        background: var(--sp-gray-100);
+        border-color: var(--sp-gray-400);
+      }
+
+      &:active {
+        background: var(--sp-gray-200);
+      }
+
+      &:focus-visible {
+        box-shadow: 0 0 0 2px var(--sp-gray-50), 0 0 0 4px var(--sp-blue-500);
+      }
+
+      &.liked {
+        background: var(--sp-red-50);
+        border-color: var(--sp-red-400);
+        color: var(--sp-red-700);
+
+        &:hover {
+          background: var(--sp-red-100);
+          border-color: var(--sp-red-500);
+        }
+
+        &:active {
+          background: var(--sp-red-200);
+        }
+      }
+
+      & .heart-filled {
+        color: var(--sp-red-600);
+        animation: heartPulse 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+    }
+  }
+
+  @keyframes heartPulse {
+    0% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(1.3);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
 
   /* ── Post body ───────────────────────────── */

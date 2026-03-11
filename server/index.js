@@ -492,12 +492,52 @@ app.get('/api/posts', async (req, res) => {
  */
 app.get('/api/posts/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).populate('createdBy', 'firstName lastName');
+
     if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch post' });
+  }
+});
+
+/**
+ * POST /api/posts/:id/like
+ * Toggle like for the current user
+ */
+app.post('/api/posts/:id/like', requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    const userId = req.user._id;
+    const hasLiked = post.likes.includes(userId);
+
+    // Toggle logic
+    let updatedPost;
+    if (hasLiked) {
+      updatedPost = await Post.findByIdAndUpdate(
+        req.params.id,
+        { $pull: { likes: userId } },
+        { new: true }
+      ).populate('createdBy', 'firstName lastName');
+    } else {
+      updatedPost = await Post.findByIdAndUpdate(
+        req.params.id,
+        { $addToSet: { likes: userId } },
+        { new: true }
+      ).populate('createdBy', 'firstName lastName');
+    }
+
+    return res.json({ success: true, post: updatedPost });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to update like status' });
   }
 });
 

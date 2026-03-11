@@ -29,6 +29,15 @@ const EditIcon = () => html`
   </svg>
 `;
 
+const HeartIcon = ({ filled }) => html`
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
+    fill="${filled ? 'currentColor' : 'none'}" 
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+    class="${filled ? 'heart-filled' : 'heart-outline'}">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+  </svg>
+`;
+
 // ============================================
 // HELPERS
 // ============================================
@@ -77,6 +86,12 @@ const ForumPost = ({ blockEl }) => {
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [sidebarItemId, setSidebarItemId] = useState(null); // the SidebarItem linking this post
+
+  // Local state for likes and views to allow optimistic updates
+  const [likesCount, setLikesCount] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [viewsCount, setViewsCount] = useState(0);
+
   const commentsListRef = useRef(null);
 
   // Scroll to bottom when comments change
@@ -177,6 +192,18 @@ const ForumPost = ({ blockEl }) => {
             };
             setPost(transformedPost);
 
+            const fetchedLikes = fetchedPost.likes || [];
+            setLikesCount(fetchedLikes.length);
+            setViewsCount(fetchedPost.views || 0);
+
+            // Check if current user explicitly likes this post
+            const cu = getCurrentUser();
+            if (cu && cu._id) {
+              setHasLiked(fetchedLikes.includes(String(cu._id)));
+            } else {
+              setHasLiked(false);
+            }
+
             // If sidebarItemId wasn't supplied by the event (e.g. opened from cards view),
             // look it up so the Edit button can use it for location-move support.
             if (!sid) {
@@ -236,6 +263,37 @@ const ForumPost = ({ blockEl }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const toggleLike = async () => {
+    if (!currentUser) {
+      // Prompt user to login if attempting to like without auth
+      window.dispatchEvent(new CustomEvent('open-auth-modal'));
+      return;
+    }
+
+    // Optimistic UI Update
+    const originallyLiked = hasLiked;
+    setHasLiked(!originallyLiked);
+    setLikesCount(prev => originallyLiked ? prev - 1 : prev + 1);
+
+    try {
+      const response = await fetch(`${API_BASE}/posts/${post.id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setHasLiked(originallyLiked);
+        setLikesCount(prev => originallyLiked ? prev + 1 : prev - 1);
+      }
+    } catch (error) {
+      // Revert on failure
+      setHasLiked(originallyLiked);
+      setLikesCount(prev => originallyLiked ? prev + 1 : prev - 1);
+    }
+  };
+
   const canEdit = isOwner(post, currentUser);
 
   return html`
@@ -269,6 +327,17 @@ const ForumPost = ({ blockEl }) => {
         <span class="author-name">${post.author}</span>
         <span class="meta-separator">•</span>
         <span class="topic-name">${post.topic}</span>
+        <span class="meta-separator">•</span>
+        <span class="views-count">${viewsCount} Views</span>
+
+        <button 
+          class="like-btn ${hasLiked ? 'liked' : ''}" 
+          onClick=${toggleLike}
+          aria-label=${hasLiked ? 'Unlike post' : 'Like post'}
+        >
+          <${HeartIcon} filled=${hasLiked} />
+          <span class="like-count">${likesCount}</span>
+        </button>
       </div>
 
       <div
