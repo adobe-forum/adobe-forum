@@ -16,15 +16,6 @@ const PAGE_SIZE = 12;
 // ── Shared Instances ──────────────────────────────────────────────────
 const domParser = new DOMParser();
 
-// ── Pure Helper Functions ─────────────────────────────────────────────
-function extractImage(body) {
-  if (!body) return null;
-  const doc = domParser.parseFromString(body, 'text/html');
-  const img = doc.querySelector('img');
-  // eslint-disable-next-line no-script-url
-  return (img && img.src && !img.src.startsWith('javascript:')) ? img.src : null;
-}
-
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
@@ -83,9 +74,8 @@ function Card({ post, onClick }) {
 
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
-  const extractedImg = post.image || extractImage(post.body);
-  const imgSrc = extractedImg || '../../icons/adobe_logo.svg';
-  const isPlaceholder = !extractedImg;
+  const imgSrc = '../../icons/adobe_logo.svg';
+  const isPlaceholder = true;
 
   const author = post.author?.name || post.author?.username || post.author
     || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
@@ -139,15 +129,21 @@ function Card({ post, onClick }) {
         ` : ''}
       </div>
       <div class="card-body">
-        ${tags.length > 0 ? html`<div class="card-tags">${tags.map((tag) => html`<span class="card-tag">${tag}</span>`)}</div>` : ''}
-        <h3 class="card-title">${post.title}</h3>
-        <p class="card-meta">
-          <span class="spectrum-Avatar" style="background-color: ${avColor}" aria-hidden="true">
-            <span class="spectrum-Avatar-initials">${initials}</span>
-          </span>
-          <span class="card-author">${author}</span>
-        </p>
-        ${excerpt ? html`<p class="card-desc">${excerpt}</p>` : ''}
+        <div class="card-top">
+          <div class="card-tags">
+            ${tags.length > 0 ? tags.map((tag) => html`<span class="card-tag">${tag}</span>`) : ''}
+          </div>
+          <h3 class="card-title">${post.title}</h3>
+        </div>
+        <div class="card-bottom">
+          <p class="card-meta">
+            <span class="spectrum-Avatar" style="background-color: ${avColor}" aria-hidden="true">
+              <span class="spectrum-Avatar-initials">${initials}</span>
+            </span>
+            <span class="card-author">${author}</span>
+          </p>
+          <p class="card-desc">${excerpt || ''}</p>
+        </div>
       </div>
       <div class="card-read-more" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">

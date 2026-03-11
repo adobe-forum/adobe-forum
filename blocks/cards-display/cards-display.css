@@ -128,8 +128,8 @@
     /* Tooltip must come BEFORE badge to satisfy stylelint's descending specificity rule */
     .card-category-tooltip {
       position: absolute;
-      bottom: calc(var(--spectrum-spacing-200) + 32px); 
-      left: var(--spectrum-spacing-200);
+      bottom: calc(var(--spectrum-spacing-400) + 32px); 
+      left: var(--spectrum-spacing-400);
       z-index: 10; 
       background-color: var(--spectrum-gray-900);
       border: 1px solid var(--spectrum-gray-800);
@@ -198,15 +198,15 @@
     /* Category Badge */
     .card-category-badge {
       position: absolute;
-      bottom: var(--spectrum-spacing-200);
-      left: var(--spectrum-spacing-200);
+      bottom: var(--spectrum-spacing-400);
+      left: var(--spectrum-spacing-400);
       z-index: 2; 
       display: inline-flex;
       align-items: center;
       max-width: calc(100% - 32px);
       box-sizing: border-box;
-      height: 24px;
-      padding: 0 var(--spectrum-spacing-200);
+      height: 26px; /* increased slightly to allow for descenders */
+      padding: 2px var(--spectrum-spacing-200) 0; /* nudged text visually center */
       border-radius: var(--spectrum-border-radius-100); 
       background-color: var(--spectrum-gray-100);
       color: var(--spectrum-gray-900);
@@ -216,7 +216,7 @@
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.02em;
-      line-height: 1;
+      line-height: normal; /* remove fixed line-height: 1 which clips descenders */
       white-space: nowrap;
       cursor: default;
       transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -247,11 +247,24 @@
       padding: var(--spectrum-spacing-400);
       display: flex;
       flex-direction: column;
-      gap: var(--spectrum-spacing-200);
       min-width: 0;
       overflow: hidden;
       box-sizing: border-box;
       flex: 1;
+    }
+
+    .card-top {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spectrum-spacing-200);
+    }
+
+    .card-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spectrum-spacing-200);
+      margin-top: auto;
+      padding-top: var(--spectrum-spacing-200);
     }
   
     .card-tags {
@@ -358,6 +371,7 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
       overflow-wrap: break-word;
+      min-height: 3em;
     }
   
     /* Card Read More must come BEFORE the global card hover state */
