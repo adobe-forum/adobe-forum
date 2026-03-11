@@ -621,8 +621,9 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-    // REQ 6: opens Spectrum dialog (not window.confirm)
-  // Walks a node's children recursively to find the first item (file or subfolder) not owned by currentUser
+  // REQ 6: opens Spectrum dialog (not window.confirm)
+  // Walks a node's children recursively to find the first item (file or subfolder)
+  // not owned by currentUser
   const findBlockingChild = useCallback((node, user) => {
     const children = node.children || [];
     for (let i = 0; i < children.length; i += 1) {
