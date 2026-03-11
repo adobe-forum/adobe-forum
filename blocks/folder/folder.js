@@ -21,18 +21,19 @@ const timeAgo = (ts) => {
 
 const countFolders = (node) => (node.children || []).filter((c) => c.isFolder).length;
 
-// REQ 3+4: Files (isFolder===false) are stripped — Folder modal shows ONLY folders/subfolders.
+// REQ 3+4: Files (isFolder===false) are kept in the tree for ownership checks but
+// marked with type:'file' so GridPanel still renders ONLY folders.
 // createdBy is preserved as a plain string for ownership checks (req 6).
 const toFolderNode = (item) => {
   // eslint-disable-next-line no-underscore-dangle
-  if (item.isFolder === false) return null; // skip files
-  const children = (item.children || []).map(toFolderNode).filter(Boolean);
+  const isFile = item.isFolder === false;
+  const children = isFile ? [] : (item.children || []).map(toFolderNode).filter(Boolean);
   return {
     // eslint-disable-next-line no-underscore-dangle
     id: String(item._id || item.id),
     name: item.title || item.name,
-    type: 'folder',
-    isFolder: true,
+    type: isFile ? 'file' : 'folder',
+    isFolder: !isFile,
     updatedAt: item.createdAt || item.updatedAt || null,
     // eslint-disable-next-line no-underscore-dangle
     createdBy: item.createdBy ? String(item.createdBy._id || item.createdBy) : null,
@@ -620,13 +621,41 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-  // REQ 6: opens Spectrum dialog (not window.confirm)
-  const handleDelete = (node) => setDeleteDialog(node);
+    // REQ 6: opens Spectrum dialog (not window.confirm)
+  // Walks a node's children recursively to find the first item (file or subfolder) not owned by currentUser
+  const findBlockingChild = useCallback((node, user) => {
+    const children = node.children || [];
+    for (let i = 0; i < children.length; i += 1) {
+      const child = children[i];
+      if (!isOwner(child, user)) return child; // files and folders both checked
+      if (child.isFolder) {
+        const nested = findBlockingChild(child, user);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  }, []);
+
+  const handleDelete = (node) => {
+    // Check if any descendant file or subfolder was created by another user
+    const blocker = findBlockingChild(node, currentUser);
+    if (blocker) {
+      setFolderError(null);
+      setDeleteDialog({
+        blocked: true,
+        blockerName: blocker.name,
+        blockerType: blocker.isFolder ? 'subfolder' : 'file',
+        parentName: node.name,
+      });
+      return;
+    }
+    setDeleteDialog(node);
+  };
 
   const confirmDelete = async () => {
     const node = deleteDialog;
     setDeleteDialog(null);
-    if (!node) return;
+    if (!node || node.blocked) return;
     try {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
@@ -787,11 +816,19 @@ function FolderModal({ isOpen, onClose, onSelect }) {
           onClose=${() => setCtx(null)}/>`}
 
       <${SpectrumAlertDialog}
-        isOpen=${!!deleteDialog}
+        isOpen=${!!(deleteDialog && !deleteDialog.blocked)}
         title="Delete Folder"
-        message=${deleteDialog ? `Delete "${deleteDialog.name}"? This will also remove all its subfolders.` : ''}
+        message=${deleteDialog && !deleteDialog.blocked ? `Are you sure you want to delete "${deleteDialog.name}"? This action cannot be undone.` : ''}
         confirmLabel="Delete"
         onConfirm=${confirmDelete}
+        onCancel=${() => setDeleteDialog(null)}
+      />
+      <${SpectrumAlertDialog}
+        isOpen=${!!(deleteDialog && deleteDialog.blocked)}
+        title="Cannot Delete"
+        message=${deleteDialog && deleteDialog.blocked ? `Cannot delete: "${deleteDialog.blockerName}" ${deleteDialog.blockerType === 'file' ? '(a file)' : '(a subfolder)'} in this folder was created by another user. Ask them to remove it first.` : ''}
+        confirmLabel="OK"
+        onConfirm=${() => setDeleteDialog(null)}
         onCancel=${() => setDeleteDialog(null)}
       />
     </div>`;
