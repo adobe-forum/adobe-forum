@@ -196,6 +196,16 @@ const ForumPost = ({ blockEl }) => {
             setLikesCount(fetchedLikes.length);
             setViewsCount(fetchedPost.views || 0);
 
+            // Broadcast the loaded view count to any listening components (like the cards)
+            window.dispatchEvent(new CustomEvent('af-post-updated', {
+              detail: {
+                // eslint-disable-next-line no-underscore-dangle
+                id: fetchedPost._id,
+                views: fetchedPost.views || 0,
+                likes: fetchedLikes.length,
+              },
+            }));
+
             // Check if current user explicitly likes this post
             const cu = getCurrentUser();
             // eslint-disable-next-line no-underscore-dangle
@@ -274,8 +284,14 @@ const ForumPost = ({ blockEl }) => {
 
     // Optimistic UI Update
     const originallyLiked = hasLiked;
+    const newLikesCount = originallyLiked ? likesCount - 1 : likesCount + 1;
     setHasLiked(!originallyLiked);
-    setLikesCount((prev) => (originallyLiked ? prev - 1 : prev + 1));
+    setLikesCount(newLikesCount);
+
+    // Broadcast optimistic update
+    window.dispatchEvent(new CustomEvent('af-post-updated', {
+      detail: { id: post.id, likes: newLikesCount },
+    }));
 
     try {
       const response = await fetch(`${API_BASE}/posts/${post.id}/like`, {
@@ -285,14 +301,18 @@ const ForumPost = ({ blockEl }) => {
       });
 
       if (!response.ok) {
-        // Revert on failure
-        setHasLiked(originallyLiked);
-        setLikesCount((prev) => (originallyLiked ? prev + 1 : prev - 1));
+        throw new Error('Server rejected like toggle');
       }
     } catch (error) {
       // Revert on failure
+      const revertedLikesCount = originallyLiked ? newLikesCount + 1 : newLikesCount - 1;
       setHasLiked(originallyLiked);
-      setLikesCount((prev) => (originallyLiked ? prev + 1 : prev - 1));
+      setLikesCount(revertedLikesCount);
+
+      // Broadcast revert
+      window.dispatchEvent(new CustomEvent('af-post-updated', {
+        detail: { id: post.id, likes: revertedLikesCount },
+      }));
     }
   };
 
