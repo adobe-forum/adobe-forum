@@ -115,6 +115,21 @@ const FileIcon = () => html`
 `;
 
 // ============================================
+// HIGHLIGHT HELPER
+// ============================================
+
+function HighlightedText({ text, highlight }) {
+  if (!highlight) return text;
+  const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escapedHighlight})`, 'gi'));
+  return parts.map((part, i) => (
+    part.toLowerCase() === highlight.toLowerCase()
+      ? html`<mark key=${i} class="search-highlight">${part}</mark>`
+      : part
+  ));
+}
+
+// ============================================
 // OWNERSHIP HELPER
 // ============================================
 
@@ -137,10 +152,11 @@ function isOwner(item, currentUser) {
 // ============================================
 
 function TreeItem({
-  item, activeItem, currentUser, onItemClick, onDelete, level = 0,
+  item, activeItem, currentUser, onItemClick, onDelete, level = 0, searchTerm = '',
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpandedState, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const isExpanded = !!searchTerm || isExpandedState;
 
   const hasChildren = item.children && item.children.length > 0;
   // IMPORTANT: trust the server's isFolder flag exclusively.
@@ -180,15 +196,15 @@ function TreeItem({
         title=${item.title}>
         <span class="tree-chevron">
           ${isFolder
-    ? html`<${ChevronIcon} expanded=${isExpanded} />`
-    : html`<span class="tree-chevron-spacer"/>`}
+      ? html`<${ChevronIcon} expanded=${isExpanded} />`
+      : html`<span class="tree-chevron-spacer"/>`}
         </span>
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
-    ? html`<${FolderIcon} expanded=${isExpanded} />`
-    : html`<${FileIcon} />`}
+      ? html`<${FolderIcon} expanded=${isExpanded} />`
+      : html`<${FileIcon} />`}
         </span>
-        <span class="tree-label">${item.title}</span>
+        <span class="tree-label"><${HighlightedText} text=${item.title} highlight=${searchTerm} /></span>
 
         ${isHovered && canEdit && html`
           <span class="item-actions">
@@ -206,7 +222,7 @@ function TreeItem({
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
               onItemClick=${onItemClick}
-              onDelete=${onDelete} level=${level + 1} />
+              onDelete=${onDelete} level=${level + 1} searchTerm=${searchTerm} />
           `)}
         </ul>
       `}
@@ -220,10 +236,11 @@ function TreeItem({
 
 function CategoryItem({
   category, activeSubcategory, currentUser, onSubcategoryClick,
-  onDeleteCategory,
+  onDeleteCategory, searchTerm = '',
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsedState, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const isCollapsed = searchTerm ? false : isCollapsedState;
 
   const hasItems = category.items && category.items.length > 0;
 
@@ -241,7 +258,7 @@ function CategoryItem({
         onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}>
         <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
         <span class="category-icon"><${FolderIcon} expanded=${!isCollapsed} /></span>
-        <span class="category-name">${category.name}</span>
+        <span class="category-name"><${HighlightedText} text=${category.name} highlight=${searchTerm} /></span>
         ${isHovered && canDeleteCategory && html`
           <span class="item-actions">
             <button class="item-action-btn item-action-btn-delete" title="Delete category"
@@ -254,15 +271,15 @@ function CategoryItem({
       ${!isCollapsed && html`
         <ul class="tree-list">
           ${hasItems
-    ? category.items.map((item) => html`
+        ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
                   onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
-                  level=${0} />
+                  level=${1} searchTerm=${searchTerm} />
               `)
-    : html`<div class="no-items">No items yet</div>`
-}
+        : html`<div class="no-items">No items yet</div>`
+      }
         </ul>
       `}
     </li>
@@ -502,7 +519,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
+        ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -510,10 +527,11 @@ function Sidebar() {
                     currentUser=${currentUser}
                     onSubcategoryClick=${handleSubcategoryClick}
                     onDeleteCategory=${handleDelete}
+                    searchTerm=${searchTerm}
                   />
                 `)
-    : html`<div class="no-results">No categories found</div>`
-}
+        : html`<div class="no-results">No categories found</div>`
+      }
           </ul>
         `}
       </div>

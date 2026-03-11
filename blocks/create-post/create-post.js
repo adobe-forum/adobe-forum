@@ -1608,11 +1608,6 @@ function CreatePost() {
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [toast, setToast] = useState(null);
-  const [editId, setEditId] = useState(null); // non-null = edit mode
-  // SidebarItem to move if location changes
-  const [editSidebarItemId, setEditSidebarItemId] = useState(null);
-  const [originalCategory, setOriginalCategory] = useState(''); // track if user changed location
-  const [originalFolderId, setOriginalFolderId] = useState(null); // track original folder
 
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
@@ -1658,40 +1653,29 @@ function CreatePost() {
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
-  // On mount: check sessionStorage for an edit draft (set by forum-post when Edit is clicked).
-  // Falls back to localStorage so a page refresh doesn't wipe the form.
+  // On mount: check sessionStorage for a saved draft (in case of refresh)
   useEffect(() => {
-    const raw = sessionStorage.getItem('edit-post-draft');
+    const raw = sessionStorage.getItem('create-post-draft');
     if (raw) {
       try {
         const draft = JSON.parse(raw);
-        // Move to localStorage so refresh can restore it, then clear sessionStorage
-        localStorage.setItem('edit-post-draft', raw);
-        sessionStorage.removeItem('edit-post-draft');
-        setEditId(draft.id || null);
-        setEditSidebarItemId(draft.sidebarItemId || null);
+        localStorage.setItem('create-post-draft', raw);
+        sessionStorage.removeItem('create-post-draft');
         setTitle(draft.title || '');
         setBody(draft.body || '');
         setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
         setCategory(draft.category || '');
-        setOriginalCategory(draft.category || '');
-        setOriginalFolderId(null);
       } catch { /* ignore corrupted draft */ }
       return;
     }
-    // No sessionStorage draft — check localStorage (i.e. user refreshed the page)
-    const saved = localStorage.getItem('edit-post-draft');
+    const saved = localStorage.getItem('create-post-draft');
     if (!saved) return;
     try {
       const draft = JSON.parse(saved);
-      setEditId(draft.id || null);
-      setEditSidebarItemId(draft.sidebarItemId || null);
       setTitle(draft.title || '');
       setBody(draft.body || '');
       setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
       setCategory(draft.category || '');
-      setOriginalCategory(draft.category || '');
-      setOriginalFolderId(null);
     } catch { /* ignore corrupted draft */ }
   }, []);
 
@@ -1716,67 +1700,6 @@ function CreatePost() {
   const handlePost = async () => {
     // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
-
-    // ── EDIT MODE (PATCH) ──────────────────────────────────────────────
-    if (editId) {
-      try {
-        const response = await fetch(`http://localhost:5000/api/posts/${editId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            title: title.trim(), body, tags: tagsWithHash, category,
-          }),
-        });
-        const result = await response.json();
-        if (response.ok) {
-          // Move the SidebarItem only if the user explicitly picked a new location
-          const categoryChanged = category !== originalCategory;
-          const folderChanged = folderId !== originalFolderId;
-          const locationChanged = editSidebarItemId && (categoryChanged || folderChanged);
-          if (locationChanged) {
-            try {
-              const moveRes = await fetch(
-                `http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`,
-                {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({ category, parentId: folderId || null }),
-                },
-              );
-              const moveData = await moveRes.json();
-              if (!moveRes.ok) {
-                // Post is already saved — warn but don't block
-                showToast(moveData.error || 'Location update failed.', 'error');
-              } else {
-                // Refresh the sidebar so it shows the new location
-                window.dispatchEvent(new CustomEvent('refresh-sidebar'));
-              }
-            } catch (moveErr) {
-              // eslint-disable-next-line no-console
-              console.error('Move failed:', moveErr);
-              showToast('Location update failed — network error.', 'error');
-            }
-          }
-          // Clear the persisted draft on successful save
-          localStorage.removeItem('edit-post-draft');
-          // Notify forum-post to refresh its view
-          window.dispatchEvent(new CustomEvent('edit-post:saved', {
-            detail: {
-              id: editId, title: title.trim(), body, tags: tagsWithHash, topic: category,
-            },
-          }));
-          // Return to the post view
-          window.history.back();
-        } else {
-          showToast(result.error || 'Failed to update post', 'error');
-        }
-      } catch {
-        showToast('Network error: Unable to connect to the server.', 'error');
-      }
-      return;
-    }
 
     // ── CREATE MODE (POST) ────────────────────────────────────────────
     const postData = {
@@ -1832,7 +1755,7 @@ function CreatePost() {
 
   const handleCancel = () => {
     showToast('Are you sure you want to discard this post?', 'warning', () => {
-      localStorage.removeItem('edit-post-draft');
+      localStorage.removeItem('create-post-draft');
       window.location.href = '/';
     });
   };
@@ -1851,8 +1774,8 @@ function CreatePost() {
       ` : html`
         <div className="cp-page-header">
           <div className="cp-header-content">
-            <h1 className="cp-page-title">${editId ? 'Edit Post' : 'Post your thoughts'}</h1>
-            <p className="cp-page-subtitle">${editId ? 'Update your post below.' : 'Ask a question and get helpful answers from the community!'}</p>
+            <h1 className="cp-page-title">Post your thoughts</h1>
+            <p className="cp-page-subtitle">Ask a question and get helpful answers from the community!</p>
           </div>
           <div className="cp-required-badge">
             <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
@@ -1927,7 +1850,7 @@ function CreatePost() {
               </label>
               <p className="helper-text">Provide details to help others answer your question (min. 20 characters)</p>
               <${RichTextEditor}
-                key=${editId || 'new'}
+                key="new"
                 onChange=${handleBodyChange}
                 minChars=${20}
                 initialValue=${body}

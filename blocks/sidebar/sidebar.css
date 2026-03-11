@@ -118,8 +118,8 @@
       }
 
       &:focus {
-        border-color: var(--sidebar-active-color);
-        box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+        border-color: var(--spectrum-accent-color-900);
+        box-shadow: 0 0 0 2px rgb(218 31 38 / 10%);
         background: var(--sp-gray-50);
       }
     }
@@ -325,6 +325,12 @@
     line-height: 1;
   }
 
+  & mark.search-highlight {
+    background-color: rgba(255, 214, 0, 0.4);
+    color: inherit;
+    border-radius: 2px;
+  }
+
   /* ── Empty / loading / error states ─────── */
 
   & .no-items {
@@ -419,6 +425,7 @@
    ============================================= */
 
 @media (width >=768px) {
+
   main,
   .content-wrapper {
     transition: margin-left var(--sidebar-transition);
