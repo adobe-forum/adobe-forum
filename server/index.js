@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -465,14 +465,62 @@ app.get('/api/posts', async (req, res) => {
       ];
     }
 
-    const [posts, total] = await Promise.all([
-      Post.find(query)
-        .populate('createdBy', 'firstName lastName')
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit),
-      Post.countDocuments(query),
-    ]);
+    const sortOption = req.query.sort || 'latest';
+    let sortObj = { createdAt: -1 };
+    
+    if (sortOption === 'oldest') sortObj = { createdAt: 1 };
+    if (sortOption === 'most_viewed') sortObj = { views: -1 };
+    
+    // For sorting by most_liked, we need an aggregation pipeline because likes is an array of IDs.
+    // If not most_liked, we can use a standard find query.
+    let posts, total;
+    if (sortOption === 'most_liked') {
+      const pipeline = [
+        { $match: query },
+        { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
+        { $sort: { likesCount: -1, createdAt: -1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        {
+           $lookup: {
+             from: 'users',
+             localField: 'createdBy',
+             foreignField: '_id',
+             as: 'createdByObj'
+           }
+        },
+        {
+          $addFields: {
+            createdBy: { $arrayElemAt: ['$createdByObj', 0] }
+          }
+        },
+        { $project: { createdByObj: 0 } }
+      ];
+      
+      const countPipeline = [
+        { $match: query },
+        { $count: 'total' }
+      ];
+
+      const [aggResult, countResult] = await Promise.all([
+        Post.aggregate(pipeline),
+        Post.aggregate(countPipeline)
+      ]);
+      
+      posts = aggResult;
+      total = countResult.length > 0 ? countResult[0].total : 0;
+    } else {
+      const [findResult, countResult] = await Promise.all([
+        Post.find(query)
+          .populate('createdBy', 'firstName lastName')
+          .sort(sortObj)
+          .skip((page - 1) * limit)
+          .limit(limit),
+        Post.countDocuments(query),
+      ]);
+      posts = findResult;
+      total = countResult;
+    }
 
     res.json({
       success: true,

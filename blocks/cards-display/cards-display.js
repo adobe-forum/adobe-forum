@@ -16,15 +16,6 @@ const PAGE_SIZE = 12;
 // ── Shared Instances ──────────────────────────────────────────────────
 const domParser = new DOMParser();
 
-// ── Pure Helper Functions ─────────────────────────────────────────────
-function extractImage(body) {
-  if (!body) return null;
-  const doc = domParser.parseFromString(body, 'text/html');
-  const img = doc.querySelector('img');
-  // eslint-disable-next-line no-script-url
-  return (img && img.src && !img.src.startsWith('javascript:')) ? img.src : null;
-}
-
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
@@ -83,9 +74,8 @@ function Card({ post, onClick }) {
 
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
-  const extractedImg = post.image || extractImage(post.body);
-  const imgSrc = extractedImg || '../../icons/adobe_logo.svg';
-  const isPlaceholder = !extractedImg;
+  const imgSrc = '../../icons/adobe_logo.svg';
+  const isPlaceholder = true;
 
   const author = post.author?.name || post.author?.username || post.author
     || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
@@ -124,6 +114,21 @@ function Card({ post, onClick }) {
           class="card-img-box ${isPlaceholder ? 'card-img--placeholder' : ''}" 
           loading="lazy" 
         />
+        <div class="card-img-overlay-metrics">
+          <div class="spectrum-Badge spectrum-Badge--sizeS spectrum-Badge--neutral card-metric-badge" title="Likes">
+            <svg class="spectrum-Icon spectrum-Icon--sizeS" focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span class="spectrum-Badge-label">${post.likes?.length || 0}</span>
+          </div>
+          <div class="spectrum-Badge spectrum-Badge--sizeS spectrum-Badge--neutral card-metric-badge" title="Views">
+            <svg class="spectrum-Icon spectrum-Icon--sizeS" focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span class="spectrum-Badge-label">${post.views || 0}</span>
+          </div>
+        </div>
         ${displayCategory ? html`
           <span class="card-category-badge">
             <span class="card-category-text">${displayCategory}</span>
@@ -139,15 +144,21 @@ function Card({ post, onClick }) {
         ` : ''}
       </div>
       <div class="card-body">
-        ${tags.length > 0 ? html`<div class="card-tags">${tags.map((tag) => html`<span class="card-tag">${tag}</span>`)}</div>` : ''}
-        <h3 class="card-title">${post.title}</h3>
-        <p class="card-meta">
-          <span class="spectrum-Avatar" style="background-color: ${avColor}" aria-hidden="true">
-            <span class="spectrum-Avatar-initials">${initials}</span>
-          </span>
-          <span class="card-author">${author}</span>
-        </p>
-        ${excerpt ? html`<p class="card-desc">${excerpt}</p>` : ''}
+        <div class="card-top">
+          <div class="card-tags">
+            ${tags.length > 0 ? tags.map((tag) => html`<span class="card-tag">${tag}</span>`) : ''}
+          </div>
+          <h3 class="card-title">${post.title}</h3>
+        </div>
+        <div class="card-bottom">
+          <p class="card-meta">
+            <span class="spectrum-Avatar" style="background-color: ${avColor}" aria-hidden="true">
+              <span class="spectrum-Avatar-initials">${initials}</span>
+            </span>
+            <span class="card-author">${author}</span>
+          </p>
+          <p class="card-desc">${excerpt || ''}</p>
+        </div>
       </div>
       <div class="card-read-more" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -232,6 +243,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [totalCount, setTotalCount] = useState(null); // {n} badge count
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [sortOption, setSortOption] = useState('latest');
   const [refreshTick, setRefreshTick] = useState(0);
   // "My Posts" — read ?author= from URL once on mount
   const [authorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
@@ -255,6 +267,56 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   }
 
   useEffect(() => {
+    // Force a data refresh when returning to this page from a post
+    // This catches browser back button navs and tab switches
+    const handleReturn = () => {
+      setRefreshTick((t) => t + 1);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleReturn();
+      }
+    };
+
+    // Listen for real-time post metric updates (views/likes) from the forum-post view
+    const handlePostUpdated = (e) => {
+      const { id, views, likes } = e.detail;
+      if (!id) return;
+
+      setPosts((currentPosts) => currentPosts.map((p) => {
+        const pId = p._id || p.id;
+        if (String(pId) === String(id)) {
+          // If the payload contains views or likes, update them.
+          // Fallback to existing values if not provided in the partial update.
+          const newViews = views !== undefined ? views : p.views;
+          const newLikes = likes !== undefined ? likes : p.likes?.length;
+
+          return {
+            ...p,
+            views: newViews,
+            // Create a fake likes array of the correct length so the card display logic works
+            likes: new Array(newLikes).fill('placeholder'),
+          };
+        }
+        return p;
+      }));
+    };
+
+    window.addEventListener('pageshow', handleReturn);
+    window.addEventListener('popstate', handleReturn);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('af-post-updated', handlePostUpdated);
+
+    return () => {
+      window.removeEventListener('pageshow', handleReturn);
+      window.removeEventListener('popstate', handleReturn);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('af-post-updated', handlePostUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
 
@@ -267,15 +329,21 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           url = new URL(`${API_BASE_URL}/sidebar-items/category/${encodeURIComponent(category)}`);
           url.searchParams.append('page', currentPage);
           url.searchParams.append('limit', PAGE_SIZE);
+          url.searchParams.append('sort', sortOption);
         } else {
           url = new URL(`${API_BASE_URL}/posts`);
           url.searchParams.append('page', currentPage);
           url.searchParams.append('limit', PAGE_SIZE);
+          url.searchParams.append('sort', sortOption);
           if (searchQuery) url.searchParams.append('search', searchQuery);
           if (authorId) url.searchParams.append('author', authorId); // My Posts filter
         }
 
-        const res = await fetch(url, { signal });
+        // Ensure we bypass browser cache for fresh views/likes stats
+        const res = await fetch(url, {
+          signal,
+          cache: 'no-store',
+        });
         if (!res.ok) throw new Error('Network response was not ok');
         const data = await res.json();
 
@@ -297,7 +365,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     fetchPosts();
     return () => { controller.abort(); };
-  }, [currentPage, searchQuery, category, refreshTick, authorId]);
+  }, [currentPage, searchQuery, category, refreshTick, authorId, sortOption]);
 
   useEffect(() => {
     const handleSearch = (e) => {
@@ -410,7 +478,20 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
   return html`
     <div class="cards-header">
-      ${renderTitle()}
+      <div class="cards-title-row">
+        ${renderTitle()}
+        ${!searchQuery && !authorId ? html`
+          <div class="cards-sort-wrapper">
+            <label for="cards-sort" class="cards-sort-label">Sort by:</label>
+            <select id="cards-sort" class="cards-sort-select" value=${sortOption} onChange=${(e) => { setSortOption(e.target.value); setCurrentPage(1); }}>
+              <option value="latest">Latest</option>
+              <option value="oldest">Oldest</option>
+              <option value="most_liked">Most Liked</option>
+              <option value="most_viewed">Most Viewed</option>
+            </select>
+          </div>
+        ` : ''}
+      </div>
       ${initialSubtitle && !searchQuery && !category && !authorId ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
     </div>
 
