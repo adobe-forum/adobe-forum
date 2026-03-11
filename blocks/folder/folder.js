@@ -637,8 +637,15 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     return null;
   }, []);
 
-  const handleDelete = (node) => {
-    // Check if any descendant file or subfolder was created by another user
+  // Show "Are you sure?" first — blocker check happens on confirm
+  const handleDelete = (node) => setDeleteDialog(node);
+
+  const confirmDelete = async () => {
+    const node = deleteDialog;
+    setDeleteDialog(null);
+    if (!node || node.blocked) return;
+
+    // After user confirms, check if any descendant is owned by another user
     const blocker = findBlockingChild(node, currentUser);
     if (blocker) {
       setFolderError(null);
@@ -650,13 +657,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
       });
       return;
     }
-    setDeleteDialog(node);
-  };
 
-  const confirmDelete = async () => {
-    const node = deleteDialog;
-    setDeleteDialog(null);
-    if (!node || node.blocked) return;
     try {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
