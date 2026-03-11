@@ -620,6 +620,10 @@ app.post('/api/sidebar-items', requireAuth, async (req, res) => {
     if (!title || !category)
       return res.status(400).json({ error: 'Invalid payload' });
 
+    // ── FIX: enforce max length on folder/item names ──
+    if (title.trim().length > 50)
+      return res.status(400).json({ error: 'Name must be 50 characters or fewer.' });
+
     if (isFolder) {
       const duplicate = await SidebarItem.findOne({ title, category, parentId, isFolder: true });
       if (duplicate) return res.status(409).json({ error: 'A folder with that name already exists here.' });
@@ -654,6 +658,11 @@ app.post('/api/sidebar-items/smart-add', requireAuth, async (req, res) => {
 
     if (!title || !category || !postId)
       return res.status(400).json({ error: 'Invalid payload' });
+
+    // ── FIX: enforce max length ──
+    if (title.trim().length > 50)
+      return res.status(400).json({ error: 'Name must be 50 characters or fewer.' });
+
     if (parentId !== null && !mongoose.Types.ObjectId.isValid(parentId))
       return res.status(400).json({ error: 'Invalid payload' });
 
@@ -704,6 +713,10 @@ app.post('/api/sidebar/categories', requireAuth, async (req, res) => {
     const { name } = req.body;
     if (!name || !name.trim())
       return res.status(400).json({ error: 'Category name is required' });
+
+    // ── FIX: enforce max length on category names ──
+    if (name.trim().length > 50)
+      return res.status(400).json({ error: 'Category name must be 50 characters or fewer.' });
 
     const categoryName = name.trim();
 
