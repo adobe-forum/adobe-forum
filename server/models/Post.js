@@ -18,6 +18,14 @@ const postSchema = new mongoose.Schema({
   tags: [{
     type: String,
   }],
+  views: {
+    type: Number,
+    default: 0,
+  },
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
   // Tracks which user created this post.
   // Used for ownership checks on edit/delete.
   // Optional (null) for posts created before this field was added.
