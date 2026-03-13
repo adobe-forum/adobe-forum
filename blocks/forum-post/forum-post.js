@@ -242,13 +242,23 @@ const ForumPost = ({ blockEl }) => {
       cardsWrappers.forEach((el) => { el.style.display = ''; });
     };
 
+    // Navigate away if the currently viewed post is deleted from the sidebar
+    const handleItemDeleted = (e) => {
+      const { itemId } = e.detail || {};
+      if (itemId && sidebarItemId && itemId === sidebarItemId) {
+        window.location.href = '/';
+      }
+    };
+
     window.addEventListener('load-forum-post', handleLoadPost);
     window.addEventListener('show-cards', handleShowCards);
+    window.addEventListener('sidebar-item-deleted', handleItemDeleted);
     return () => {
       window.removeEventListener('load-forum-post', handleLoadPost);
       window.removeEventListener('show-cards', handleShowCards);
+      window.removeEventListener('sidebar-item-deleted', handleItemDeleted);
     };
-  }, [blockEl]);
+  }, [blockEl, sidebarItemId]);
 
   if (!post) {
     return html`

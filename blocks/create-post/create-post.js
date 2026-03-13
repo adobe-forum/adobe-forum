@@ -1518,6 +1518,66 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
   `;
 }
 
+// CONFIDENTIALITY AGREEMENT DIALOG
+function ConfidentialityDialog({ isOpen, onAgree, onDecline }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') onDecline(); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, onDecline]);
+
+  if (!isOpen) return null;
+
+  return html`
+    <div className="cp-agree-backdrop" onClick=${(e) => { if (e.target === e.currentTarget) onDecline(); }}>
+      <div className="cp-agree-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cp-agree-title">
+        <div className="cp-agree-header">
+          <span className="cp-agree-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </span>
+          <h2 className="cp-agree-title" id="cp-agree-title">Confidentiality Agreement</h2>
+        </div>
+        <div className="cp-agree-body">
+          <p className="cp-agree-lead">Before you publish, please confirm the following:</p>
+          <div className="cp-agree-content">
+            <p>I certify that this post <strong>does not contain</strong> any of the following:</p>
+            <ul className="cp-agree-list">
+              <li>Confidential or proprietary Adobe information</li>
+              <li>Client names, project details, or account information</li>
+              <li>Personally identifiable information (PII) of any individual</li>
+              <li>Security credentials, API keys, tokens, or passwords</li>
+              <li>Content covered by Non-Disclosure Agreements (NDAs)</li>
+              <li>Internal-only documents, screenshots, or communications</li>
+            </ul>
+            <p className="cp-agree-note">
+              By clicking <strong>"I Agree"</strong>, I acknowledge that my post is appropriate for internal community sharing and complies with Adobe's data protection policies.
+            </p>
+          </div>
+        </div>
+        <div className="cp-agree-footer">
+          <button type="button" className="cp-agree-btn cp-agree-btn--secondary" onClick=${onDecline}>
+            Go Back
+          </button>
+          <button type="button" className="cp-agree-btn cp-agree-btn--primary" onClick=${onAgree}>
+            I Agree
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // INLINE PREVIEW
 function InlinePreview({
   title, category, body, tags, onBack, onPost,
@@ -1607,6 +1667,7 @@ function CreatePost() {
   const [bodyJson, setBodyJson] = useState(null);
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [showAgreement, setShowAgreement] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success', onConfirm = null) => {
@@ -1769,7 +1830,7 @@ function CreatePost() {
           body=${body}
           tags=${tags}
           onBack=${() => setShowPreview(false)}
-          onPost=${handlePost}
+          onPost=${() => setShowAgreement(true)}
         />
       ` : html`
         <div className="cp-page-header">
@@ -1896,6 +1957,11 @@ function CreatePost() {
           </div>
         </form>
       `}
+      <${ConfidentialityDialog}
+        isOpen=${showAgreement}
+        onAgree=${() => { setShowAgreement(false); handlePost(); }}
+        onDecline=${() => setShowAgreement(false)}
+      />
       ${toast && html`
         <div className=${`cp-toast cp-toast-${toast.type}`}>
           <span className="cp-toast-msg">${toast.message}</span>

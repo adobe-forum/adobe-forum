@@ -462,6 +462,9 @@ function Sidebar() {
       if (data.success) {
         await fetchCategories();
         window.dispatchEvent(new CustomEvent('refresh-cards'));
+        window.dispatchEvent(new CustomEvent('sidebar-item-deleted', {
+          detail: { itemId, categoryId },
+        }));
       } else {
         setDeleteError(data.error || 'Delete failed.');
       }

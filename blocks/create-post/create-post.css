@@ -1463,3 +1463,190 @@
   padding: 0;
   font-size: inherit;
 }
+
+/* ── Confidentiality Agreement Dialog ──────────────────────────────── */
+
+.cp-agree-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 50%);
+  backdrop-filter: blur(4px);
+  animation: cp-agree-fade-in 0.2s ease-out;
+  padding: 16px;
+}
+
+@keyframes cp-agree-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cp-agree-slide-up {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cp-agree-dialog {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 25%), 0 0 0 1px rgb(0 0 0 / 6%);
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: cp-agree-slide-up 0.25s ease-out;
+  overflow: hidden;
+}
+
+.cp-agree-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #eceef1;
+}
+
+.cp-agree-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 10px;
+  background: #fff0f1;
+  border: 1px solid rgb(218 31 38 / 18%);
+  color: #da1f26;
+}
+
+.cp-agree-icon svg {
+  display: block;
+}
+
+.cp-agree-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.cp-agree-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cp-agree-lead {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 14px;
+}
+
+.cp-agree-content {
+  background: #f8f9fb;
+  border: 1px solid #eceef1;
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.cp-agree-content p {
+  font-size: 13.5px;
+  color: #333;
+  margin: 0 0 10px;
+  line-height: 1.55;
+}
+
+.cp-agree-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+}
+
+.cp-agree-list li {
+  position: relative;
+  padding: 7px 0 7px 28px;
+  font-size: 13.5px;
+  color: #333;
+  line-height: 1.45;
+  border-bottom: 1px solid rgb(0 0 0 / 5%);
+}
+
+.cp-agree-list li:last-child {
+  border-bottom: none;
+}
+
+.cp-agree-list li::before {
+  content: "✕";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffebee;
+  border: 1.5px solid rgb(218 31 38 / 25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #da1f26;
+  line-height: 1;
+}
+
+.cp-agree-note {
+  font-size: 13px !important;
+  color: #555 !important;
+  margin: 0 !important;
+  line-height: 1.55;
+}
+
+.cp-agree-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #eceef1;
+}
+
+.cp-agree-btn {
+  padding: 10px 24px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.cp-agree-btn:active {
+  transform: scale(0.97);
+}
+
+.cp-agree-btn--secondary {
+  background: transparent;
+  color: #1a1a1a;
+  border: 1.5px solid #dde1e7;
+}
+
+.cp-agree-btn--secondary:hover {
+  background: #f0f1f3;
+  border-color: #9a9a9a;
+}
+
+.cp-agree-btn--primary {
+  background: #da1f26;
+  color: #fff;
+}
+
+.cp-agree-btn--primary:hover {
+  background: #b81219;
+  box-shadow: 0 4px 14px rgb(218 31 38 / 28%);
+}
