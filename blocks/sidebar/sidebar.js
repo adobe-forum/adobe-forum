@@ -5,7 +5,7 @@ const API_BASE = 'http://localhost:5000/api';
 
 // ============================================
 // NORMALIZE
-// ============================================
+// ============================================`
 
 function normalizeItems(items) {
   return (items || []).map((item) => {
@@ -460,11 +460,13 @@ function Sidebar() {
       });
       const data = await response.json();
       if (data.success) {
+        if (itemId) {
+          window.dispatchEvent(new CustomEvent('sidebar-item-deleted', {
+            detail: { itemId },
+          }));
+        }
         await fetchCategories();
         window.dispatchEvent(new CustomEvent('refresh-cards'));
-        window.dispatchEvent(new CustomEvent('sidebar-item-deleted', {
-          detail: { itemId, categoryId },
-        }));
       } else {
         setDeleteError(data.error || 'Delete failed.');
       }

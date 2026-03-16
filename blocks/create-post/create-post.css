@@ -1480,13 +1480,25 @@
 }
 
 @keyframes cp-agree-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes cp-agree-slide-up {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .cp-agree-dialog {
@@ -1523,7 +1535,7 @@
   color: #da1f26;
 }
 
-.cp-agree-icon svg {
+.cp-agree-icon-svg {
   display: block;
 }
 
@@ -1630,23 +1642,23 @@
   transform: scale(0.97);
 }
 
-.cp-agree-btn--secondary {
+.cp-agree-btn-secondary {
   background: transparent;
   color: #1a1a1a;
   border: 1.5px solid #dde1e7;
 }
 
-.cp-agree-btn--secondary:hover {
+.cp-agree-btn-secondary:hover {
   background: #f0f1f3;
   border-color: #9a9a9a;
 }
 
-.cp-agree-btn--primary {
+.cp-agree-btn-primary {
   background: #da1f26;
   color: #fff;
 }
 
-.cp-agree-btn--primary:hover {
+.cp-agree-btn-primary:hover {
   background: #b81219;
   box-shadow: 0 4px 14px rgb(218 31 38 / 28%);
 }

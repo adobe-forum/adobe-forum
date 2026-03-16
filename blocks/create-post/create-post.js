@@ -1542,7 +1542,7 @@ function ConfidentialityDialog({ isOpen, onAgree, onDecline }) {
       <div className="cp-agree-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cp-agree-title">
         <div className="cp-agree-header">
           <span className="cp-agree-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg className="cp-agree-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
           </span>
@@ -1566,10 +1566,10 @@ function ConfidentialityDialog({ isOpen, onAgree, onDecline }) {
           </div>
         </div>
         <div className="cp-agree-footer">
-          <button type="button" className="cp-agree-btn cp-agree-btn--secondary" onClick=${onDecline}>
+          <button type="button" className="cp-agree-btn cp-agree-btn-secondary" onClick=${onDecline}>
             Go Back
           </button>
-          <button type="button" className="cp-agree-btn cp-agree-btn--primary" onClick=${onAgree}>
+          <button type="button" className="cp-agree-btn cp-agree-btn-primary" onClick=${onAgree}>
             I Agree
           </button>
         </div>
