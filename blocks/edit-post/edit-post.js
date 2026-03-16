@@ -1731,7 +1731,7 @@ function EditPost() {
 
     try {
       const response = await fetch(`http://localhost:5000/api/posts/${editId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
