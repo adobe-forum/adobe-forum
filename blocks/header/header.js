@@ -524,6 +524,8 @@ function loadCSS(href) {
 
 export default async function decorate(block) {
   block.textContent = '';
+  block.style.display = 'block';
+  block.style.minHeight = 'var(--header-height)';
   const headerWrapper = document.createElement('div');
   headerWrapper.className = 'header-wrapper';
   block.append(headerWrapper);
