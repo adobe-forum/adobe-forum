@@ -56,7 +56,7 @@ body.fm-scroll-lock {
   border-bottom: 1px solid #ebebeb;
   background: #f8f8f8;
   flex-shrink: 0;
-}
+} 
 
 .fm-nav {
   display: flex;
