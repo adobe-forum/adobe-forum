@@ -327,7 +327,7 @@
   & h6 {
     margin: 16px 0 8px;
     line-height: 1.3;
-    font-weight: 700;
+    font-weight: inherit;
   }
 
   & h1 {
@@ -361,7 +361,7 @@
   & .ce-inline-h4,
   & .ce-inline-h5,
   & .ce-inline-h6 {
-    font-weight: 700;
+    font-weight: inherit;
   }
 
   & .ce-inline-h1 {
