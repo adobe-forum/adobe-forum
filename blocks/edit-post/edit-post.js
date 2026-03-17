@@ -629,11 +629,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       block = block.parentNode;
     }
 
-    // Check if selection is partial (some text selected, but not the full block)
-    const isPartial = !range.collapsed && block
-            && range.toString().trim() !== block.textContent.trim();
+    // Any non-collapsed selection → inline span (only selected text changes size)
+    const hasSelection = !range.collapsed;
 
-    if (!isPartial) {
+    if (!hasSelection) {
       // Full block or collapsed cursor: use native formatBlock
       // First unwrap any inline heading spans in this block
       if (block) {
