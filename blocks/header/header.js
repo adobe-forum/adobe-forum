@@ -448,6 +448,7 @@ function HeaderComponent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [sessionWarning, setSessionWarning] = useState(false);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
 
@@ -455,6 +456,27 @@ function HeaderComponent() {
     const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
     window.addEventListener('sidebar-state-changed', onSidebarStateChange);
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
+  }, []);
+
+  // Session timeout — warn at 25 min, auto-logout at 30 min
+  useEffect(() => {
+    if (!user) return undefined;
+    const WARNING_AT = 25 * 60 * 1000;
+    const LOGOUT_AT = 30 * 60 * 1000;
+
+    const warnTimer = setTimeout(() => setSessionWarning(true), WARNING_AT);
+    const logoutTimer = setTimeout(() => {
+      fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(() => {
+          localStorage.removeItem('af_user');
+          window.location.replace('/auth-form');
+        });
+    }, LOGOUT_AT);
+
+    return () => {
+      clearTimeout(warnTimer);
+      clearTimeout(logoutTimer);
+    };
   }, []);
 
   const toggleSidebar = () => {
@@ -503,7 +525,18 @@ function HeaderComponent() {
       </div>
     </nav>
 
-    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}`;
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}
+
+    ${sessionWarning && html`
+      <div class="session-warning-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Your session expires in 5 minutes. 
+        <a href="/auth-form">Log in again</a> to stay signed in.
+        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
+      </div>`}`;
 }
 
 // ============================================

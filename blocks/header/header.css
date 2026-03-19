@@ -947,3 +947,63 @@ footer,
     color: #d7373f !important;
   }
 }
+
+/* =============================================
+   SESSION WARNING BANNER
+   ============================================= */
+
+.session-warning-banner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #7a5c00;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 99999;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 14%);
+  white-space: nowrap;
+
+  & svg {
+    flex-shrink: 0;
+    stroke: #f59e0b;
+  }
+
+  & a {
+    color: #da1f26;
+    font-weight: 700;
+    text-decoration: underline;
+    margin-left: 2px;
+
+    &:hover {
+      color: #b71418;
+    }
+  }
+}
+
+.session-warning-close {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #7a5c00;
+  margin-left: 8px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
