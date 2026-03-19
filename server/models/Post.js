@@ -26,6 +26,13 @@ const postSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   }],
+  // Peer-review workflow status.
+  // Defaults to 'published' so all pre-existing posts remain visible.
+  status: {
+    type: String,
+    enum: ['published', 'pending_review', 'changes_requested'],
+    default: 'published',
+  },
   // Tracks which user created this post.
   // Used for ownership checks on edit/delete.
   // Optional (null) for posts created before this field was added.

@@ -245,6 +245,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [category, setCategory] = useState('');
   const [sortOption, setSortOption] = useState('latest');
   const [refreshTick, setRefreshTick] = useState(0);
+  const [isMine, setIsMine] = useState(false);
   // "My Posts" — read ?author= from URL once on mount
   const [authorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
 
@@ -254,7 +255,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
   // Title: My Posts > Category filter > Search > default
   let displayTitle = initialTitle;
-  if (authorId) {
+  if (authorId || isMine) {
     displayTitle = 'My Posts';
   } else if (category) {
     displayTitle = `${category} Posts`;
@@ -336,7 +337,8 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           url.searchParams.append('limit', PAGE_SIZE);
           url.searchParams.append('sort', sortOption);
           if (searchQuery) url.searchParams.append('search', searchQuery);
-          if (authorId) url.searchParams.append('author', authorId); // My Posts filter
+          if (authorId) url.searchParams.append('author', authorId); // My Posts filter (URL-based)
+          if (isMine) url.searchParams.append('mine', 'true'); // My Posts filter (sidebar button)
         }
 
         // Ensure we bypass browser cache for fresh views/likes stats
@@ -365,7 +367,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
     fetchPosts();
     return () => { controller.abort(); };
-  }, [currentPage, searchQuery, category, refreshTick, authorId, sortOption]);
+  }, [currentPage, searchQuery, category, refreshTick, authorId, sortOption, isMine]);
 
   useEffect(() => {
     const handleSearch = (e) => {
@@ -388,7 +390,14 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     window.addEventListener('search-posts', handleSearch);
     window.addEventListener('filter-category', handleFilter);
     window.addEventListener('show-cards', handleShowCards);
-    const handleRefresh = () => setRefreshTick((t) => t + 1);
+    const handleRefresh = (e) => {
+      if (e && e.detail && e.detail.mine) {
+        setIsMine(true);
+      } else {
+        setIsMine(false);
+      }
+      setRefreshTick((t) => t + 1);
+    };
     window.addEventListener('refresh-cards', handleRefresh);
     window.addEventListener('edit-post:saved', handleRefresh);
     toggleViews(true);
@@ -417,7 +426,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 
   const getEmptyStateContent = () => {
     // My Posts — user hasn't created anything yet
-    if (authorId && !searchQuery && !category) {
+    if ((authorId || isMine) && !searchQuery && !category) {
       return html`
         <div class="cards-no-results">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -453,7 +462,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   // When authorId/category/search is active, skip the badge — just plain title.
   const renderTitle = () => {
     // My Posts — always show badge with total count
-    if (authorId) {
+    if (authorId || isMine) {
       const countLabel = totalCount !== null ? totalCount : '…';
       return html`
         <h2 class="cards-title">
@@ -480,7 +489,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     <div class="cards-header">
       <div class="cards-title-row">
         ${renderTitle()}
-        ${!searchQuery && !authorId ? html`
+        ${!searchQuery && !authorId && !isMine ? html`
           <div class="cards-sort-wrapper">
             <label for="cards-sort" class="cards-sort-label">Sort by:</label>
             <select id="cards-sort" class="cards-sort-select" value=${sortOption} onChange=${(e) => { setSortOption(e.target.value); setCurrentPage(1); }}>
@@ -492,7 +501,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           </div>
         ` : ''}
       </div>
-      ${initialSubtitle && !searchQuery && !category && !authorId ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
+      ${initialSubtitle && !searchQuery && !category && !authorId && !isMine ? html`<p class="cards-subtitle">${initialSubtitle}</p>` : ''}
     </div>
 
     ${loading && html`<${SkeletonLoaders} />`}

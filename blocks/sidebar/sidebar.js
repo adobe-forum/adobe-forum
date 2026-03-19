@@ -299,6 +299,7 @@ function Sidebar() {
   const [activeSubcategory, setActiveSubcategory] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [pendingReviews, setPendingReviews] = useState([]);
 
   // ── Auth state ──────────────────────────────────────────────────────────
   // null  = not yet checked
@@ -419,6 +420,30 @@ function Sidebar() {
     };
   }, []);
 
+  // ── Fetch pending reviews ───────────────────────────────────────────
+  const fetchPendingReviews = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`${API_BASE}/reviews/pending`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setPendingReviews(data.reviews || []);
+      }
+    } catch {
+      /* non-fatal */
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) fetchPendingReviews();
+    else setPendingReviews([]);
+  }, [currentUser]);
+
+  useEffect(() => {
+    window.addEventListener('refresh-sidebar', fetchPendingReviews);
+    return () => window.removeEventListener('refresh-sidebar', fetchPendingReviews);
+  }, [currentUser]);
+
   // ── Handlers ────────────────────────────────────────────────────────────
 
   const handleSubcategoryClick = (subcategoryId, postId) => {
@@ -477,6 +502,30 @@ function Sidebar() {
     }
   };
 
+  // ── Navigation handlers ─────────────────────────────────────────────
+  const handleHome = () => {
+    setActiveSubcategory(null);
+    window.dispatchEvent(new CustomEvent('show-cards'));
+    window.dispatchEvent(new CustomEvent('refresh-cards'));
+  };
+
+  const handleMyPosts = () => {
+    setActiveSubcategory(null);
+    window.dispatchEvent(new CustomEvent('show-cards'));
+    window.dispatchEvent(new CustomEvent('refresh-cards', { detail: { mine: true } }));
+  };
+
+  const handlePendingReviewClick = (review) => {
+    if (!review.postId) return;
+    // eslint-disable-next-line no-underscore-dangle
+    const postId = typeof review.postId === 'object' ? String(review.postId._id) : String(review.postId);
+    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
+    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
+    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
+    postWrappers.forEach((el) => { el.style.display = 'block'; });
+    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+  };
+
   // ── Search filter ───────────────────────────────────────────────────────
 
   const filterItems = (items, term) => items.reduce((acc, item) => {
@@ -503,15 +552,35 @@ function Sidebar() {
 
   return html`
     <div class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
-      <div class="sidebar">
+      <aside class="sidebar">
         <div class="search-container">
-          <input type="text" placeholder="Search..." value=${searchTerm}
-            onInput=${(e) => setSearchTerm(e.target.value.toLowerCase())} />
+          <input type="text" placeholder="Search topics..." value=${searchTerm}
+            onInput=${(e) => setSearchTerm(e.target.value.toLowerCase())} class="sidebar-search-input" />
         </div>
 
-        <div class="explorer-header">
-          <span class="explorer-header-label">Topics</span>
-        </div>
+        ${currentUser && html`
+          <div class="sidebar-item ${!activeSubcategory && !window.location.search.includes('mine=true') ? 'active' : ''}" onClick=${handleHome}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Home
+          </div>
+
+          <div class="sidebar-section">Reviews</div>
+          <div class="sidebar-item" onClick=${() => document.querySelector('.sidebar-pending-list').style.display = document.querySelector('.sidebar-pending-list').style.display === 'none' ? 'block' : 'none'}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+            Pending Reviews
+            ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:var(--amber);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
+          </div>
+          <ul class="sidebar-pending-list" style="list-style:none; padding:4px 0 8px 24px; margin:0; display:block;">
+            ${pendingReviews.length > 0 ? pendingReviews.map((r) => html`
+              <li key=${r._id} style="font-size:12px; color:var(--text2); padding:4px 0; cursor:pointer;" onClick=${() => handlePendingReviewClick(r)}>
+                <div style="font-weight:500;">${r.postId?.title || 'Untitled Post'}</div>
+                <div style="color:var(--text3); font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
+              </li>
+            `) : html`<li style="font-size:12px; color:var(--text3); padding:4px 0; font-style: italic;">No reviews pending</li>`}
+          </ul>
+        `}
+
+        <div class="sidebar-section">Topics</div>
 
         ${loading && html`<div class="loading">Loading…</div>`}
         ${error && html`
@@ -524,7 +593,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-    ? filteredCategories.map((category) => html`
+              ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -535,11 +604,11 @@ function Sidebar() {
                     searchTerm=${searchTerm}
                   />
                 `)
-    : html`<div class="no-results">No categories found</div>`
-}
+              : html`<div class="no-results">No categories found</div>`
+            }
           </ul>
         `}
-      </div>
+      </aside>
 
       ${isOpen && html`
         <div class="sidebar-backdrop"

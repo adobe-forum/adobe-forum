@@ -1,7 +1,33 @@
 :root {
   /* --- App Layout Dimensions --- */
-  --nav-width: 256px;
-  --header-height: 64px;
+  --nav-width: 220px; /* matched to prototype sidebar width */
+  --header-height: 0px; /* Header is inside topnav now */
+
+  /* =============================================
+     PROTOTYPE NEW STYLING TOKENS (Remapped to Spectrum)
+     ============================================= */
+  --bg:        var(--sp-gray-75);
+  --surface:   var(--sp-gray-50);
+  --surface2:  var(--sp-gray-100);
+  --border:    var(--sp-gray-200);
+  --border2:   var(--sp-gray-300);
+  --text:      var(--sp-gray-900);
+  --text2:     var(--sp-gray-700);
+  --text3:     var(--sp-gray-500);
+  --accent:    var(--sp-red-600);
+  --accent-bg: #ffeaea;
+  --accent2:   var(--sp-blue-600);
+  --accent2-bg:var(--sp-blue-100);
+  --green:     #16a34a;
+  --green-bg:  #f0fdf4;
+  --amber:     #e68619;
+  --amber-bg:  #fffbeb;
+  --radius:    var(--sp-radius-md);
+  --radius-lg: var(--sp-radius-lg);
+  --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,.14);
+  --font:      var(--body-font-family);
+  --mono:      var(--post-code-font);
 
   /* =============================================
      SPECTRUM DESIGN TOKENS — light theme, medium scale
@@ -95,11 +121,11 @@
   --heading-font-size-xs: 18px;
 
   /* Misc Colors */
-  --light-color: var(--sp-gray-100);
-  --background-color: var(--sp-gray-75);
-  --text-color: var(--sp-gray-900);
-  --link-color: var(--spectrum-accent-color-900);
-  --link-hover-color: var(--spectrum-accent-color-1000);
+  --light-color: var(--bg);
+  --background-color: var(--bg);
+  --text-color: var(--text);
+  --link-color: var(--accent2);
+  --link-hover-color: var(--accent);
 }
 
 @font-face {
@@ -143,10 +169,11 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--body-font-family);
-  font-size: var(--body-font-size-m);
-  background-color: var(--background-color);
-  color: var(--text-color);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  background-color: var(--bg);
+  color: var(--text);
   min-height: 100vh;
 
   /* --- FIX APPLIED HERE --- */
@@ -191,8 +218,7 @@ aside.sidebar-wrapper {
 
 main {
   grid-area: content;
-  background-color: var(--background-color);
-  padding: 20px;
+  background-color: var(--bg);
   position: relative;
   overflow: hidden auto;
 
@@ -203,7 +229,6 @@ main {
   /* prevent grid blowout */
 
   @media (width >=768px) {
-    padding: 40px;
     max-width: calc(100vw - var(--nav-width));
 
     /* Hard cap width */

@@ -1577,6 +1577,128 @@ function ConfidentialityDialog({ isOpen, onAgree, onDecline }) {
   `;
 }
 
+// STEP INDICATOR
+function StepIndicator({ currentStep }) {
+  const steps = ['Write', 'Confirm', 'Choose Reviewers'];
+  return html`
+    <div className="cp-step-indicator">
+      ${steps.map((label, i) => {
+        const stepNum = i + 1;
+        let cls = 'cp-step';
+        if (stepNum < currentStep) cls += ' cp-step-done';
+        else if (stepNum === currentStep) cls += ' cp-step-active';
+        return html`
+          <div key=${label} className=${cls}>
+            <div className="cp-step-circle">${stepNum < currentStep ? '\u2713' : stepNum}</div>
+            <span className="cp-step-label">${label}</span>
+          </div>
+          ${i < steps.length - 1 ? html`<div className="cp-step-line ${stepNum < currentStep ? 'cp-step-line-done' : ''}" />` : null}
+        `;
+      })}
+    </div>
+  `;
+}
+
+// REVIEWER PICKER DIALOG
+function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
+  const [users, setUsers] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelected([]);
+    setSearch('');
+    setLoadingUsers(true);
+    fetch('http://localhost:5000/api/users', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setUsers(data.users || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingUsers(false));
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const toggle = (userId) => {
+    setSelected((prev) => {
+      if (prev.includes(userId)) return prev.filter((id) => id !== userId);
+      if (prev.length >= 5) return prev;
+      return [...prev, userId];
+    });
+  };
+
+  const filtered = users.filter((u) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    const name = `${u.firstName} ${u.lastName}`.toLowerCase();
+    return name.includes(q) || u.email.toLowerCase().includes(q);
+  });
+
+  return html`
+    <div className="cp-agree-backdrop" onClick=${(e) => { if (e.target === e.currentTarget) onBack(); }}>
+      <div className="cp-agree-dialog cp-reviewer-dialog" role="dialog" aria-modal="true">
+        <div className="cp-agree-header">
+          <span className="cp-agree-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <h2 className="cp-agree-title">Select Reviewers</h2>
+        </div>
+        <div className="cp-reviewer-body">
+          <p className="cp-agree-lead">Choose 1–5 teammates to review your post before it's published.</p>
+          <div className="cp-reviewer-search">
+            <input type="text" placeholder="Search by name or email…" value=${search}
+              onInput=${(e) => setSearch(e.target.value)} />
+          </div>
+          ${loadingUsers ? html`<div className="cp-reviewer-loading">Loading users…</div>` : html`
+            <div className="cp-reviewer-list">
+              ${filtered.length === 0 ? html`<div className="cp-reviewer-empty">No users found</div>` : filtered.map((u) => {
+                const isSelected = selected.includes(String(u._id));
+                const isDisabled = !isSelected && selected.length >= 5;
+                return html`
+                  <div key=${u._id}
+                    className=${`cp-reviewer-row ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                    onClick=${() => !isDisabled && toggle(String(u._id))}>
+                    <div className="cp-reviewer-avatar">${u.firstName.charAt(0)}${u.lastName.charAt(0)}</div>
+                    <div className="cp-reviewer-info">
+                      <span className="cp-reviewer-name">${u.firstName} ${u.lastName}</span>
+                      <span className="cp-reviewer-email">${u.email}</span>
+                    </div>
+                    <span className="cp-reviewer-check">${isSelected ? '\u2713' : ''}</span>
+                  </div>
+                `;
+              })}
+            </div>
+          `}
+        </div>
+        <div className="cp-agree-footer">
+          <span className="cp-reviewer-count">${selected.length}/5 selected</span>
+          <div className="cp-reviewer-actions">
+            <button type="button" className="cp-agree-btn cp-agree-btn-secondary" onClick=${onBack}>Go Back</button>
+            <button type="button" className="cp-agree-btn cp-agree-btn-primary"
+              disabled=${selected.length === 0}
+              onClick=${() => onSubmit(selected)}>Submit for Review</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // INLINE PREVIEW
 function InlinePreview({
   title, category, body, tags, onBack, onPost,
@@ -1667,6 +1789,7 @@ function CreatePost() {
   const [tags, setTags] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [showAgreement, setShowAgreement] = useState(false);
+  const [showReviewerPicker, setShowReviewerPicker] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success', onConfirm = null) => {
@@ -1757,25 +1880,22 @@ function CreatePost() {
     setShowPreview(true);
   };
 
-  const handlePost = async () => {
+  const handlePost = async (reviewerIds) => {
     // Prepend # to each tag before sending to the backend
     const tagsWithHash = tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
-    // ── CREATE MODE (POST) ────────────────────────────────────────────
     const postData = {
       title: title.trim(),
       category,
       body,
       tags: tagsWithHash,
-      created_at: new Date().toISOString(), // eslint-disable-line camelcase
+      status: 'pending_review',
     };
 
     try {
       const response = await fetch('http://localhost:5000/api/posts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(postData),
       });
@@ -1786,25 +1906,43 @@ function CreatePost() {
         const { post: createdPost } = result;
         const catName = category.split(' > ')[0];
 
-        const smartPayload = {
-          title: title.trim(),
-          category: catName,
-          postId: createdPost._id, // eslint-disable-line no-underscore-dangle
-          parentId: folderId || null, // place inside the selected subfolder
-        };
+        // Add to sidebar
         try {
           await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(smartPayload),
+            body: JSON.stringify({
+              title: title.trim(),
+              category: catName,
+              postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+              parentId: folderId || null,
+            }),
           });
         } catch (sidebarErr) { // eslint-disable-line no-unused-vars
           /* post was created; sidebar-add failed silently */
         }
+
+        // Create review document
+        try {
+          await fetch('http://localhost:5000/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+              reviewerIds,
+            }),
+          });
+        } catch (reviewErr) { // eslint-disable-line no-unused-vars
+          /* post was created; review creation failed silently */
+        }
+
         window.dispatchEvent(new CustomEvent('refresh-sidebar'));
         window.dispatchEvent(new CustomEvent('refresh-cards'));
-        window.history.back();
+        showToast('Your post has been submitted for review!', 'success');
+        localStorage.removeItem('create-post-draft');
+        setTimeout(() => { window.history.back(); }, 2000);
       } else {
         showToast(result.error || 'Failed to create post', 'error');
       }
@@ -1844,6 +1982,8 @@ function CreatePost() {
             <span><span className="required">*</span> Required fields</span>
           </div>
         </div>
+
+        <${StepIndicator} currentStep=${1} />
 
         <form onSubmit=${handleSubmit}>
           <div className="cp-form-section">
@@ -1958,8 +2098,13 @@ function CreatePost() {
       `}
       <${ConfidentialityDialog}
         isOpen=${showAgreement}
-        onAgree=${() => { setShowAgreement(false); handlePost(); }}
+        onAgree=${() => { setShowAgreement(false); setShowReviewerPicker(true); }}
         onDecline=${() => setShowAgreement(false)}
+      />
+      <${ReviewerPickerDialog}
+        isOpen=${showReviewerPicker}
+        onSubmit=${(reviewerIds) => { setShowReviewerPicker(false); handlePost(reviewerIds); }}
+        onBack=${() => { setShowReviewerPicker(false); setShowAgreement(true); }}
       />
       ${toast && html`
         <div className=${`cp-toast cp-toast-${toast.type}`}>
