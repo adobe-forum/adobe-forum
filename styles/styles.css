@@ -1,7 +1,7 @@
 :root {
   /* --- App Layout Dimensions --- */
   --nav-width: 220px; /* matched to prototype sidebar width */
-  --header-height: 0px; /* Header is inside topnav now */
+  --header-height: 64px; /* Hardcoded to match header.css to prevent layout shifts */
 
   /* =============================================
      PROTOTYPE NEW STYLING TOKENS (Remapped to Spectrum)

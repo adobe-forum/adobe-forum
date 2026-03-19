@@ -404,7 +404,11 @@ function Sidebar() {
   };
 
   useEffect(() => {
-    fetchCategories();
+    // Defer initialization to yield the main thread and avoid massive TBT
+    const initTimer = setTimeout(() => {
+      fetchCategories();
+    }, 50);
+
     window.addEventListener('refresh-sidebar', fetchCategories);
 
     // When the user navigates back via history.back(), the browser may restore
@@ -415,6 +419,7 @@ function Sidebar() {
     window.addEventListener('pageshow', onPageShow);
 
     return () => {
+      clearTimeout(initTimer);
       window.removeEventListener('refresh-sidebar', fetchCategories);
       window.removeEventListener('pageshow', onPageShow);
     };
@@ -435,8 +440,15 @@ function Sidebar() {
   };
 
   useEffect(() => {
-    if (currentUser) fetchPendingReviews();
-    else setPendingReviews([]);
+    if (currentUser) {
+      // Defer to prevent blocking main thread
+      const initTimer = setTimeout(() => {
+        fetchPendingReviews();
+      }, 50);
+      return () => clearTimeout(initTimer);
+    }
+    setPendingReviews([]);
+    return undefined;
   }, [currentUser]);
 
   useEffect(() => {
