@@ -86,6 +86,8 @@ const ForumPost = ({ blockEl }) => {
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [sidebarItemId, setSidebarItemId] = useState(null); // the SidebarItem linking this post
+  const [reviewData, setReviewData] = useState(null);
+  const [reviewComment, setReviewComment] = useState('');
 
   // Local state for likes and views to allow optimistic updates
   const [likesCount, setLikesCount] = useState(0);
@@ -188,6 +190,7 @@ const ForumPost = ({ blockEl }) => {
               createdBy: cb ? String(cb._id || cb) : null,
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
+              status: fetchedPost.status || 'published',
               comments: [],
             };
             setPost(transformedPost);
@@ -215,6 +218,17 @@ const ForumPost = ({ blockEl }) => {
             } else {
               setHasLiked(false);
             }
+
+            // Fetch review data for this post
+            // eslint-disable-next-line no-underscore-dangle
+            const reviewUrl = `${API_BASE}/reviews/by-post/${fetchedPost._id}`;
+            fetch(reviewUrl, { credentials: 'include' })
+              .then((r) => { if (r.ok) return r.json(); return null; })
+              .then((d) => {
+                if (d && d.success) setReviewData(d.review);
+                else setReviewData(null);
+              })
+              .catch(() => setReviewData(null));
 
             // If sidebarItemId wasn't supplied by the event (e.g. opened from cards view),
             // look it up so the Edit button can use it for location-move support.
@@ -328,6 +342,99 @@ const ForumPost = ({ blockEl }) => {
 
   const canEdit = isOwner(post, currentUser);
 
+  // Determine review context
+  // eslint-disable-next-line no-underscore-dangle
+  const currentUserId = currentUser ? String(currentUser._id) : null;
+  const isReviewer = reviewData && currentUserId
+    ? reviewData.reviewers.some((rv) => {
+      const rvId = rv.userId && typeof rv.userId === 'object'
+        // eslint-disable-next-line no-underscore-dangle
+        ? String(rv.userId._id) : String(rv.userId);
+      return rvId === currentUserId;
+    })
+    : false;
+  const postStatus = post.status || 'published';
+  const showReviewPanel = isReviewer && (postStatus === 'pending_review' || postStatus === 'changes_requested');
+  const showChangesRequestedBanner = canEdit && postStatus === 'changes_requested';
+
+  const handleReviewAction = async (actionStatus) => {
+    if (!reviewData) return;
+
+    if (actionStatus === 'changes_requested' && !reviewComment.trim()) {
+      // eslint-disable-next-line no-alert
+      alert('Please provide a comment explaining what changes are needed.');
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      const response = await fetch(`${API_BASE}/reviews/${reviewData._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: actionStatus, comment: reviewComment }),
+      });
+      if (response.ok) {
+        setReviewComment('');
+        window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+        window.dispatchEvent(new CustomEvent('refresh-cards'));
+
+        if (actionStatus === 'changes_requested') {
+          // Go back to the homepage / cards view
+          window.dispatchEvent(new CustomEvent('show-cards'));
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+
+        // Re-fetch review data
+        // eslint-disable-next-line no-underscore-dangle
+        const rRes = await fetch(`${API_BASE}/reviews/by-post/${post.id}`, { credentials: 'include' });
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if (rData.success) setReviewData(rData.review);
+        }
+        // Re-fetch post to get updated status
+        const pRes = await fetch(`${API_BASE}/posts/${post.id}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData.success && pData.post) {
+            setPost((prev) => ({ ...prev, status: pData.post.status }));
+          }
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Review action failed:', err);
+    }
+  };
+
+  const handleResubmit = async () => {
+    if (!reviewData) return;
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      const response = await fetch(`${API_BASE}/reviews/${reviewData._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ resetAll: true }),
+      });
+      if (response.ok) {
+        window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+        window.dispatchEvent(new CustomEvent('refresh-cards'));
+        // Re-fetch review + post
+        const rRes = await fetch(`${API_BASE}/reviews/by-post/${post.id}`, { credentials: 'include' });
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if (rData.success) setReviewData(rData.review);
+        }
+        setPost((prev) => ({ ...prev, status: 'pending_review' }));
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Re-submit failed:', err);
+    }
+  };
+
   return html`
     <div class="forum-post-wrapper">
       ${loading && html`<div class="loading-overlay">Loading post...</div>`}
@@ -372,10 +479,52 @@ const ForumPost = ({ blockEl }) => {
         </button>
       </div>
 
+      ${showChangesRequestedBanner && html`
+        <div class="review-changes-banner">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>Changes were requested \u2014 edit your post and re-submit for review.</span>
+          <button class="review-resubmit-btn" onClick=${handleResubmit}>Re-submit for Review</button>
+        </div>
+      `}
+
       <div
         class="post-body-raw"
         dangerouslySetInnerHTML=${{ __html: post.body }}
       />
+
+      ${showReviewPanel && html`
+        <div class="review-panel">
+          <h3 class="review-panel-title">Peer Review</h3>
+          <p class="review-panel-desc">You have been asked to review this post. Please provide your feedback below.</p>
+          <textarea
+            class="review-textarea"
+            placeholder="Add a comment (optional)..."
+            value=${reviewComment}
+            onInput=${(e) => setReviewComment(e.target.value)}
+            rows="3"
+          />
+          <div class="review-panel-actions">
+            <button class="review-btn review-btn-approve" onClick=${() => handleReviewAction('approved')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Approve
+            </button>
+            <button class="review-btn review-btn-changes" onClick=${() => handleReviewAction('changes_requested')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Request Changes
+            </button>
+          </div>
+        </div>
+      `}
 
       <hr class="post-divider" />
 

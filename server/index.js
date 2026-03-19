@@ -9,6 +9,7 @@ import MongoStore from 'connect-mongo';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
 import User from './models/User.js';
+import Review from './models/Review.js';
 
 dotenv.config();
 
@@ -392,12 +393,14 @@ app.post('/api/posts', requireAuth, async (req, res) => {
     if (plainText.length < 20)
       return res.status(400).json({ error: 'Body too short' });
 
+    const { status } = req.body;
     const post = await Post.create({
       title,
       category,
       body,
       tags,
       createdBy: req.user._id, // ← ownership recorded
+      ...(status === 'pending_review' ? { status: 'pending_review' } : {}),
     });
 
     res.status(201).json({ success: true, post });
@@ -422,12 +425,25 @@ app.get('/api/posts', async (req, res) => {
     const author = req.query.author?.trim(); // for "My Posts" filter
 
     let query = {};
+    const isMine = req.query.mine === 'true';
 
     // Apply author filter first (My Posts)
     if (author) {
       query.createdBy = mongoose.Types.ObjectId.isValid(author)
         ? new mongoose.Types.ObjectId(author)
         : author;
+    }
+
+    // Only show published posts in the main feed.
+    // If ?mine=true, show all the logged-in user's posts regardless of status.
+    if (isMine && req.session?.userId) {
+      query.createdBy = new mongoose.Types.ObjectId(req.session.userId);
+    } else {
+      // Legacy posts have no status field — treat them as published.
+      // We store this as a separate filter and combine via $and at the end.
+      const statusFilter = { $or: [{ status: 'published' }, { status: { $exists: false } }] };
+      query.$and = query.$and || [];
+      query.$and.push(statusFilter);
     }
 
     if (search) {
@@ -454,16 +470,23 @@ app.get('/api/posts', async (req, res) => {
 
       const userIds = matchingUsers.map((u) => u._id);
 
-      query.$or = [
-        { title: searchRegex },                         // post title
-        { category: searchRegex },                      // category name
-        { tags: searchRegex },                          // tags (partial match)
-        { body: searchRegex },                          // post body / description
-        ...(userIds.length > 0                          // author name
-          ? [{ createdBy: { $in: userIds } }]
-          : []),
-      ];
+      const searchFilter = {
+        $or: [
+          { title: searchRegex },                         // post title
+          { category: searchRegex },                      // category name
+          { tags: searchRegex },                          // tags (partial match)
+          { body: searchRegex },                          // post body / description
+          ...(userIds.length > 0                          // author name
+            ? [{ createdBy: { $in: userIds } }]
+            : []),
+        ],
+      };
+      query.$and = query.$and || [];
+      query.$and.push(searchFilter);
     }
+
+    // Clean up: if $and is empty, remove it
+    if (query.$and && query.$and.length === 0) delete query.$and;
 
     const sortOption = req.query.sort || 'latest';
     let sortObj = { createdAt: -1 };
@@ -795,11 +818,20 @@ app.post('/api/sidebar/categories', requireAuth, async (req, res) => {
 app.get('/api/sidebar/categories', async (_req, res) => {
   try {
     const items = await SidebarItem.find()
-      .populate('postId', '_id title category tags body')
+      .populate('postId', '_id title category tags body status')
       .sort({ category: 1, order: 1, createdAt: 1 });
 
+    // Filter out sidebar items whose linked post is not published
+    const publishedItems = items.filter((item) => {
+      if (!item.postId) return true; // folders have no postId — keep them
+      if (typeof item.postId === 'object' && item.postId.status) {
+        return item.postId.status === 'published';
+      }
+      return true; // no status field means legacy 'published'
+    });
+
     const groups = new Map();
-    items.forEach((item) => {
+    publishedItems.forEach((item) => {
       if (!groups.has(item.category)) groups.set(item.category, []);
       groups.get(item.category).push(item);
     });
@@ -1029,6 +1061,170 @@ app.delete('/api/sidebar-items/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+/* -------------------- USERS -------------------- */
+
+/**
+ * GET /api/users
+ * Returns all users except the currently logged-in one.
+ */
+app.get('/api/users', requireAuth, async (req, res) => {
+  try {
+    const users = await User.find(
+      { _id: { $ne: req.user._id } },
+      '_id firstName lastName email',
+    );
+    return res.json({ success: true, users });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+/* -------------------- REVIEWS -------------------- */
+
+/**
+ * POST /api/reviews
+ * Create a Review document. Body: { postId, reviewerIds: [] }
+ */
+app.post('/api/reviews', requireAuth, async (req, res) => {
+  try {
+    const { postId, reviewerIds } = req.body;
+    if (!postId || !Array.isArray(reviewerIds) || reviewerIds.length === 0) {
+      return res.status(400).json({ error: 'postId and at least one reviewerId are required.' });
+    }
+    if (reviewerIds.length > 5) {
+      return res.status(400).json({ error: 'Maximum 5 reviewers allowed.' });
+    }
+    const review = await Review.create({
+      postId: new mongoose.Types.ObjectId(postId),
+      authorId: req.user._id,
+      reviewers: reviewerIds.map((id) => ({
+        userId: new mongoose.Types.ObjectId(id),
+        status: 'pending',
+        comment: '',
+        updatedAt: new Date(),
+      })),
+      overallStatus: 'pending',
+    });
+    return res.status(201).json({ success: true, review });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Review creation failed.' });
+  }
+});
+
+/**
+ * GET /api/reviews/pending
+ * Returns all reviews where the logged-in user is a reviewer with status 'pending'.
+ */
+app.get('/api/reviews/pending', requireAuth, async (req, res) => {
+  try {
+    const reviews = await Review.find({
+      'reviewers.userId': req.user._id,
+      'reviewers.status': 'pending',
+    })
+      .populate('postId', 'title category status')
+      .populate('authorId', 'firstName lastName email')
+      .populate('reviewers.userId', 'firstName lastName email');
+
+    // Filter to only reviews where THIS user's entry is actually pending
+    const filtered = reviews.filter((r) =>
+      r.reviewers.some((rv) => {
+        const rvId = rv.userId && typeof rv.userId === 'object' ? rv.userId._id : rv.userId;
+        return String(rvId) === String(req.user._id) && rv.status === 'pending';
+      })
+    );
+
+    return res.json({ success: true, reviews: filtered });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch pending reviews.' });
+  }
+});
+
+/**
+ * GET /api/reviews/by-post/:postId
+ * Returns the review document for a given post.
+ */
+app.get('/api/reviews/by-post/:postId', requireAuth, async (req, res) => {
+  try {
+    const review = await Review.findOne({
+      postId: new mongoose.Types.ObjectId(req.params.postId),
+    })
+      .populate('authorId', 'firstName lastName email')
+      .populate('reviewers.userId', 'firstName lastName email');
+    if (!review) return res.status(404).json({ error: 'No review found for this post.' });
+    return res.json({ success: true, review });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch review.' });
+  }
+});
+
+/**
+ * PATCH /api/reviews/:id
+ * Reviewer submits their decision. Body: { status, comment }
+ * Also used by author to reset all statuses back to pending on re-submit.
+ */
+app.patch('/api/reviews/:id', requireAuth, async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ error: 'Review not found.' });
+
+    const { status, comment, resetAll } = req.body;
+
+    // Author re-submitting: reset all reviewers to pending
+    if (resetAll && String(review.authorId) === String(req.user._id)) {
+      review.reviewers.forEach((rv) => {
+        rv.status = 'pending';
+        rv.comment = '';
+        rv.updatedAt = new Date();
+      });
+      review.overallStatus = 'pending';
+      await review.save();
+
+      // Also set post status back to pending_review
+      await Post.findByIdAndUpdate(review.postId, { status: 'pending_review' });
+
+      return res.json({ success: true, review });
+    }
+
+    // Normal reviewer decision
+    if (!status || !['approved', 'changes_requested'].includes(status)) {
+      return res.status(400).json({ error: 'status must be approved or changes_requested.' });
+    }
+
+    const entry = review.reviewers.find(
+      (rv) => String(rv.userId) === String(req.user._id),
+    );
+    if (!entry) return res.status(403).json({ error: 'You are not a reviewer for this post.' });
+
+    entry.status = status;
+    entry.comment = comment || '';
+    entry.updatedAt = new Date();
+
+    // Recalculate overallStatus
+    const allApproved = review.reviewers.every((rv) => rv.status === 'approved');
+    const anyChangesRequested = review.reviewers.some((rv) => rv.status === 'changes_requested');
+
+    if (allApproved) {
+      review.overallStatus = 'approved';
+      await Post.findByIdAndUpdate(review.postId, { status: 'published' });
+    } else if (anyChangesRequested) {
+      review.overallStatus = 'changes_requested';
+      await Post.findByIdAndUpdate(review.postId, { status: 'changes_requested' });
+    } else {
+      review.overallStatus = 'pending';
+    }
+
+    await review.save();
+    return res.json({ success: true, review });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Review update failed.' });
   }
 });
 
