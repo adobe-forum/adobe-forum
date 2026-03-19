@@ -221,9 +221,13 @@ const ForumPost = ({ blockEl }) => {
 
             // Fetch review data for this post
             // eslint-disable-next-line no-underscore-dangle
-            fetch(`${API_BASE}/reviews/by-post/${fetchedPost._id}`, { credentials: 'include' })
+            const reviewUrl = `${API_BASE}/reviews/by-post/${fetchedPost._id}`;
+            fetch(reviewUrl, { credentials: 'include' })
               .then((r) => { if (r.ok) return r.json(); return null; })
-              .then((d) => { if (d && d.success) setReviewData(d.review); else setReviewData(null); })
+              .then((d) => {
+                if (d && d.success) setReviewData(d.review);
+                else setReviewData(null);
+              })
               .catch(() => setReviewData(null));
 
             // If sidebarItemId wasn't supplied by the event (e.g. opened from cards view),
@@ -357,6 +361,7 @@ const ForumPost = ({ blockEl }) => {
     if (!reviewData) return;
 
     if (actionStatus === 'changes_requested' && !reviewComment.trim()) {
+      // eslint-disable-next-line no-alert
       alert('Please provide a comment explaining what changes are needed.');
       return;
     }

@@ -25,7 +25,7 @@ export async function loginUser({ email, password }) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Sign-in failed.');
   return data;
-} 
+}
 
 /**
  * POST /api/auth/register

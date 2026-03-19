@@ -98,7 +98,11 @@
     border-bottom: 1px solid var(--border);
     margin-bottom: 8px;
   }
-  & .sidebar-logo span { color: var(--text3); font-weight: 300; }
+
+  & .sidebar-logo span {
+    color: var(--text3);
+    font-weight: 300;
+  }
 
   /* ── Sidebar Items ───────────────────────────────── */
   & .sidebar-item {
@@ -115,8 +119,17 @@
     user-select: none;
   }
   & .sidebar-item:hover { background: var(--surface2); }
-  & .sidebar-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
-  & .sidebar-item svg { opacity: .6; flex-shrink: 0; }
+
+  & .sidebar-item.active {
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  & .sidebar-item svg {
+    opacity: .6;
+    flex-shrink: 0;
+  }
   & .sidebar-item.active svg { opacity: 1; }
 
   /* ── Sidebar Section Headers ─────────────────────── */
@@ -160,7 +173,7 @@
 
       &:focus {
         border-color: var(--accent2);
-        box-shadow: 0 0 0 2px rgba(37,99,235,.1);
+        box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
         background: var(--bg);
       }
     }
@@ -283,10 +296,6 @@
       background: var(--accent-bg);
       color: var(--accent);
       font-weight: 500;
-
-      & .tree-icon {
-        opacity: 1;
-      }
     }
   }
 
@@ -334,6 +343,10 @@
     &.tree-icon-file {
       color: var(--sidebar-file-color);
     }
+  }
+
+  & .tree-item-content.active .tree-icon {
+    opacity: 1;
   }
 
   & .tree-label {

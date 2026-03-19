@@ -1623,7 +1623,8 @@
 
 .cp-agree-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 16px 24px 20px;
   border-top: 1px solid #eceef1;
@@ -1878,8 +1879,3 @@
   gap: 8px;
 }
 
-.cp-agree-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}

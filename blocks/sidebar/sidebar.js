@@ -509,6 +509,7 @@ function Sidebar() {
     window.dispatchEvent(new CustomEvent('refresh-cards'));
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleMyPosts = () => {
     setActiveSubcategory(null);
     window.dispatchEvent(new CustomEvent('show-cards'));
@@ -565,18 +566,22 @@ function Sidebar() {
           </div>
 
           <div class="sidebar-section">Reviews</div>
-          <div class="sidebar-item" onClick=${() => document.querySelector('.sidebar-pending-list').style.display = document.querySelector('.sidebar-pending-list').style.display === 'none' ? 'block' : 'none'}>
+          <div class="sidebar-item" onClick=${() => { document.querySelector('.sidebar-pending-list').style.display = document.querySelector('.sidebar-pending-list').style.display === 'none' ? 'block' : 'none'; }}>
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
             Pending Reviews
             ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:var(--amber);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
           </div>
           <ul class="sidebar-pending-list" style="list-style:none; padding:4px 0 8px 24px; margin:0; display:block;">
-            ${pendingReviews.length > 0 ? pendingReviews.map((r) => html`
-              <li key=${r._id} style="font-size:12px; color:var(--text2); padding:4px 0; cursor:pointer;" onClick=${() => handlePendingReviewClick(r)}>
+            ${pendingReviews.length > 0 ? pendingReviews.map((r) => {
+    // eslint-disable-next-line no-underscore-dangle
+    const reviewId = r._id;
+    return html`
+              <li key=${reviewId} style="font-size:12px; color:var(--text2); padding:4px 0; cursor:pointer;" onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;">${r.postId?.title || 'Untitled Post'}</div>
                 <div style="color:var(--text3); font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
               </li>
-            `) : html`<li style="font-size:12px; color:var(--text3); padding:4px 0; font-style: italic;">No reviews pending</li>`}
+            `;
+  }) : html`<li style="font-size:12px; color:var(--text3); padding:4px 0; font-style: italic;">No reviews pending</li>`}
           </ul>
         `}
 
@@ -593,7 +598,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-              ? filteredCategories.map((category) => html`
+    ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -604,8 +609,8 @@ function Sidebar() {
                     searchTerm=${searchTerm}
                   />
                 `)
-              : html`<div class="no-results">No categories found</div>`
-            }
+    : html`<div class="no-results">No categories found</div>`
+}
           </ul>
         `}
       </aside>

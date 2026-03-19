@@ -1583,18 +1583,18 @@ function StepIndicator({ currentStep }) {
   return html`
     <div className="cp-step-indicator">
       ${steps.map((label, i) => {
-        const stepNum = i + 1;
-        let cls = 'cp-step';
-        if (stepNum < currentStep) cls += ' cp-step-done';
-        else if (stepNum === currentStep) cls += ' cp-step-active';
-        return html`
+    const stepNum = i + 1;
+    let cls = 'cp-step';
+    if (stepNum < currentStep) cls += ' cp-step-done';
+    else if (stepNum === currentStep) cls += ' cp-step-active';
+    return html`
           <div key=${label} className=${cls}>
             <div className="cp-step-circle">${stepNum < currentStep ? '\u2713' : stepNum}</div>
             <span className="cp-step-label">${label}</span>
           </div>
           ${i < steps.length - 1 ? html`<div className="cp-step-line ${stepNum < currentStep ? 'cp-step-line-done' : ''}" />` : null}
         `;
-      })}
+  })}
     </div>
   `;
 }
@@ -1667,12 +1667,14 @@ function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
           ${loadingUsers ? html`<div className="cp-reviewer-loading">Loading users…</div>` : html`
             <div className="cp-reviewer-list">
               ${filtered.length === 0 ? html`<div className="cp-reviewer-empty">No users found</div>` : filtered.map((u) => {
-                const isSelected = selected.includes(String(u._id));
-                const isDisabled = !isSelected && selected.length >= 5;
-                return html`
-                  <div key=${u._id}
+    // eslint-disable-next-line no-underscore-dangle
+    const userId = String(u._id);
+    const isSelected = selected.includes(userId);
+    const isDisabled = !isSelected && selected.length >= 5;
+    return html`
+                  <div key=${userId}
                     className=${`cp-reviewer-row ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                    onClick=${() => !isDisabled && toggle(String(u._id))}>
+                    onClick=${() => !isDisabled && toggle(userId)}>
                     <div className="cp-reviewer-avatar">${u.firstName.charAt(0)}${u.lastName.charAt(0)}</div>
                     <div className="cp-reviewer-info">
                       <span className="cp-reviewer-name">${u.firstName} ${u.lastName}</span>
@@ -1681,7 +1683,7 @@ function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
                     <span className="cp-reviewer-check">${isSelected ? '\u2713' : ''}</span>
                   </div>
                 `;
-              })}
+  })}
             </div>
           `}
         </div>

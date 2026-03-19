@@ -24,8 +24,8 @@
   --amber-bg:  #fffbeb;
   --radius:    var(--sp-radius-md);
   --radius-lg: var(--sp-radius-lg);
-  --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,.14);
+  --shadow:    0 1px 3px rgb(0 0 0 / 6%), 0 4px 16px rgb(0 0 0 / 6%);
+  --shadow-lg: 0 8px 40px rgb(0 0 0 / 14%);
   --font:      var(--body-font-family);
   --mono:      var(--post-code-font);
 
