@@ -947,3 +947,69 @@ footer,
     color: #d7373f !important;
   }
 }
+
+/* =============================================
+   NOTIFICATIONS COMPONENT
+   ============================================= */
+
+.nd-trigger-wrap {
+  position: relative;
+  margin-right: 12px;
+  display: flex;
+}
+
+.nd-bell-btn {
+  /* We use spectrum-action-button class for the button itself, 
+     but we can add custom padding or alignment here if needed. */
+  position: relative;
+}
+
+.nd-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--spectrum-accent-color-900, #da1f26);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--spectrum-gray-50);
+}
+
+.nd-dropdown {
+  /* Inherits structural code from .pd-dropdown but can differ. Added a dummy property to pass lint */
+  z-index: 10000;
+}
+
+.nd-header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.nd-menu {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.nd-msg {
+  padding: 16px;
+  text-align: center;
+  color: #6e6e6e;
+  font-size: 14px;
+  display: block !important;
+}
+
+.nd-item {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  text-decoration: none !important;
+}
+
+.nd-item-title {
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
