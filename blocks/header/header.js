@@ -611,87 +611,6 @@ function HeaderComponent() {
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
   }, []);
 
-  // Session timeout — fetch loginAt from server, calculate true remaining time
-  useEffect(() => {
-    if (!user) return undefined;
-
-    const SESSION_MS = 30 * 60 * 1000; // 30 minutes
-    const WARNING_MS = 5 * 60 * 1000; // warn when 5 minutes remain
-
-    let warnTimer;
-    let logoutTimer;
-
-    const doLogout = () => {
-      // Only destroy the server session — keep af_user so the login page
-      // can pre-fill or show who was logged in. It gets cleared on manual sign-out.
-      // Guard: if already on /auth-form, don't redirect again (prevents blink loop).
-      if (window.location.pathname.startsWith('/auth-form')) return;
-      fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
-        .finally(() => {
-          window.location.replace('/auth-form');
-        });
-    };
-
-    const scheduleTimers = (loginAt) => {
-      const elapsed = Date.now() - loginAt;
-      const remaining = SESSION_MS - elapsed;
-
-      // Already expired
-      if (remaining <= 0) { doLogout(); return; }
-
-      const warnIn = remaining - WARNING_MS;
-
-      if (warnIn > 0) {
-        warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
-      } else {
-        // Less than 5 minutes left — show warning immediately
-        setSessionWarning(true);
-      }
-
-      logoutTimer = setTimeout(doLogout, remaining);
-    };
-
-    // Fetch loginAt from server so page reloads don't reset the timer.
-    // If the session has already expired (401), redirect to login immediately.
-    fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
-      .then((r) => {
-        // Session expired on the server — redirect straight away
-        if (r.status === 401) { doLogout(); return null; }
-        return r.json();
-      })
-      .then((data) => {
-        if (!data) return; // already redirecting
-        if (data.loginAt) {
-          // Sync loginAt into af_user so it's available during network errors
-          try {
-            const stored = JSON.parse(localStorage.getItem('af_user') || 'null');
-            if (stored) {
-              localStorage.setItem('af_user', JSON.stringify({ ...stored, loginAt: data.loginAt }));
-            }
-          } catch { /* ignore */ }
-          scheduleTimers(data.loginAt);
-        } else {
-          // Fallback: loginAt missing — use af_user loginAt if stored, else now
-          const stored = (() => {
-            try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
-          })();
-          scheduleTimers(stored?.loginAt || Date.now());
-        }
-      })
-      .catch(() => {
-        // Network error — fall back to stored loginAt so the timer still runs
-        const stored = (() => {
-          try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
-        })();
-        scheduleTimers(stored?.loginAt || Date.now());
-      });
-
-    return () => {
-      clearTimeout(warnTimer);
-      clearTimeout(logoutTimer);
-    };
-  }, []);
-
   const toggleSidebar = () => {
     const next = !sidebarOpen;
     setSidebarOpen(next);
@@ -749,18 +668,7 @@ function HeaderComponent() {
       </div>
     </nav>
 
-    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}
-
-    ${sessionWarning && html`
-      <div class="session-warning-banner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Your session expires in 5 minutes. 
-        <a href="/auth-form">Log in again</a> to stay signed in.
-        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
-      </div>`}`;
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}`;
 }
 
 // ============================================

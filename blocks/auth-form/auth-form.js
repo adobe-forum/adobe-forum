@@ -22,7 +22,6 @@ import {
   loginUser,
   registerUser,
   forgotPassword,
-  getMe,
 } from './auth-api.js';
 
 const html = htm.bind(h);
@@ -272,12 +271,7 @@ function LoginPanel({ onForgot, active }) {
     setLoading(true);
     try {
       const data = await loginUser({ email, password });
-      if (data.user) {
-        // Store user + loginAt so the session timer survives page reloads
-        const toStore = { ...data.user };
-        if (data.loginAt) toStore.loginAt = data.loginAt;
-        localStorage.setItem('af_user', JSON.stringify(toStore));
-      }
+      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
       window.location.href = '/';
     } catch (err) {
       setErrors({ password: err.message });
@@ -601,10 +595,5 @@ export default function decorate(block) {
   const mount = document.createElement('div');
   document.body.append(mount);
 
-  // If the user already has an active session, skip the form and go home.
-  // This prevents logged-in users from seeing the auth page on direct visit.
-  // On auto-logout the session is gone (401) so this resolves fast and renders normally.
-  getMe()
-    .then(() => { window.location.replace('/'); })
-    .catch(() => { render(html`<${AuthForm} initPanel=${initPanel}/>`, mount); });
+  render(html`<${AuthForm} initPanel=${initPanel}/>`, mount);
 }

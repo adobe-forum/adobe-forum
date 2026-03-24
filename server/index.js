@@ -36,16 +36,16 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-  mongoUrl: process.env.MONGODB_URI,
-  collectionName: 'sessions',
-  ttl: 30 * 60,
-}),
-cookie: {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-  maxAge: 30 * 60 * 1000,
-},
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 7 * 24 * 60 * 60,
+  }),
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  },
 }));
 
 /* -------------------- DB -------------------- */
@@ -161,15 +161,10 @@ app.post('/api/auth/register', async (req, res) => {
       password,
     });
 
-    const loginAt = Date.now();
     req.session.userId = String(user._id);
-    req.session.loginAt = loginAt;
-
-    // Persist loginAt on the user document so it survives session expiry
-    await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id), loginAt } });
+    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) } });
 
   } catch (err) {
     console.error(err);
@@ -195,16 +190,10 @@ app.post('/api/auth/login', async (req, res) => {
     if (!match)
       return res.status(401).json({ error: 'Invalid email or password.' });
 
-    const loginAt = Date.now();
     req.session.userId = String(user._id);
-    req.session.loginAt = loginAt;
 
-    // Persist loginAt on the user document so it survives session expiry
-    await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
-
-    // Return safe user object (including loginAt) so client stores it in af_user
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.json({ success: true, user: { ...safeUser, _id: String(user._id), loginAt } });
+    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
 
   } catch (err) {
     console.error(err);
@@ -231,10 +220,7 @@ app.post('/api/auth/logout', (req, res) => {
  * req.user already attached by requireAuth — no extra DB call needed.
  */
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  // Prefer session loginAt (precise), fall back to user doc loginAt (survives page reloads)
-  const loginAt = req.session.loginAt
-    || (req.user.loginAt ? new Date(req.user.loginAt).getTime() : null);
-  return res.json({ success: true, user: req.user, loginAt });
+  return res.json({ success: true, user: req.user });
 });
 
 /**
