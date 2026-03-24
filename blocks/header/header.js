@@ -469,9 +469,10 @@ function HeaderComponent() {
     let logoutTimer;
 
     const doLogout = () => {
+      // Only destroy the server session — keep af_user so the login page
+      // can pre-fill or show who was logged in. It gets cleared on manual sign-out.
       fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
         .finally(() => {
-          localStorage.removeItem('af_user');
           window.location.replace('/auth-form');
         });
     };

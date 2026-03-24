@@ -194,6 +194,10 @@ app.post('/api/auth/login', async (req, res) => {
     req.session.userId = String(user._id);
     req.session.loginAt = Date.now();
 
+    // Return safe user object so the client can store it in af_user
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Sign-in failed.' });
