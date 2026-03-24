@@ -162,6 +162,7 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
     req.session.userId = String(user._id);
+    req.session.loginAt = Date.now();
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
     return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) } });
@@ -191,9 +192,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
 
     req.session.userId = String(user._id);
-
-    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
+    req.session.loginAt = Date.now();
 
   } catch (err) {
     console.error(err);
@@ -220,7 +219,7 @@ app.post('/api/auth/logout', (req, res) => {
  * req.user already attached by requireAuth — no extra DB call needed.
  */
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  return res.json({ success: true, user: req.user });
+  return res.json({ success: true, user: req.user, loginAt: req.session.loginAt || null });
 });
 
 /**

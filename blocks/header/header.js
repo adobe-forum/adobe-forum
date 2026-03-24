@@ -458,20 +458,55 @@ function HeaderComponent() {
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
   }, []);
 
-  // Session timeout — warn at 25 min, auto-logout at 30 min
+  // Session timeout — fetch loginAt from server, calculate true remaining time
   useEffect(() => {
     if (!user) return undefined;
-    const WARNING_AT = 25 * 60 * 1000;
-    const LOGOUT_AT = 30 * 60 * 1000;
 
-    const warnTimer = setTimeout(() => setSessionWarning(true), WARNING_AT);
-    const logoutTimer = setTimeout(() => {
+    const SESSION_MS = 30 * 60 * 1000; // 30 minutes
+    const WARNING_MS = 5 * 60 * 1000; // warn when 5 minutes remain
+
+    let warnTimer;
+    let logoutTimer;
+
+    const doLogout = () => {
       fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
         .finally(() => {
           localStorage.removeItem('af_user');
           window.location.replace('/auth-form');
         });
-    }, LOGOUT_AT);
+    };
+
+    const scheduleTimers = (loginAt) => {
+      const elapsed = Date.now() - loginAt;
+      const remaining = SESSION_MS - elapsed;
+
+      // Already expired
+      if (remaining <= 0) { doLogout(); return; }
+
+      const warnIn = remaining - WARNING_MS;
+
+      if (warnIn > 0) {
+        warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
+      } else {
+        // Less than 5 minutes left — show warning immediately
+        setSessionWarning(true);
+      }
+
+      logoutTimer = setTimeout(doLogout, remaining);
+    };
+
+    // Fetch loginAt from server so page reloads don't reset the timer
+    fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.loginAt) {
+          scheduleTimers(data.loginAt);
+        } else {
+          // Fallback: no loginAt stored (old session) — treat as fresh 30 min
+          scheduleTimers(Date.now());
+        }
+      })
+      .catch(() => scheduleTimers(Date.now()));
 
     return () => {
       clearTimeout(warnTimer);
