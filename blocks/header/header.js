@@ -471,6 +471,8 @@ function HeaderComponent() {
     const doLogout = () => {
       // Only destroy the server session — keep af_user so the login page
       // can pre-fill or show who was logged in. It gets cleared on manual sign-out.
+      // Guard: if already on /auth-form, don't redirect again (prevents blink loop).
+      if (window.location.pathname.startsWith('/auth-form')) return;
       fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
         .finally(() => {
           window.location.replace('/auth-form');
@@ -496,18 +498,40 @@ function HeaderComponent() {
       logoutTimer = setTimeout(doLogout, remaining);
     };
 
-    // Fetch loginAt from server so page reloads don't reset the timer
+    // Fetch loginAt from server so page reloads don't reset the timer.
+    // If the session has already expired (401), redirect to login immediately.
     fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
-      .then((r) => r.json())
+      .then((r) => {
+        // Session expired on the server — redirect straight away
+        if (r.status === 401) { doLogout(); return null; }
+        return r.json();
+      })
       .then((data) => {
+        if (!data) return; // already redirecting
         if (data.loginAt) {
+          // Sync loginAt into af_user so it's available during network errors
+          try {
+            const stored = JSON.parse(localStorage.getItem('af_user') || 'null');
+            if (stored) {
+              localStorage.setItem('af_user', JSON.stringify({ ...stored, loginAt: data.loginAt }));
+            }
+          } catch { /* ignore */ }
           scheduleTimers(data.loginAt);
         } else {
-          // Fallback: no loginAt stored (old session) — treat as fresh 30 min
-          scheduleTimers(Date.now());
+          // Fallback: loginAt missing — use af_user loginAt if stored, else now
+          const stored = (() => {
+            try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+          })();
+          scheduleTimers(stored?.loginAt || Date.now());
         }
       })
-      .catch(() => scheduleTimers(Date.now()));
+      .catch(() => {
+        // Network error — fall back to stored loginAt so the timer still runs
+        const stored = (() => {
+          try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+        })();
+        scheduleTimers(stored?.loginAt || Date.now());
+      });
 
     return () => {
       clearTimeout(warnTimer);

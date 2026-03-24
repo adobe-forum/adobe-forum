@@ -161,11 +161,15 @@ app.post('/api/auth/register', async (req, res) => {
       password,
     });
 
+    const loginAt = Date.now();
     req.session.userId = String(user._id);
-    req.session.loginAt = Date.now();
+    req.session.loginAt = loginAt;
+
+    // Persist loginAt on the user document so it survives session expiry
+    await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) } });
+    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id), loginAt } });
 
   } catch (err) {
     console.error(err);
@@ -191,12 +195,16 @@ app.post('/api/auth/login', async (req, res) => {
     if (!match)
       return res.status(401).json({ error: 'Invalid email or password.' });
 
+    const loginAt = Date.now();
     req.session.userId = String(user._id);
-    req.session.loginAt = Date.now();
+    req.session.loginAt = loginAt;
 
-    // Return safe user object so the client can store it in af_user
+    // Persist loginAt on the user document so it survives session expiry
+    await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
+
+    // Return safe user object (including loginAt) so client stores it in af_user
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
+    return res.json({ success: true, user: { ...safeUser, _id: String(user._id), loginAt } });
 
   } catch (err) {
     console.error(err);
@@ -223,7 +231,10 @@ app.post('/api/auth/logout', (req, res) => {
  * req.user already attached by requireAuth — no extra DB call needed.
  */
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  return res.json({ success: true, user: req.user, loginAt: req.session.loginAt || null });
+  // Prefer session loginAt (precise), fall back to user doc loginAt (survives page reloads)
+  const loginAt = req.session.loginAt
+    || (req.user.loginAt ? new Date(req.user.loginAt).getTime() : null);
+  return res.json({ success: true, user: req.user, loginAt });
 });
 
 /**
