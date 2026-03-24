@@ -660,6 +660,22 @@ app.patch('/api/posts/:id', requireAuth, async (req, res) => {
       post.category = category.trim();
     }
 
+    // IF POST WAS REJECTED AND IS BEING EDITED, AUTOMATICALLY RESUBMIT
+    if (post.status === 'changes_requested') {
+      post.status = 'pending_review';
+      const review = await Review.findOne({ postId: post._id });
+      if (review) {
+        review.reviewers.forEach((rv) => {
+          rv.status = 'pending';
+          rv.comment = '';
+          rv.updatedAt = new Date();
+        });
+        review.overallStatus = 'pending';
+        review.authorNotified = false;
+        await review.save();
+      }
+    }
+
     await post.save(); // pre-save hook sets updatedAt
     return res.json({ success: true, post });
   } catch (err) {
@@ -1112,9 +1128,15 @@ app.post('/api/reviews', requireAuth, async (req, res) => {
     if (reviewerIds.length > 5) {
       return res.status(400).json({ error: 'Maximum 5 reviewers allowed.' });
     }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found.' });
+    }
+
     const review = await Review.create({
       postId: new mongoose.Types.ObjectId(postId),
-      authorId: req.user._id,
+      authorId: post.createdBy,
       reviewers: reviewerIds.map((id) => ({
         userId: new mongoose.Types.ObjectId(id),
         status: 'pending',
@@ -1123,6 +1145,7 @@ app.post('/api/reviews', requireAuth, async (req, res) => {
       })),
       overallStatus: 'pending',
     });
+
     return res.status(201).json({ success: true, review });
   } catch (err) {
     console.error(err);
@@ -1156,6 +1179,47 @@ app.get('/api/reviews/pending', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch pending reviews.' });
+  }
+});
+
+/**
+ * GET /api/reviews/author-notifications
+ * Returns reviews for the logged-in author where there's an unseen decision.
+ */
+app.get('/api/reviews/author-notifications', requireAuth, async (req, res) => {
+  try {
+    const reviews = await Review.find({
+      authorId: req.user._id,
+      $or: [
+        { overallStatus: 'changes_requested' },
+        { overallStatus: 'approved', authorNotified: false }
+      ]
+    })
+      .populate('postId', 'title status')
+      .populate('reviewers.userId', 'firstName lastName');
+
+    return res.json({ success: true, reviews });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch author notifications.' });
+  }
+});
+
+/**
+ * PATCH /api/reviews/:id/dismiss-notification
+ * Marks a review as seen by the author.
+ */
+app.patch('/api/reviews/:id/dismiss-notification', requireAuth, async (req, res) => {
+  try {
+    const review = await Review.findOne({ _id: req.params.id, authorId: req.user._id });
+    if (!review) return res.status(404).json({ error: 'Review not found.' });
+
+    review.authorNotified = true;
+    await review.save();
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to dismiss notification.' });
   }
 });
 
@@ -1224,6 +1288,8 @@ app.patch('/api/reviews/:id', requireAuth, async (req, res) => {
     const allApproved = review.reviewers.every((rv) => rv.status === 'approved');
     const anyChangesRequested = review.reviewers.some((rv) => rv.status === 'changes_requested');
 
+    const previousStatus = review.overallStatus;
+
     if (allApproved) {
       review.overallStatus = 'approved';
       await Post.findByIdAndUpdate(review.postId, { status: 'published' });
@@ -1234,7 +1300,12 @@ app.patch('/api/reviews/:id', requireAuth, async (req, res) => {
       review.overallStatus = 'pending';
     }
 
+    if (review.overallStatus !== 'pending' && previousStatus !== review.overallStatus) {
+      review.authorNotified = false;
+    }
+
     await review.save();
+
     return res.json({ success: true, review });
   } catch (err) {
     console.error(err);

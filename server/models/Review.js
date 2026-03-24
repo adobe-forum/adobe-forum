@@ -38,6 +38,10 @@ const reviewSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'changes_requested'],
     default: 'pending',
   },
+  authorNotified: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

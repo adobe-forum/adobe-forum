@@ -81,6 +81,13 @@ const IconEye = () => html`
     <circle cx="9" cy="9" r="2.2" stroke="currentColor" stroke-width="1.35" fill="none"/>
   </svg>`;
 
+const IconBell = () => html`
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>`;
+
 const IconEyeOff = () => html`
   <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
     <line x1="2" y1="2" x2="16" y2="16" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
@@ -441,16 +448,162 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
 }
 
 // ============================================
+// NOTIFICATIONS DROPDOWN
+// ============================================
+function NotificationsDropdown({ onClose }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const fetchSafe = (url) => fetch(url, { credentials: 'include' })
+          .then((r) => (r.ok ? r.json() : { success: false }))
+          .catch(() => ({ success: false }));
+
+        const [pendingRes, notifRes] = await Promise.all([
+          fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
+          fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
+        ]);
+
+        const combined = [];
+        if (pendingRes.success) {
+          pendingRes.reviews.forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
+        }
+        if (notifRes.success) {
+          notifRes.reviews.forEach((r) => combined.push({ type: 'author_update', data: r }));
+        }
+
+        // sort by most recent updatedAt
+        combined.sort((a, b) => new Date(b.data.updatedAt) - new Date(a.data.updatedAt));
+        setItems(combined);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch notifications', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onOutside = (e) => { if (!e.target.closest('.nd-trigger-wrap')) onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onOutside);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onOutside);
+    };
+  }, [onClose]);
+
+  const loadPost = (postId) => {
+    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
+    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
+    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
+    postWrappers.forEach((el) => { el.style.display = 'block'; });
+    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+  };
+
+  const handlePendingClick = (e, postId) => {
+    e.preventDefault();
+    onClose();
+    loadPost(postId);
+  };
+
+  const handleDismiss = async (e, postId, reviewId) => {
+    e.preventDefault();
+    try {
+      await fetch(API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+    } catch (err) { /* ignore */ }
+    onClose();
+    loadPost(postId);
+  };
+
+  return html`
+    <div class="pd-dropdown nd-dropdown" role="menu" aria-label="Notifications menu">
+      <div class="pd-header">
+        <div class="pd-info">
+          <p class="pd-name nd-header-title">Notifications</p>
+        </div>
+      </div>
+      <div class="pd-divider"></div>
+      <ul class="pd-menu nd-menu" role="none">
+        ${loading ? html`<li class="nd-msg">Loading...</li>` : null}
+        ${!loading && items.length === 0 ? html`<li class="nd-msg">No new notifications.</li>` : null}
+        ${!loading && items.map((item) => {
+    if (item.type === 'reviewer_pending') {
+      const r = item.data;
+      // eslint-disable-next-line no-underscore-dangle
+      const pId = r.postId._id;
+      return html`
+              <li role="none" style="padding: 0 8px; margin-bottom: 6px;">
+                <a href="#" class="pd-item nd-item" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)} style="border-left: 4px solid #1473e6; background-color: #f4f8ff; padding-left: 12px; border-radius: 4px; box-sizing: border-box;">
+                  <span class="pd-item-label nd-item-title" style="color: #0d66d0; font-weight: 600;">Review Request: ${r.postId.title}</span>
+                  <span class="pd-email">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
+                </a>
+              </li>`;
+    }
+    if (item.type === 'author_update') {
+      const r = item.data;
+      const isApproved = r.overallStatus === 'approved';
+      const statusText = isApproved ? 'Post Approved' : 'Changes Requested';
+      const bdColor = isApproved ? '#2d9d78' : '#da1f26';
+      const bgColor = isApproved ? '#ecf8f4' : '#fcf0f0';
+      const titleColor = isApproved ? '#227f60' : '#bd1319';
+      // eslint-disable-next-line no-underscore-dangle
+      const pId = r.postId._id;
+      // eslint-disable-next-line no-underscore-dangle
+      const rId = r._id;
+      return html`
+              <li role="none" style="padding: 0 8px; margin-bottom: 6px;">
+                <a href="#" class="pd-item nd-item" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)} style="border-left: 4px solid ${bdColor}; background-color: ${bgColor}; padding-left: 12px; border-radius: 4px; box-sizing: border-box;">
+                  <span class="pd-item-label nd-item-title" style="color: ${titleColor}; font-weight: 600;">${statusText}: ${r.postId.title}</span>
+                  <span class="pd-email" style="color: ${bdColor};">Please view the review notes.</span>
+                </a>
+              </li>`;
+    }
+    return null;
+  })}
+      </ul>
+    </div>`;
+}
+
+// ============================================
 // HEADER COMPONENT
 // ============================================
 
 function HeaderComponent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [sessionWarning, setSessionWarning] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
+
+  useEffect(() => {
+    if (user) {
+      const fetchSafe = (url) => fetch(url, { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : { success: false }))
+        .catch(() => ({ success: false }));
+
+      Promise.all([
+        fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
+        fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
+      ]).then(([pendingRes, notifRes]) => {
+        let count = 0;
+        if (pendingRes.success) count += pendingRes.reviews.length;
+        if (notifRes.success) count += notifRes.reviews.length;
+        setPendingCount(count);
+      }).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error(err);
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
@@ -565,12 +718,23 @@ function HeaderComponent() {
 
       <div class="nav-tools">
         <ul>
+          ${user && html`
+          <li class="profile-item">
+            <div class="nd-trigger-wrap">
+              <button type="button" class="spectrum-action-button nd-bell-btn ${notifOpen ? ' is-active' : ''}" aria-label="Notifications" aria-expanded=${String(notifOpen)} onClick=${() => { setNotifOpen((o) => !o); setDropdownOpen(false); }}>
+                <${IconBell}/>
+                ${pendingCount > 0 ? html`<span class="nd-badge"></span>` : null}
+              </button>
+              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} />` : null}
+            </div>
+          </li>
+          `}
           <li class="profile-item">
             <div class="pd-trigger-wrap">
               <button type="button" class="profile-avatar-btn${dropdownOpen ? ' is-active' : ''}"
                 aria-label="Open profile menu" aria-expanded=${String(dropdownOpen)}
                 aria-haspopup="true"
-                onClick=${() => setDropdownOpen((o) => !o)}>
+                onClick=${() => { setDropdownOpen((o) => !o); setNotifOpen(false); }}>
                 ${initials}
               </button>
               ${dropdownOpen && user && html`
