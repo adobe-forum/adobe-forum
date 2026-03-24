@@ -247,7 +247,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [isMine, setIsMine] = useState(false);
   // "My Posts" — read ?author= from URL once on mount
-  const [authorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
+  const [authorId, setAuthorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
 
   // ── Resolve display title ─────────────────────────────────────────
   // Priority: My Posts (authorId) > Category filter > Search > {n} token default
@@ -288,15 +288,12 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       setPosts((currentPosts) => currentPosts.map((p) => {
         const pId = p._id || p.id;
         if (String(pId) === String(id)) {
-          // If the payload contains views or likes, update them.
-          // Fallback to existing values if not provided in the partial update.
           const newViews = views !== undefined ? views : p.views;
           const newLikes = likes !== undefined ? likes : p.likes?.length;
 
           return {
             ...p,
             views: newViews,
-            // Create a fake likes array of the correct length so the card display logic works
             likes: new Array(newLikes).fill('placeholder'),
           };
         }
@@ -337,22 +334,17 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
           url.searchParams.append('limit', PAGE_SIZE);
           url.searchParams.append('sort', sortOption);
           if (searchQuery) url.searchParams.append('search', searchQuery);
-          if (authorId) url.searchParams.append('author', authorId); // My Posts filter (URL-based)
-          if (isMine) url.searchParams.append('mine', 'true'); // My Posts filter (sidebar button)
+          if (authorId) url.searchParams.append('author', authorId);
+          if (isMine) url.searchParams.append('mine', 'true');
         }
 
-        // Ensure we bypass browser cache for fresh views/likes stats
-        const res = await fetch(url, {
-          signal,
-          cache: 'no-store',
-        });
+        const res = await fetch(url, { signal, cache: 'no-store' });
         if (!res.ok) throw new Error('Network response was not ok');
         const data = await res.json();
 
         setPosts(normalizeApiData(data, category));
         setTotalPages(data.totalPages || 1);
 
-        // Supports common API field names for total count
         const count = data.totalCount ?? data.total ?? data.count ?? data.totalItems ?? null;
         setTotalCount(count);
       } catch (err) {
@@ -395,6 +387,8 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
         setIsMine(true);
       } else {
         setIsMine(false);
+        setAuthorId('');
+        window.history.replaceState({}, '', '/');
       }
       setRefreshTick((t) => t + 1);
     };

@@ -640,7 +640,7 @@ function HeaderComponent() {
           ${user && html`
           <li class="profile-item">
             <div class="nd-trigger-wrap">
-              <button type="button" class="spectrum-action-button nd-bell-btn ${notifOpen ? ' is-active' : ''}" aria-label="Notifications" aria-expanded=${String(notifOpen)} onClick=${() => { setNotifOpen((o) => !o); setDropdownOpen(false); }}>
+              <button type="button" class="spectrum-action-button nd-bell-btn" aria-label="Notifications" aria-expanded=${String(notifOpen)} onClick=${() => { setNotifOpen((o) => !o); setDropdownOpen(false); }}>
                 <${IconBell}/>
                 ${pendingCount > 0 ? html`<span class="nd-badge"></span>` : null}
               </button>
