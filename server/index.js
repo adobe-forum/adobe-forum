@@ -311,12 +311,9 @@ app.post('/api/auth/reset-password', async (req, res) => {
  * PATCH /api/auth/profile
  * Updates firstName and lastName for the logged-in user.
  */
-app.patch('/api/auth/profile', async (req, res) => {
+app.patch('/api/auth/profile', requireAuth, async (req, res) => {
   try {
-    const { userId, firstName, lastName } = req.body;
-
-    if (!userId)
-      return res.status(400).json({ error: 'User ID is required.' });
+    const { firstName, lastName } = req.body;
 
     if (!firstName || !firstName.trim())
       return res.status(400).json({ error: 'First name is required.' });
@@ -325,7 +322,7 @@ app.patch('/api/auth/profile', async (req, res) => {
       return res.status(400).json({ error: 'Last name is required.' });
 
     const user = await User.findByIdAndUpdate(
-      userId,
+      req.user._id,
       { firstName: firstName.trim(), lastName: lastName.trim(), updatedAt: Date.now() },
       { new: true },
     );
@@ -345,17 +342,17 @@ app.patch('/api/auth/profile', async (req, res) => {
  * PATCH /api/auth/change-password
  * Verifies the current password then updates to the new one.
  */
-app.patch('/api/auth/change-password', async (req, res) => {
+app.patch('/api/auth/change-password', requireAuth, async (req, res) => {
   try {
-    const { userId, currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword } = req.body;
 
-    if (!userId || !currentPassword || !newPassword)
+    if (!currentPassword || !newPassword)
       return res.status(400).json({ error: 'All fields are required.' });
 
     if (newPassword.length < 8)
       return res.status(400).json({ error: 'New password must be at least 8 characters.' });
 
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
     const match = await user.comparePassword(currentPassword);
