@@ -161,6 +161,14 @@ const ForumPost = ({ blockEl }) => {
 
       setLoading(true);
 
+      // Push a history entry so the browser Back button returns to cards view
+      // (replaceState if we're already in a post, pushState otherwise)
+      if (window.history.state?.view === 'post') {
+        window.history.replaceState({ view: 'post', postId }, '', '/');
+      } else {
+        window.history.pushState({ view: 'post', postId }, '', '/');
+      }
+
       // Show this block, hide cards
       if (blockEl) blockEl.style.display = 'block';
       const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
@@ -304,7 +312,14 @@ const ForumPost = ({ blockEl }) => {
   };
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('show-cards'));
+    if (window.history.state?.view === 'post') {
+      // We pushed this entry — use history.back() so the browser's
+      // popstate handler in cards-display restores the cards view properly
+      window.history.back();
+    } else {
+      // Fallback: no history state (e.g. direct URL load), dispatch manually
+      window.dispatchEvent(new CustomEvent('show-cards'));
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

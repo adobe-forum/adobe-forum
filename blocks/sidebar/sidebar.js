@@ -164,7 +164,7 @@ function TreeItem({
   // that causes post-links to render as folders and duplicate items on create.
   const { isFolder } = item;
   const itemId = item.id;
-  const paddingLeft = Math.min(12 + level * 20, 100);
+  const paddingLeft = Math.min(8 + level * 16, 80);
 
   // Only show action buttons if the logged-in user created this item
   const canEdit = isOwner(item, currentUser);
@@ -218,7 +218,9 @@ function TreeItem({
 
       ${isExpanded && html`
         <ul class="tree-children">
-          ${hasChildren && item.children.map((child) => html`
+          ${hasChildren && [...item.children]
+    .sort((a, b) => (b.isFolder ? 1 : 0) - (a.isFolder ? 1 : 0))
+    .map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
               onItemClick=${onItemClick}
@@ -271,7 +273,9 @@ function CategoryItem({
       ${!isCollapsed && html`
         <ul class="tree-list">
           ${hasItems
-    ? category.items.map((item) => html`
+    ? [...category.items]
+      .sort((a, b) => (b.isFolder ? 1 : 0) - (a.isFolder ? 1 : 0))
+      .map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
@@ -583,17 +587,17 @@ function Sidebar() {
             Pending Reviews
             ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:var(--amber);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
           </div>
-          <ul class="sidebar-pending-list" style="list-style:none; padding:4px 0 8px 24px; margin:0; display:block;">
+          <ul class="sidebar-pending-list">
             ${pendingReviews.length > 0 ? pendingReviews.map((r) => {
     // eslint-disable-next-line no-underscore-dangle
     const reviewId = r._id;
     return html`
-              <li key=${reviewId} style="font-size:12px; color:var(--text2); padding:4px 0; cursor:pointer;" onClick=${() => handlePendingReviewClick(r)}>
+              <li key=${reviewId} style="font-size:12px; color:var(--text2); padding:5px 8px; cursor:pointer; border-radius:4px;" onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;">${r.postId?.title || 'Untitled Post'}</div>
-                <div style="color:var(--text3); font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
+                <div style="color:var(--text3); font-size:10px; margin-top:1px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
               </li>
             `;
-  }) : html`<li style="font-size:12px; color:var(--text3); padding:4px 0; font-style: italic;">No reviews pending</li>`}
+  }) : html`<li style="font-size:12px; color:var(--text3); padding:5px 8px; font-style: italic;">No reviews pending</li>`}
           </ul>
         `}
 

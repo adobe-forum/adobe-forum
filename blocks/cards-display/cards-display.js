@@ -268,15 +268,26 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   }
 
   useEffect(() => {
-    // Force a data refresh when returning to this page from a post
-    // This catches browser back button navs and tab switches
-    const handleReturn = () => {
+    // Handle browser Back/Forward navigation
+    const handleReturn = (e) => {
+      // If returning from a post view (popstate with no post state, or pageshow)
+      // restore the cards grid and refresh data
+      const isPopstate = e?.type === 'popstate';
+      const leavingPost = isPopstate && e.state?.view !== 'post';
+      const isPageshow = e?.type === 'pageshow';
+
+      if (leavingPost || isPageshow) {
+        // Make sure cards are visible (in case we're returning from a post)
+        toggleViews(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
       setRefreshTick((t) => t + 1);
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        handleReturn();
+        setRefreshTick((t) => t + 1);
       }
     };
 

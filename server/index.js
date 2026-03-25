@@ -8,7 +8,7 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import Post from './models/Post.js';
 import SidebarItem from './models/SidebarItem.js';
-import User from './models/User.js';
+import User from './models/user.js';
 import Review from './models/Review.js';
 
 dotenv.config();
@@ -490,10 +490,10 @@ app.get('/api/posts', async (req, res) => {
 
     const sortOption = req.query.sort || 'latest';
     let sortObj = { createdAt: -1 };
-    
+
     if (sortOption === 'oldest') sortObj = { createdAt: 1 };
     if (sortOption === 'most_viewed') sortObj = { views: -1 };
-    
+
     // For sorting by most_liked, we need an aggregation pipeline because likes is an array of IDs.
     // If not most_liked, we can use a standard find query.
     let posts, total;
@@ -505,12 +505,12 @@ app.get('/api/posts', async (req, res) => {
         { $skip: (page - 1) * limit },
         { $limit: limit },
         {
-           $lookup: {
-             from: 'users',
-             localField: 'createdBy',
-             foreignField: '_id',
-             as: 'createdByObj'
-           }
+          $lookup: {
+            from: 'users',
+            localField: 'createdBy',
+            foreignField: '_id',
+            as: 'createdByObj'
+          }
         },
         {
           $addFields: {
@@ -519,7 +519,7 @@ app.get('/api/posts', async (req, res) => {
         },
         { $project: { createdByObj: 0 } }
       ];
-      
+
       const countPipeline = [
         { $match: query },
         { $count: 'total' }
@@ -529,7 +529,7 @@ app.get('/api/posts', async (req, res) => {
         Post.aggregate(pipeline),
         Post.aggregate(countPipeline)
       ]);
-      
+
       posts = aggResult;
       total = countResult.length > 0 ? countResult[0].total : 0;
     } else {
