@@ -467,6 +467,10 @@ function Sidebar() {
       console.warn('Sidebar click failed: No postId available.');
       return;
     }
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.href = `/?category=${encodeURIComponent(subcategoryId)}&post=${postId}`;
+      return;
+    }
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
@@ -516,6 +520,10 @@ function Sidebar() {
 
   // ── Navigation handlers ─────────────────────────────────────────────
   const handleHome = () => {
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.href = '/';
+      return;
+    }
     setActiveSubcategory(null);
     window.dispatchEvent(new CustomEvent('show-cards'));
     window.dispatchEvent(new CustomEvent('refresh-cards'));
@@ -523,6 +531,10 @@ function Sidebar() {
 
   // eslint-disable-next-line no-unused-vars
   const handleMyPosts = () => {
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.href = '/?mine=true';
+      return;
+    }
     setActiveSubcategory(null);
     window.dispatchEvent(new CustomEvent('show-cards'));
     window.dispatchEvent(new CustomEvent('refresh-cards', { detail: { mine: true } }));
@@ -532,6 +544,10 @@ function Sidebar() {
     if (!review.postId) return;
     // eslint-disable-next-line no-underscore-dangle
     const postId = typeof review.postId === 'object' ? String(review.postId._id) : String(review.postId);
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.href = `/?post=${postId}`;
+      return;
+    }
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
