@@ -563,11 +563,16 @@ app.get('/api/posts', async (req, res) => {
  */
 app.get('/api/posts/:id', async (req, res) => {
   try {
-    const post = await Post.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { views: 1 } },
-      { new: true }
-    ).populate('createdBy', 'firstName lastName');
+    let post;
+    if (req.query.view === '1') {
+      post = await Post.findByIdAndUpdate(
+        req.params.id,
+        { $inc: { views: 1 } },
+        { new: true }
+      ).populate('createdBy', 'firstName lastName');
+    } else {
+      post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
+    }
 
     if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });

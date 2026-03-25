@@ -959,9 +959,18 @@ footer,
 }
 
 .nd-bell-btn {
-  /* We use spectrum-action-button class for the button itself, 
-     but we can add custom padding or alignment here if needed. */
+  /* Enforce Adobe Spectrum grey styling and prevent unexpected red global inheritance */
   position: relative;
+  background-color: transparent !important;
+  color: var(--spectrum-gray-800, #4b4b4b) !important;
+  border-color: transparent !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nd-bell-btn:hover,
+.nd-bell-btn[aria-expanded="true"] {
+  background-color: var(--spectrum-gray-200, #eaeaea) !important;
+  color: var(--spectrum-gray-900, #222) !important;
 }
 
 .nd-badge {
@@ -989,7 +998,8 @@ footer,
 
 .nd-menu {
   max-height: 300px;
-  overflow-y: auto;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
 }
 
 .nd-msg {
@@ -1006,6 +1016,8 @@ footer,
   align-items: flex-start !important;
   gap: 4px !important;
   text-decoration: none !important;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .nd-item-title {
