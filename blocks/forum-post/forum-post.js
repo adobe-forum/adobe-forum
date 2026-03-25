@@ -167,7 +167,16 @@ const ForumPost = ({ blockEl }) => {
       cardsWrappers.forEach((el) => { el.style.display = 'none'; });
 
       try {
-        const url = `${API_BASE}/posts/${postId}`;
+        let url = `${API_BASE}/posts/${postId}`;
+
+        // Unique Views Tracking using LocalStorage
+        const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
+        if (!viewedPosts.includes(postId)) {
+          url += '?view=1';
+          viewedPosts.push(postId);
+          localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
+        }
+
         const response = await fetch(url);
 
         if (response.ok) {
