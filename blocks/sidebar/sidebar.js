@@ -300,6 +300,9 @@ function Sidebar() {
   const [deleteDialog, setDeleteDialog] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [pendingReviews, setPendingReviews] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
 
   // ── Auth state ──────────────────────────────────────────────────────────
   // null  = not yet checked
@@ -425,7 +428,7 @@ function Sidebar() {
     };
   }, []);
 
-  // ── Fetch pending reviews ───────────────────────────────────────────
+  // ── Fetch pending reviews (reviewer side) ──────────────────────────
   const fetchPendingReviews = async () => {
     if (!currentUser) return;
     try {
@@ -439,21 +442,37 @@ function Sidebar() {
     }
   };
 
+  // ── Fetch my review requests (author side) ──────────────────────────
+  const fetchMyRequests = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`${API_BASE}/reviews/my-requests`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setMyRequests((data.reviews || []).filter((r) => r.overallStatus !== 'approved'));
+      }
+    } catch {
+      /* non-fatal */
+    }
+  };
+
   useEffect(() => {
     if (currentUser) {
-      // Defer to prevent blocking main thread
       const initTimer = setTimeout(() => {
         fetchPendingReviews();
+        fetchMyRequests();
       }, 50);
       return () => clearTimeout(initTimer);
     }
     setPendingReviews([]);
+    setMyRequests([]);
     return undefined;
   }, [currentUser]);
 
   useEffect(() => {
-    window.addEventListener('refresh-sidebar', fetchPendingReviews);
-    return () => window.removeEventListener('refresh-sidebar', fetchPendingReviews);
+    const refreshAll = () => { fetchPendingReviews(); fetchMyRequests(); };
+    window.addEventListener('refresh-sidebar', refreshAll);
+    return () => window.removeEventListener('refresh-sidebar', refreshAll);
   }, [currentUser]);
 
   // ── Handlers ────────────────────────────────────────────────────────────
@@ -519,27 +538,6 @@ function Sidebar() {
   };
 
   // ── Navigation handlers ─────────────────────────────────────────────
-  const handleHome = () => {
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-      window.location.href = '/';
-      return;
-    }
-    setActiveSubcategory(null);
-    window.dispatchEvent(new CustomEvent('show-cards'));
-    window.dispatchEvent(new CustomEvent('refresh-cards'));
-  };
-
-  // eslint-disable-next-line no-unused-vars
-  const handleMyPosts = () => {
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-      window.location.href = '/?mine=true';
-      return;
-    }
-    setActiveSubcategory(null);
-    window.dispatchEvent(new CustomEvent('show-cards'));
-    window.dispatchEvent(new CustomEvent('refresh-cards', { detail: { mine: true } }));
-  };
-
   const handlePendingReviewClick = (review) => {
     if (!review.postId) return;
     // eslint-disable-next-line no-underscore-dangle
@@ -579,8 +577,22 @@ function Sidebar() {
 
   // ── Render ──────────────────────────────────────────────────────────────
 
+  const toggleSidebar = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    applyBodyOffset(next);
+  };
+
   return html`
-    <div class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
+    <div class="sidebar-root">
+      <button class="sidebar-hamburger" onClick=${toggleSidebar} aria-label=${isOpen ? 'Close sidebar' : 'Open sidebar'}>
+        ${isOpen
+    ? html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+    : html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`
+}
+      </button>
+
+      <div class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
       <aside class="sidebar">
         <div class="search-container">
           <input type="text" placeholder="Search topics..." value=${searchTerm}
@@ -588,29 +600,61 @@ function Sidebar() {
         </div>
 
         ${currentUser && html`
-          <div class="sidebar-item ${!activeSubcategory && !window.location.search.includes('mine=true') ? 'active' : ''}" onClick=${handleHome}>
+          <div class="sidebar-item ${!activeSubcategory && !window.location.search.includes('mine=true') ? 'active' : ''}"
+            onClick=${() => { window.location.href = 'http://localhost:3000'; }}>
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             Home
           </div>
 
           <div class="sidebar-section">Reviews</div>
-          <div class="sidebar-item" onClick=${() => { document.querySelector('.sidebar-pending-list').style.display = document.querySelector('.sidebar-pending-list').style.display === 'none' ? 'block' : 'none'; }}>
+
+          <div class="sidebar-item" onClick=${() => setPendingOpen((o) => !o)}>
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
             Pending Reviews
-            ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:var(--amber);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
+            ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:#854F0B;color:#FAEEDA;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
+            <svg style="margin-left:${pendingReviews.length > 0 ? '4px' : 'auto'};transition:transform .2s;transform:rotate(${pendingOpen ? '90deg' : '0deg'});flex-shrink:0;opacity:.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
-          <ul class="sidebar-pending-list" style="list-style:none; padding:4px 0 8px 24px; margin:0; display:block;">
+          ${pendingOpen && html`
+          <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
             ${pendingReviews.length > 0 ? pendingReviews.map((r) => {
     // eslint-disable-next-line no-underscore-dangle
     const reviewId = r._id;
     return html`
-              <li key=${reviewId} style="font-size:12px; color:var(--text2); padding:4px 0; cursor:pointer;" onClick=${() => handlePendingReviewClick(r)}>
-                <div style="font-weight:500;">${r.postId?.title || 'Untitled Post'}</div>
-                <div style="color:var(--text3); font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
+              <li key=${reviewId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #BA7517;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
+                <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
+                <div style="color:var(--text3);font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
               </li>
             `;
-  }) : html`<li style="font-size:12px; color:var(--text3); padding:4px 0; font-style: italic;">No reviews pending</li>`}
+  }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No reviews pending</li>`}
           </ul>
+          `}
+
+          <div class="sidebar-item" onClick=${() => setRequestsOpen((o) => !o)}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            My Requests
+            ${myRequests.length > 0 ? html`<span style="margin-left:auto;background:#0C447C;color:#E6F1FB;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${myRequests.length}</span>` : ''}
+            <svg style="margin-left:${myRequests.length > 0 ? '4px' : 'auto'};transition:transform .2s;transform:rotate(${requestsOpen ? '90deg' : '0deg'});flex-shrink:0;opacity:.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          ${requestsOpen && html`
+          <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
+            ${myRequests.length > 0 ? myRequests.map((r) => {
+    // eslint-disable-next-line no-underscore-dangle
+    const reqId = r._id;
+    const reviewedCount = (r.reviewers || []).filter((rv) => rv.status !== 'pending').length;
+    const totalCount = (r.reviewers || []).length;
+    let statusLabel;
+    if (r.overallStatus === 'approved') statusLabel = 'Approved';
+    else if (r.overallStatus === 'changes_requested') statusLabel = 'Changes requested';
+    else statusLabel = `${reviewedCount}/${totalCount} reviewed`;
+    return html`
+              <li key=${reqId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #185FA5;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
+                <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
+                <div style="color:var(--text3);font-size:10px;">${statusLabel}</div>
+              </li>
+            `;
+  }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No requests sent</li>`}
+          </ul>
+          `}
         `}
 
         <div class="sidebar-section">Topics</div>
@@ -665,6 +709,7 @@ function Sidebar() {
         onConfirm=${() => setDeleteError(null)}
         onCancel=${() => setDeleteError(null)}
       />
+      </div>
     </div>
   `;
 }

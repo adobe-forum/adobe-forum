@@ -22,6 +22,7 @@ import {
   loginUser,
   registerUser,
   forgotPassword,
+  getMe,
 } from './auth-api.js';
 
 const html = htm.bind(h);
@@ -271,7 +272,13 @@ function LoginPanel({ onForgot, active }) {
     setLoading(true);
     try {
       const data = await loginUser({ email, password });
-      if (data.user) localStorage.setItem('af_user', JSON.stringify(data.user));
+      if (data.user) {
+        // Store loginAt alongside user so session timer works across page reloads.
+        // _id is always preserved — needed for reviewer assignments even after expiry.
+        const toStore = { ...data.user };
+        if (data.loginAt) toStore.loginAt = data.loginAt;
+        localStorage.setItem('af_user', JSON.stringify(toStore));
+      }
       window.location.href = '/';
     } catch (err) {
       setErrors({ password: err.message });
@@ -595,5 +602,12 @@ export default function decorate(block) {
   const mount = document.createElement('div');
   document.body.append(mount);
 
-  render(html`<${AuthForm} initPanel=${initPanel}/>`, mount);
+  // If user has an active session, skip the form and redirect home.
+  // If session is expired (401), render the form normally.
+  // NOTE: af_user is intentionally kept in localStorage after auto-logout
+  // so the user _id is available for reviewer lookups — we don't redirect
+  // based on localStorage alone, only on a live server session check.
+  getMe()
+    .then(() => { window.location.replace('/'); })
+    .catch(() => { render(html`<${AuthForm} initPanel=${initPanel}/>`, mount); });
 }
