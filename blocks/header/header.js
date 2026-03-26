@@ -340,8 +340,14 @@ function ProfilePopup({ onClose }) {
   const handleOverlay = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const handleLogout = () => {
-    localStorage.removeItem('af_user');
-    window.location.replace('/auth-form');
+    // Always destroy the server session first — otherwise the session cookie
+    // remains valid and auth-form's getMe() call returns 200, which immediately
+    // redirects back to '/' causing a redirect loop.
+    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(() => {
+        localStorage.removeItem('af_user');
+        window.location.replace('/auth-form');
+      });
   };
 
   if (!user) { handleLogout(); return null; }
@@ -402,8 +408,14 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
   }, [onClose]);
 
   const handleLogout = () => {
-    localStorage.removeItem('af_user');
-    window.location.replace('/auth-form');
+    // Always destroy the server session first — otherwise the session cookie
+    // remains valid and auth-form's getMe() call returns 200, which immediately
+    // redirects back to '/' causing a redirect loop.
+    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(() => {
+        localStorage.removeItem('af_user');
+        window.location.replace('/auth-form');
+      });
   };
 
   const handleMyPosts = () => {
@@ -581,6 +593,7 @@ function HeaderComponent() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [sessionWarning, setSessionWarning] = useState(false);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
 
@@ -609,6 +622,96 @@ function HeaderComponent() {
     const onSidebarStateChange = (e) => setSidebarOpen(e.detail.isOpen);
     window.addEventListener('sidebar-state-changed', onSidebarStateChange);
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
+  }, []);
+
+  // ── Session timeout ─────────────────────────────────────────────────────
+  // Reads loginAt from /me (authoritative) or localStorage (fallback).
+  // At 25 min: show warning banner. At 30 min: logout and redirect.
+  // The effect re-runs whenever the stored user changes so timers are
+  // always anchored to the current loginAt — not a stale captured value.
+  useEffect(() => {
+    const SESSION_MS = 30 * 60 * 1000; // 30 min
+    const WARNING_MS = 5 * 60 * 1000; //  5 min before logout = 25 min mark
+    let warnTimer;
+    let logoutTimer;
+
+    // Read user fresh from localStorage each time the effect runs
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+    })();
+
+    // No user in localStorage at all — nothing to time out, don't touch session
+    if (!storedUser) return () => {};
+
+    const doLogout = () => {
+      if (window.location.pathname.startsWith('/auth-form')) return;
+      fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(() => {
+          localStorage.removeItem('af_user');
+          window.location.replace('/auth-form');
+        });
+    };
+
+    const scheduleTimers = (loginAt) => {
+      clearTimeout(warnTimer);
+      clearTimeout(logoutTimer);
+      const now = Date.now();
+      const elapsed = now - loginAt;
+      const remaining = SESSION_MS - elapsed;
+
+      // loginAt is in the future or wildly wrong — treat as fresh login
+      const safeRemaining = (remaining > SESSION_MS || remaining < 0) ? SESSION_MS : remaining;
+
+      if (safeRemaining <= 0) {
+        doLogout();
+        return;
+      }
+
+      const warnIn = safeRemaining - WARNING_MS;
+      if (warnIn <= 0) {
+        // Already past the 25-min mark — show warning immediately
+        setSessionWarning(true);
+      } else {
+        warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
+      }
+      logoutTimer = setTimeout(doLogout, safeRemaining);
+    };
+
+    // Ask the server for the authoritative loginAt from the session store.
+    // 200 → schedule from server loginAt (most accurate).
+    // 401 → session gone, logout.
+    // network error → fall back to localStorage loginAt, do NOT logout.
+    fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
+      .then((r) => {
+        if (r.status === 401) {
+          // Real session expiry — log out
+          doLogout();
+          return null;
+        }
+        if (!r.ok) return null; // other server error — skip, don't logout
+        return r.json();
+      })
+      .then((data) => {
+        if (!data) return;
+        const serverLoginAt = data.loginAt;
+        if (serverLoginAt) {
+          // Keep localStorage in sync
+          try {
+            const s = JSON.parse(localStorage.getItem('af_user') || 'null');
+            if (s) localStorage.setItem('af_user', JSON.stringify({ ...s, loginAt: serverLoginAt }));
+          } catch { /* ignore */ }
+          scheduleTimers(serverLoginAt);
+        } else {
+          // Session alive but loginAt missing — fall back to localStorage
+          scheduleTimers(storedUser.loginAt || Date.now());
+        }
+      })
+      .catch(() => {
+        // Network error — keep the user logged in, schedule from localStorage
+        if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
+      });
+
+    return () => { clearTimeout(warnTimer); clearTimeout(logoutTimer); };
   }, []);
 
   const toggleSidebar = () => {
@@ -668,7 +771,18 @@ function HeaderComponent() {
       </div>
     </nav>
 
-    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}`;
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}
+
+    ${sessionWarning && html`
+      <div class="session-warning-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Your session expires in 5 minutes.
+        <a href="/auth-form">Log in again</a> to stay signed in.
+        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
+      </div>`}`;
 }
 
 // ============================================

@@ -35,16 +35,18 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
+  rolling: false, // session expiry is fixed from loginAt, not sliding
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
     collectionName: 'sessions',
-    ttl: 7 * 24 * 60 * 60,
+    ttl: 30 * 60,          // 30 minutes — hard expiry in MongoDB
+    touchAfter: 0,         // never auto-extend TTL on touch
   }),
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 30 * 60 * 1000, // 30 minutes
   },
 }));
 
@@ -161,10 +163,18 @@ app.post('/api/auth/register', async (req, res) => {
       password,
     });
 
+    const loginAt = Date.now();
     req.session.userId = String(user._id);
+    req.session.loginAt = loginAt;
+
+    // Persist loginAt on User doc so it survives session expiry and page reloads.
+    await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
+
+    // Explicitly save session before responding (same reason as login route).
+    await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) } });
+    return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) }, loginAt });
 
   } catch (err) {
     console.error(err);
@@ -190,10 +200,20 @@ app.post('/api/auth/login', async (req, res) => {
     if (!match)
       return res.status(401).json({ error: 'Invalid email or password.' });
 
+    const loginAt = Date.now();
     req.session.userId = String(user._id);
+    req.session.loginAt = loginAt;
+
+    // Persist loginAt on User doc so it survives session expiry and page reloads.
+    await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
+
+    // Explicitly save session before responding — ensures the session is written
+    // to MongoDB before the client redirects and calls /me. Without this, the
+    // session may not be persisted yet and /me returns 401 causing instant logout.
+    await new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
-    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) } });
+    return res.json({ success: true, user: { ...safeUser, _id: String(user._id) }, loginAt });
 
   } catch (err) {
     console.error(err);
@@ -220,7 +240,10 @@ app.post('/api/auth/logout', (req, res) => {
  * req.user already attached by requireAuth — no extra DB call needed.
  */
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  return res.json({ success: true, user: req.user });
+  // Prefer session loginAt (precise); fall back to User doc loginAt (survives page reloads)
+  const loginAt = req.session.loginAt
+    || (req.user.loginAt ? new Date(req.user.loginAt).getTime() : null);
+  return res.json({ success: true, user: req.user, loginAt });
 });
 
 /**
@@ -1227,6 +1250,23 @@ app.get('/api/reviews/by-post/:postId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch review.' });
+  }
+});
+
+/**
+ * GET /api/reviews/my-requests
+ * Returns all reviews where the logged-in user is the author (requested the review).
+ * Shows all active reviews regardless of notification/seen status.
+ */
+app.get('/api/reviews/my-requests', requireAuth, async (req, res) => {
+  try {
+    const reviews = await Review.find({ authorId: req.user._id })
+      .populate('postId', 'title category status')
+      .populate('reviewers.userId', 'firstName lastName email');
+    return res.json({ success: true, reviews });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch your review requests.' });
   }
 });
 
