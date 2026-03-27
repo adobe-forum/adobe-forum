@@ -542,10 +542,19 @@ function Sidebar() {
     if (!review.postId) return;
     // eslint-disable-next-line no-underscore-dangle
     const postId = typeof review.postId === 'object' ? String(review.postId._id) : String(review.postId);
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-      window.location.href = `/?post=${postId}`;
+
+    // Check whether the main forum post viewer exists on this page.
+    const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
+    const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
+    if (!postViewer && !cardsViewer) {
+      // Not on the main forum page — pass the postId via sessionStorage so the
+      // forum-post block can read it reliably on mount without any timing issues.
+      console.log('[sidebar] Cross-page nav: setting af_open_post =', postId);
+      sessionStorage.setItem('af_open_post', postId);
+      window.location.href = 'http://localhost:3000/';
       return;
     }
+
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
@@ -619,10 +628,13 @@ function Sidebar() {
             ${pendingReviews.length > 0 ? pendingReviews.map((r) => {
     // eslint-disable-next-line no-underscore-dangle
     const reviewId = r._id;
+    const authorName = r.authorId
+      ? (`${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`).trim() || 'Unknown'
+      : 'Unknown';
     return html`
               <li key=${reviewId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #BA7517;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
-                <div style="color:var(--text3);font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
+                <div style="color:var(--text3);font-size:10px;">by ${authorName}</div>
               </li>
             `;
   }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No reviews pending</li>`}
