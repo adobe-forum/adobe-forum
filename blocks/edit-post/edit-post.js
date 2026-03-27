@@ -104,6 +104,26 @@ const BLOCK_FORMATS = {
   h6: 'h6',
 };
 
+// Code snippet language options
+const CODE_LANGUAGES = [
+  { value: 'plaintext', label: 'Plain Text' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'bash', label: 'Bash' },
+  { value: 'json', label: 'JSON' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'dart', label: 'Dart' },
+  { value: 'go', label: 'Go' },
+  { value: 'c', label: 'C' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'csharp', label: 'C#' },
+  { value: 'java', label: 'Java' },
+  { value: 'graphql', label: 'GraphQL' },
+];
+
 // RICH TEXT EDITOR COMPONENT
 // ============================================
 
@@ -113,15 +133,29 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const activeCellRef = useRef(null);
   const resizeRef = useRef(null);
   const fileInputRef = useRef(null);
+  const codePickerRef = useRef(null);
   const [showTableTools, setShowTableTools] = useState(false);
   const [icons, setIcons] = useState(iconCache);
   const [activeFormats, setActiveFormats] = useState({});
   const [charCount, setCharCount] = useState(0);
+  const [showCodeLangPicker, setShowCodeLangPicker] = useState(false);
 
   // Load icons from /icons/ folder on mount
   useEffect(() => {
     loadIcons().then((loaded) => setIcons({ ...loaded }));
   }, []);
+
+  // Close code-language picker when clicking outside
+  useEffect(() => {
+    if (!showCodeLangPicker) return undefined;
+    const onDocClick = (e) => {
+      if (codePickerRef.current && !codePickerRef.current.contains(e.target)) {
+        setShowCodeLangPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [showCodeLangPicker]);
 
   const emitChange = () => {
     const editor = editorRef.current;
@@ -498,7 +532,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     }
   };
 
-  const handleCodeBlock = () => {
+  const handleCodeBlock = (lang = 'plaintext') => {
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const editor = editorRef.current;
@@ -510,10 +544,6 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     if (!block) return;
 
     if (block.tagName === 'PRE') {
-      // Toggle off: exit the code block.
-      // - Has content → keep the <pre>, insert a normal paragraph after it and
-      //   move cursor there so the user can continue typing outside the block.
-      // - Empty → remove the shell entirely, no orphaned <pre> left behind.
       const p = document.createElement('p');
       p.innerHTML = '<br>';
       if (block.textContent.trim()) {
@@ -528,6 +558,11 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       sel.addRange(newRange);
     } else {
       const pre = document.createElement('pre');
+      const chosenLang = lang === 'plaintext' ? '' : lang;
+      if (chosenLang) {
+        pre.dataset.language = chosenLang;
+        pre.classList.add(`code-lang-${chosenLang}`);
+      }
       pre.textContent = block.textContent || '';
       block.replaceWith(pre);
       const newRange = document.createRange();
@@ -813,7 +848,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
         handleInlineCode();
         break;
       case 'codeBlock':
-        handleCodeBlock();
+        handleCodeBlock(value);
         break;
       case 'blockquote':
         handleBlockquote();
@@ -1307,7 +1342,47 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
         </span>
         <span className="ce-toolbar-group">
           ${tbBtn('code', 'Inline Code')}
-          ${tbBtn('codeBlock', 'Code Block')}
+          <span className="ce-code-block-wrap" ref=${codePickerRef}>
+            <button type="button"
+              className=${`ce-toolbar-btn${activeFormats.codeBlock ? ' active' : ''}`}
+              title="Code Block"
+              id="ce-code-block-btn"
+              onMouseDown=${(e) => {
+    e.preventDefault();
+    const editor = editorRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    let block = sel?.anchorNode;
+    while (block && block.parentNode !== editor) block = block.parentNode;
+    if (block && block.tagName === 'PRE') {
+      execFormat('codeBlock', '');
+      setShowCodeLangPicker(false);
+    } else {
+      setShowCodeLangPicker((v) => !v);
+    }
+  }}
+              dangerouslySetInnerHTML=${{ __html: icons.codeBlock || '' }}
+            />
+            ${showCodeLangPicker && html`
+              <div className="ce-lang-picker" role="listbox" aria-label="Select language">
+                ${CODE_LANGUAGES.map((lang) => html`
+                  <button
+                    key=${lang.value}
+                    type="button"
+                    role="option"
+                    className=${`ce-lang-option ce-lang-${lang.value}`}
+                    onMouseDown=${(e) => {
+    e.preventDefault();
+    setShowCodeLangPicker(false);
+    execFormat('codeBlock', lang.value);
+  }}
+                  >
+                    ${lang.label}
+                  </button>
+                `)}
+              </div>
+            `}
+          </span>
         </span>
         <span className="ce-toolbar-group">
           ${tbBtn('link', 'Insert Link')}
