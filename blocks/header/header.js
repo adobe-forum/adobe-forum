@@ -382,7 +382,7 @@ function ProfilePopup({ onClose }) {
     <div class="pp-overlay" onClick=${handleOverlay} role="dialog" aria-modal="true" aria-label="Profile">
       <div class="pp-modal">
         <button type="button" class="pp-close" aria-label="Close" onClick=${onClose}>
-          <${IconClose}/>
+          <${IconClose}/>cd 
         </button>
         ${renderContent()}
       </div>
