@@ -164,7 +164,7 @@ function TreeItem({
   // that causes post-links to render as folders and duplicate items on create.
   const { isFolder } = item;
   const itemId = item.id;
-  const paddingLeft = Math.min(8 + level * 16, 80);
+  const paddingLeft = Math.min(12 + level * 20, 100);
 
   // Only show action buttons if the logged-in user created this item
   const canEdit = isOwner(item, currentUser);
@@ -218,9 +218,7 @@ function TreeItem({
 
       ${isExpanded && html`
         <ul class="tree-children">
-          ${hasChildren && [...item.children]
-    .sort((a, b) => (b.isFolder ? 1 : 0) - (a.isFolder ? 1 : 0))
-    .map((child) => html`
+          ${hasChildren && item.children.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
               onItemClick=${onItemClick}
@@ -273,9 +271,7 @@ function CategoryItem({
       ${!isCollapsed && html`
         <ul class="tree-list">
           ${hasItems
-    ? [...category.items]
-      .sort((a, b) => (b.isFolder ? 1 : 0) - (a.isFolder ? 1 : 0))
-      .map((item) => html`
+    ? category.items.map((item) => html`
                 <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                   currentUser=${currentUser}
                   onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
@@ -542,6 +538,19 @@ function Sidebar() {
     if (!review.postId) return;
     // eslint-disable-next-line no-underscore-dangle
     const postId = typeof review.postId === 'object' ? String(review.postId._id) : String(review.postId);
+
+    // Check whether the main forum post viewer exists on this page.
+    const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
+    const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
+    if (!postViewer && !cardsViewer) {
+      // Not on the main forum page — pass the postId via sessionStorage so the
+      // forum-post block can read it reliably on mount without any timing issues.
+      console.log('[sidebar] Cross-page nav: setting af_open_post =', postId);
+      sessionStorage.setItem('af_open_post', postId);
+      window.location.href = 'http://localhost:3000/';
+      return;
+    }
+
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
@@ -610,31 +619,21 @@ function Sidebar() {
             ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:#854F0B;color:#FAEEDA;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
             <svg style="margin-left:${pendingReviews.length > 0 ? '4px' : 'auto'};transition:transform .2s;transform:rotate(${pendingOpen ? '90deg' : '0deg'});flex-shrink:0;opacity:.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
-<<<<<<< HEAD
-          <ul class="sidebar-pending-list">
-=======
           ${pendingOpen && html`
           <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
->>>>>>> dev
             ${pendingReviews.length > 0 ? pendingReviews.map((r) => {
     // eslint-disable-next-line no-underscore-dangle
     const reviewId = r._id;
+    const authorName = r.authorId
+      ? (`${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`).trim() || 'Unknown'
+      : 'Unknown';
     return html`
-<<<<<<< HEAD
-              <li key=${reviewId} style="font-size:12px; color:var(--text2); padding:5px 8px; cursor:pointer; border-radius:4px;" onClick=${() => handlePendingReviewClick(r)}>
-                <div style="font-weight:500;">${r.postId?.title || 'Untitled Post'}</div>
-                <div style="color:var(--text3); font-size:10px; margin-top:1px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
-              </li>
-            `;
-  }) : html`<li style="font-size:12px; color:var(--text3); padding:5px 8px; font-style: italic;">No reviews pending</li>`}
-=======
               <li key=${reviewId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #BA7517;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
-                <div style="color:var(--text3);font-size:10px;">by ${r.authorId ? `${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`.trim() : 'Unknown'}</div>
+                <div style="color:var(--text3);font-size:10px;">by ${authorName}</div>
               </li>
             `;
   }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No reviews pending</li>`}
->>>>>>> dev
           </ul>
           `}
 
