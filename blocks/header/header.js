@@ -95,6 +95,26 @@ const IconEyeOff = () => html`
     <path d="M8.3 3.1C8.5 3 8.8 3 9 3c5.2 0 8 6 8 6s-.9 1.8-2.6 3.2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" fill="none"/>
   </svg>`;
 
+// ── Status icons for review timeline ────────────────────────────────────────
+const IconStatusApproved = () => html`
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="8" fill="#268e6c"/>
+    <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+const IconStatusChanges = () => html`
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="8" fill="#e68619"/>
+    <path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="8" cy="11" r="0.9" fill="#fff"/>
+  </svg>`;
+
+const IconStatusPending = () => html`
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
+    <path d="M8 4.5V8l2.5 2" stroke="#1473e6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
 // ============================================
 // HELPERS
 // ============================================
@@ -110,6 +130,19 @@ function getInitials(firstName, lastName) {
   const f = (firstName || '').trim()[0] || '';
   const l = (lastName || '').trim()[0] || '';
   return (f + l).toUpperCase() || '?';
+}
+
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 // ============================================
@@ -473,16 +506,26 @@ function NotificationsDropdown({ onClose }) {
           .then((r) => (r.ok ? r.json() : { success: false }))
           .catch(() => ({ success: false }));
 
-        const [pendingRes, notifRes] = await Promise.all([
+        const [pendingRes, myRequestsRes, notifRes] = await Promise.all([
           fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
+          fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
           fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
         ]);
 
         const combined = [];
+
+        // Reviewer side: posts assigned to me for review
         if (pendingRes.success) {
           pendingRes.reviews.forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
         }
-        if (notifRes.success) {
+
+        // Author side: my-requests includes BOTH approved + changes_requested
+        // Fall back to author-notifications if my-requests endpoint unavailable
+        if (myRequestsRes.success && myRequestsRes.reviews) {
+          myRequestsRes.reviews
+            .filter((r) => r.overallStatus === 'approved' || r.overallStatus === 'changes_requested')
+            .forEach((r) => combined.push({ type: 'author_update', data: r }));
+        } else if (notifRes.success) {
           notifRes.reviews.forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
@@ -508,7 +551,14 @@ function NotificationsDropdown({ onClose }) {
     };
   }, [onClose]);
 
-  const loadPost = (postId) => {
+  const navigateToPost = (postId) => {
+    if (!postId) return;
+    // If not on the home page, navigate there and carry the postId
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index') {
+      window.location.href = `/?openPost=${postId}`;
+      return;
+    }
+    // Already on home page — same DOM + event pattern as sidebar
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
@@ -519,7 +569,7 @@ function NotificationsDropdown({ onClose }) {
   const handlePendingClick = (e, postId) => {
     e.preventDefault();
     onClose();
-    loadPost(postId);
+    navigateToPost(postId);
   };
 
   const handleDismiss = async (e, postId, reviewId) => {
@@ -531,7 +581,7 @@ function NotificationsDropdown({ onClose }) {
       });
     } catch (err) { /* ignore */ }
     onClose();
-    loadPost(postId);
+    navigateToPost(postId);
   };
 
   return html`
@@ -542,7 +592,7 @@ function NotificationsDropdown({ onClose }) {
         </div>
       </div>
       <div class="pd-divider"></div>
-      <ul class="pd-menu nd-menu" role="none">
+      <ul class="pd-menu nd-menu nd-tl-list" role="none">
         ${loading ? html`<li class="nd-msg">Loading...</li>` : null}
         ${!loading && items.length === 0 ? html`<li class="nd-msg">No new notifications.</li>` : null}
         ${!loading && items.map((item) => {
@@ -550,30 +600,49 @@ function NotificationsDropdown({ onClose }) {
       const r = item.data;
       // eslint-disable-next-line no-underscore-dangle
       const pId = r.postId._id;
+      const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
-              <li role="none" style="padding: 0 8px; margin-bottom: 6px;">
-                <a href="#" class="pd-item nd-item" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)} style="border-left: 4px solid #1473e6; background-color: #f4f8ff; padding-left: 12px; border-radius: 4px; box-sizing: border-box;">
-                  <span class="pd-item-label nd-item-title" style="color: #0d66d0; font-weight: 600;">Review Request: ${r.postId.title}</span>
-                  <span class="pd-email">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
+              <li role="none" class="nd-tl-row">
+                <div class="nd-tl-left">
+                  <span class="nd-tl-dot nd-tl-dot--pending">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
+                      <path d="M8 4.5V8l2.5 2" stroke="#1473e6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="nd-tl-line nd-tl-line--pending"></span>
+                </div>
+                <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)}>
+                  <span class="nd-pill nd-pill--pending">Review Request</span>
+                  <span class="nd-tl-title">${r.postId.title}</span>
+                  <span class="nd-tl-meta">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
+                  <span class="nd-tl-time">${timeAgo}</span>
                 </a>
               </li>`;
     }
     if (item.type === 'author_update') {
       const r = item.data;
       const isApproved = r.overallStatus === 'approved';
-      const statusText = isApproved ? 'Post Approved' : 'Changes Requested';
-      const bdColor = isApproved ? '#2d9d78' : '#da1f26';
-      const bgColor = isApproved ? '#ecf8f4' : '#fcf0f0';
-      const titleColor = isApproved ? '#227f60' : '#bd1319';
       // eslint-disable-next-line no-underscore-dangle
       const pId = r.postId._id;
       // eslint-disable-next-line no-underscore-dangle
       const rId = r._id;
+      const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
-              <li role="none" style="padding: 0 8px; margin-bottom: 6px;">
-                <a href="#" class="pd-item nd-item" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)} style="border-left: 4px solid ${bdColor}; background-color: ${bgColor}; padding-left: 12px; border-radius: 4px; box-sizing: border-box;">
-                  <span class="pd-item-label nd-item-title" style="color: ${titleColor}; font-weight: 600;">${statusText}: ${r.postId.title}</span>
-                  <span class="pd-email" style="color: ${bdColor};">Please view the review notes.</span>
+              <li role="none" class="nd-tl-row">
+                <div class="nd-tl-left">
+                  <span class="nd-tl-dot ${isApproved ? 'nd-tl-dot--approved' : 'nd-tl-dot--changes'}">
+                    ${isApproved
+    ? html`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#268e6c"/><polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : html`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#e68619"/><path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="#fff"/></svg>`}
+                  </span>
+                  <span class="nd-tl-line ${isApproved ? 'nd-tl-line--approved' : 'nd-tl-line--changes'}"></span>
+                </div>
+                <a href="#" class="nd-tl-card ${isApproved ? 'nd-tl-card--approved' : 'nd-tl-card--changes'}" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)}>
+                  <span class="nd-pill ${isApproved ? 'nd-pill--approved' : 'nd-pill--changes'}">${isApproved ? 'Approved' : 'Changes Requested'}</span>
+                  <span class="nd-tl-title">${r.postId.title}</span>
+                  <span class="nd-tl-meta">View the review notes for details.</span>
+                  <span class="nd-tl-time">${timeAgo}</span>
                 </a>
               </li>`;
     }
@@ -605,11 +674,19 @@ function HeaderComponent() {
 
       Promise.all([
         fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
+        fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
         fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
-      ]).then(([pendingRes, notifRes]) => {
+      ]).then(([pendingRes, myRequestsRes, notifRes]) => {
         let count = 0;
         if (pendingRes.success) count += pendingRes.reviews.length;
-        if (notifRes.success) count += notifRes.reviews.length;
+        // Count approved + changes_requested from my-requests (matches dropdown)
+        if (myRequestsRes.success && myRequestsRes.reviews) {
+          count += myRequestsRes.reviews.filter(
+            (r) => r.overallStatus === 'approved' || r.overallStatus === 'changes_requested',
+          ).length;
+        } else if (notifRes.success) {
+          count += notifRes.reviews.length;
+        }
         setPendingCount(count);
       }).catch((err) => {
         // eslint-disable-next-line no-console

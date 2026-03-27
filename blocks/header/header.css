@@ -16,6 +16,23 @@ body.pp-scroll-lock {
   --sidebar-width: 280px;
 }
 
+/* ── Prevent body scroll when sidebar is open on mobile ── */
+@media (width < 768px) {
+  body.sidebar-is-open {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+}
+
+/* ── Sidebar: scroll inside panel, never the body ── */
+.sidebar-wrapper aside.sidebar {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  /* height is inherited from the fixed sidebar-wrapper */
+  height: 100%;
+}
+
 /* =============================================
    HEADER WRAPPER
    ============================================= */
@@ -975,13 +992,13 @@ footer,
 
 .nd-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
   background-color: var(--spectrum-accent-color-900, #da1f26);
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--spectrum-gray-50);
+  box-shadow: 0 0 0 1.5px var(--spectrum-gray-50);
 }
 
 .nd-dropdown {
@@ -1024,7 +1041,178 @@ footer,
   font-weight: 600;
   line-height: 1.3;
   color: #1a1a1a;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* =============================================
+   REVIEW STATUS TOKENS
+   Shared by header notifications + sidebar
+   ============================================= */
+
+:root {
+  --status-approved-bg:          #ecf8f4;
+  --status-approved-border:      #268e6c;
+  --status-approved-badge:       #d4f0e7;
+  --status-approved-badge-text:  #1e7a5c;
+
+  --status-changes-bg:           #fff5e6;
+  --status-changes-border:       #e68619;
+  --status-changes-badge:        #fde8c0;
+  --status-changes-badge-text:   #9b5000;
+
+  --status-pending-bg:           #f4f8ff;
+  --status-pending-border:       #1473e6;
+  --status-pending-badge:        #d8eaff;
+  --status-pending-badge-text:   #0d5dbf;
+}
+
+/* ── Notification timeline layout ── */
+
+/* List container */
+.nd-tl-list {
+  padding: 8px 0 !important;
+}
+
+/* Each row: icon column + card */
+.nd-tl-row {
+  display: flex !important;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 12px 8px 14px;
+}
+
+/* Left column: dot icon + vertical line */
+.nd-tl-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 22px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.nd-tl-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+/* Vertical connecting line below the dot */
+.nd-tl-line {
+  width: 2px;
+  flex: 1;
+  margin-top: 4px;
+  min-height: 8px;
+  border-radius: 1px;
+}
+
+.nd-tl-line--pending  { background: var(--status-pending-border); opacity: 0.25; }
+.nd-tl-line--approved { background: var(--status-approved-border); opacity: 0.25; }
+.nd-tl-line--changes  { background: var(--status-changes-border); opacity: 0.25; }
+
+/* The card */
+.nd-tl-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-left: 8px;
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: filter 0.12s;
+  border-left: 3px solid transparent;
+}
+
+.nd-tl-card:hover { filter: brightness(0.97); }
+
+.nd-tl-card--pending  { background: var(--status-pending-bg);  border-left-color: var(--status-pending-border); }
+.nd-tl-card--approved { background: var(--status-approved-bg); border-left-color: var(--status-approved-border); }
+.nd-tl-card--changes  { background: var(--status-changes-bg);  border-left-color: var(--status-changes-border); }
+
+.nd-tl-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.nd-tl-meta {
+  font-size: 11.5px;
+  color: #6e6e6e;
+  line-height: 1.3;
+}
+
+.nd-tl-time {
+  font-size: 10.5px;
+  color: #999;
+}
+
+/* ── Small badge pill in header notifications ── */
+.nd-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 20px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.nd-pill--pending  { background: var(--status-pending-badge);  color: var(--status-pending-badge-text); }
+.nd-pill--approved { background: var(--status-approved-badge); color: var(--status-approved-badge-text); }
+.nd-pill--changes  { background: var(--status-changes-badge);  color: var(--status-changes-badge-text); }
+
+/* ── Sidebar review items (plain, colour-coded left border) ── */
+.sb-review-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 12px 5px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  border-radius: 3px;
+  margin: 2px 0;
+  transition: filter 0.12s;
+}
+
+.sb-review-item:hover { filter: brightness(0.95); }
+
+.sb-review-item--pending  { background: var(--status-pending-bg);  border-left-color: var(--status-pending-border); }
+.sb-review-item--approved { background: var(--status-approved-bg); border-left-color: var(--status-approved-border); }
+.sb-review-item--changes  { background: var(--status-changes-bg);  border-left-color: var(--status-changes-border); }
+
+.sb-review-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.sb-review-sub {
+  font-size: 10.5px;
+  color: #6e6e6e;
+  line-height: 1.3;
+}
+
 
 /* ── Session expiry warning banner ───────────────────────────────────────── */
 .session-warning-banner {
