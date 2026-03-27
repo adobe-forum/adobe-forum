@@ -106,22 +106,9 @@ const BLOCK_FORMATS = {
 
 // Code snippet language options
 const CODE_LANGUAGES = [
-  { value: 'plaintext', label: 'Plain Text' },
   { value: 'html', label: 'HTML' },
   { value: 'css', label: 'CSS' },
   { value: 'javascript', label: 'JavaScript' },
-  { value: 'typescript', label: 'TypeScript' },
-  { value: 'python', label: 'Python' },
-  { value: 'bash', label: 'Bash' },
-  { value: 'json', label: 'JSON' },
-  { value: 'sql', label: 'SQL' },
-  { value: 'dart', label: 'Dart' },
-  { value: 'go', label: 'Go' },
-  { value: 'c', label: 'C' },
-  { value: 'cpp', label: 'C++' },
-  { value: 'csharp', label: 'C#' },
-  { value: 'java', label: 'Java' },
-  { value: 'graphql', label: 'GraphQL' },
 ];
 
 // RICH TEXT EDITOR COMPONENT
@@ -483,7 +470,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     const editor = editorRef.current;
     if (!editor) return;
     const hasContent = editor.textContent.trim().length > 0
-      || editor.querySelector('table, img, iframe');
+      || editor.querySelector('table, img, iframe, pre');
     editor.classList.toggle('is-empty', !hasContent);
   };
 
@@ -564,8 +551,17 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
         pre.dataset.language = chosenLang;
         pre.classList.add(`code-lang-${chosenLang}`);
       }
-      pre.textContent = block.textContent || '';
-      block.replaceWith(pre);
+      // A block is empty only if it has no text AND no embedded media.
+      // Using textContent alone misses <img>, <table> etc. which have no text.
+      const hasContent = block.textContent.trim()
+        || block.querySelector('img, video, iframe, table');
+      if (hasContent) {
+        // Insert empty pre after the paragraph — don't touch the text
+        pre.innerHTML = '<br>';
+        block.after(pre);
+      } else {
+        block.replaceWith(pre);
+      }
       const newRange = document.createRange();
       newRange.setStart(pre, 0);
       newRange.collapse(true);
@@ -573,6 +569,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
       sel.addRange(newRange);
     }
     updateCodeLineNumbers();
+    updatePlaceholder();
   };
 
   const handleBlockquote = () => {

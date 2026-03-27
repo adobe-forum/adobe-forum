@@ -30,6 +30,14 @@ function extractExcerpt(body, max = 100) {
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
+// Extract the first <img> src from the post body HTML (for card thumbnail)
+function firstImageFromBody(body) {
+  if (!body) return null;
+  const doc = domParser.parseFromString(body, 'text/html');
+  const img = doc.querySelector('img');
+  return img ? img.src || img.getAttribute('src') : null;
+}
+
 function avatarInitials(name) {
   if (!name || name === 'Anonymous') return '?';
   const parts = name.trim().split(' ');
@@ -74,8 +82,9 @@ function Card({ post, onClick }) {
 
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
 
-  const imgSrc = '../../icons/adobe_logo.svg';
-  const isPlaceholder = true;
+  const imgSrc = firstImageFromBody(post.body || post.description || post.content || '')
+    || '../../icons/adobe_logo.svg';
+  const isPlaceholder = imgSrc === '../../icons/adobe_logo.svg';
 
   const author = post.author?.name || post.author?.username || post.author
     || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
