@@ -1,30 +1,42 @@
 /* =============================================
-   SIDEBAR TOKENS
-   --sp-* palette lives in styles.css :root
+   SIDEBAR — Spectrum 1 SideNav Pattern
+   Tokens from styles.css :root (--sp-*)
+   https://spectrum.adobe.com/page/side-navigation/
    ============================================= */
 
 :root {
-  --sidebar-width: 220px;
+  /* ── Sidebar layout ────────────────────────────── */
+  --sidebar-width: 256px;
   --sidebar-transition: 0.2s ease;
-  --sidebar-bg: var(--sp-gray-50);
-  --sidebar-surface: var(--sp-gray-75);
-  --sidebar-border: var(--sp-gray-200);
-  --sidebar-hover-bg: var(--sp-gray-100);
-  --sidebar-active-bg: #e8f0fd;
-  --sidebar-active-color: var(--sp-blue-600);
-  --sidebar-active-border: var(--sp-blue-600);
-  --sidebar-text: var(--sp-gray-800);
-  --sidebar-secondary-text: var(--sp-gray-700);
-  --sidebar-muted: var(--sp-gray-500);
-  --sidebar-label: var(--sp-gray-600);
-  --sidebar-folder-color: #e68619;
-  --sidebar-folder-open: #cb6f10;
-  --sidebar-file-color: var(--sp-gray-500);
-  --sidebar-error: var(--sp-red-600);
-  --sidebar-item-height: var(--sp-height-md);
-  --sidebar-category-height: 36px;
-  --sidebar-border-radius: var(--sp-radius-md);
-  --sidebar-active-bar: 3px;
+
+  /* ── Spectrum 1 SideNav color tokens ──────────── */
+  --sn-bg:              var(--sp-gray-50);        /* Panel background  */
+  --sn-border:          var(--sp-gray-200);       /* Right border      */
+  --sn-item-text:       var(--sp-gray-800);       /* Default label     */
+  --sn-item-text-hover: var(--sp-gray-900);       /* Hover label       */
+  --sn-item-bg-hover:   var(--sp-gray-100);       /* Hover fill        */
+  --sn-item-bg-active:  var(--sp-gray-200);       /* Active fill       */
+  --sn-item-text-active:var(--sp-gray-900);       /* Active label      */
+  --sn-section-label:   var(--sp-gray-600);       /* "TOPICS" etc.     */
+  --sn-muted:           var(--sp-gray-500);       /* Icons, placeholders */
+  --sn-folder:          #e68619;                  /* Folder amber      */
+  --sn-folder-open:     #cb6f10;
+  --sn-file:            var(--sp-gray-500);
+  --sn-error:           var(--sp-red-600);
+  --sn-focus-ring:      var(--sp-blue-500);
+
+  /* ── Spectrum 1 typography ────────────────────── */
+  --sn-font-size:       14px;   /* Spectrum body-S   */
+  --sn-label-size:      11px;   /* Section label     */
+  --sn-label-tracking:  0.06em;
+
+  /* ── Spectrum 1 geometry (medium scale) ───────── */
+  --sn-item-h:          32px;   /* Nav item height   */
+  --sn-padding-x:       16px;   /* Panel side pad    */
+  --sn-padding-y:       20px;   /* Panel top/bottom  */
+  --sn-item-radius:     var(--sp-radius-md);  /* 4px */
+  --sn-section-gap:     24px;   /* Between sections  */
+  --sn-item-gap:        2px;    /* Between items     */
 }
 
 /* =============================================
@@ -77,184 +89,173 @@
 .sidebar {
   width: 100%;
   height: 100%;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  padding: 24px 16px;
+  background: var(--sn-bg);
+  border-right: 1px solid var(--sn-border);
   display: flex;
   flex-direction: column;
-  gap: 6px;
   overflow: hidden;
   font-family: var(--font);
-  font-size: 14px;
-  color: var(--text);
+  font-size: var(--sn-font-size);
+  color: var(--sn-item-text);
+  padding: var(--sn-padding-y) 0 var(--sn-padding-y);
 
-  /* ── Sidebar Logo ────────────────────────────────── */
-  & .sidebar-logo {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--accent);
-    letter-spacing: -.3px;
-    padding: 4px 8px 20px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
-  }
-
-  & .sidebar-logo span {
-    color: var(--text3);
-    font-weight: 300;
-  }
-
-  /* ── Sidebar Items ───────────────────────────────── */
-  & .sidebar-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 10px;
-    border-radius: 7px;
-    color: var(--text2);
-    font-size: 13px;
-    font-weight: 400;
-    cursor: pointer;
-    transition: background .15s;
-    user-select: none;
-  }
-  & .sidebar-item:hover { background: var(--surface2); }
-
-  & .sidebar-item.active {
-    background: var(--accent-bg);
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  & .sidebar-item svg {
-    opacity: .6;
-    flex-shrink: 0;
-  }
-  & .sidebar-item.active svg { opacity: 1; }
-
-  /* ── Sidebar Section Headers ─────────────────────── */
-  & .sidebar-section {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--text3);
-    padding: 14px 10px 4px;
-  }
-
-  /* ── Search ─────────────────────────────── */
-
+  /* ── Search Input ────────────────────────────── */
   & .search-container {
-    margin-bottom: 12px;
     flex-shrink: 0;
+    padding: 0 var(--sn-padding-x);
+    margin-bottom: 16px;
 
     & .sidebar-search-input {
       width: 100%;
+      height: var(--sn-item-h);
       padding: 0 10px 0 34px !important;
-      height: 36px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 13px;
+      border: 1px solid var(--sn-border);
+      border-radius: var(--sp-radius-md);
+      font-size: var(--sn-font-size);
       font-family: inherit;
       box-sizing: border-box;
-      background: var(--surface2) url('data:image/svg+xml;utf8,<svg fill="none" stroke="%239a958e" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>') no-repeat 10px center / 14px;
-      color: var(--text);
+      background:
+        var(--sp-gray-100)
+        url('data:image/svg+xml;utf8,<svg fill="none" stroke="%239a958e" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>')
+        no-repeat 10px center / 14px;
+      color: var(--sn-item-text);
       outline: none;
-      transition: border-color 0.13s, box-shadow 0.13s;
-      line-height: 36px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      line-height: var(--sn-item-h);
 
       &::placeholder {
-        color: var(--text3);
+        color: var(--sn-muted);
       }
 
       &:hover {
-        border-color: var(--border2);
+        border-color: var(--sp-gray-400);
       }
 
       &:focus {
-        border-color: var(--accent2);
-        box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
-        background: var(--bg);
+        border-color: var(--sn-focus-ring);
+        box-shadow: 0 0 0 2px rgb(37 99 235 / 15%);
+        background-color: var(--sp-gray-50);
       }
     }
   }
 
+  /* ── Quick-nav items (Home, etc.) ─────────── */
+  & .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--sn-item-h);
+    margin: 0 8px var(--sn-item-gap);
+    padding: 0 8px;
+    border-radius: var(--sn-item-radius);
+    color: var(--sn-item-text);
+    font-size: var(--sn-font-size);
+    font-weight: 400;
+    cursor: pointer;
+    transition: background 0.13s;
+    user-select: none;
 
+    &:hover {
+      background: var(--sn-item-bg-hover);
+      color: var(--sn-item-text-hover);
+    }
 
-  /* ── Category list (scrollable) ──────────── */
+    &.active {
+      background: var(--sn-item-bg-active);
+      color: var(--sn-item-text-active);
+      font-weight: 700;
+    }
 
+    & svg {
+      opacity: 0.65;
+      flex-shrink: 0;
+    }
+
+    &.active svg {
+      opacity: 1;
+    }
+  }
+
+  /* ── Section Headers ("TOPICS", "REVIEWS") ── */
+  & .sidebar-section {
+    font-size: var(--sn-label-size);
+    font-weight: 700;
+    letter-spacing: var(--sn-label-tracking);
+    text-transform: uppercase;
+    color: var(--sn-section-label);
+    padding: var(--sn-section-gap) var(--sn-padding-x) 6px;
+    flex-shrink: 0;
+
+    /* no top gap for very first section */
+    &:first-of-type {
+      padding-top: 12px;
+    }
+  }
+
+  /* ── Category scrollable list ────────────── */
   & .category-list {
     flex: 1;
     overflow-y: auto;
-    padding: 2px 0 20px;
+    padding: 4px 0 24px;
     margin: 0;
     list-style: none;
     scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: var(--sn-border) transparent;
 
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
+    &::-webkit-scrollbar { width: 4px; }
 
     &::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
+      background: var(--sn-border);
+      border-radius: 2px;
 
-      &:hover {
-        background: var(--border2);
-      }
+      &:hover { background: var(--sp-gray-300); }
     }
   }
 
-  /* ── Category item ───────────────────────── */
-
+  /* ── Category item wrapper ───────────────── */
   & .category-item {
     list-style: none;
   }
 
+  /* ── Category header row ─────────────────── */
   & .category-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    height: auto;
+    gap: 8px;
+    height: var(--sn-item-h);
+    margin: 0 8px var(--sn-item-gap);
+    padding: 0 8px;
+    border-radius: var(--sn-item-radius);
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
+    font-size: var(--sn-font-size);
+    font-weight: 400;
+    color: var(--sn-item-text);
     user-select: none;
     position: relative;
-    transition: background .15s;
-    border-radius: 7px;
-    overflow: hidden;
+    transition: background 0.13s;
     min-width: 0;
 
     &:hover {
-      background: var(--surface2);
+      background: var(--sn-item-bg-hover);
     }
 
     &.is-expanded {
-      color: var(--text);
+      color: var(--sn-item-text-active);
     }
 
     & .category-chevron {
       display: flex;
       align-items: center;
-      color: var(--text3);
+      color: var(--sn-muted);
       flex-shrink: 0;
-      width: 14px;
+      width: 12px;
     }
 
     & .category-icon {
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      color: var(--amber);
-      opacity: 0.8;
-    }
-
-    &.is-expanded .category-icon {
-      opacity: 1;
+      color: var(--sn-folder);
     }
 
     & .category-name {
@@ -266,7 +267,6 @@
   }
 
   /* ── Tree lists ──────────────────────────── */
-
   & .tree-list,
   & .tree-children {
     list-style: none;
@@ -274,28 +274,33 @@
     margin: 0;
   }
 
+  /* ── Tree item row ───────────────────────── */
   & .tree-item-content {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border-radius: 7px;
+    gap: 8px;
+    height: var(--sn-item-h);
+    border-radius: var(--sn-item-radius);
     cursor: pointer;
     position: relative;
     user-select: none;
-    transition: background 0.15s;
-    font-size: 13px;
+    transition: background 0.13s;
+    font-size: var(--sn-font-size);
     font-weight: 400;
-    color: var(--text2);
+    color: var(--sn-item-text);
+
+    /* horizontal margin mirrors category header; left padding set via inline style (indentation) */
+    margin-right: 8px;
 
     &:hover {
-      background: var(--surface2);
+      background: var(--sn-item-bg-hover);
+      color: var(--sn-item-text-hover);
     }
 
     &.active {
-      background: var(--accent-bg);
-      color: var(--accent);
-      font-weight: 500;
+      background: var(--sn-item-bg-active);
+      color: var(--sn-item-text-active);
+      font-weight: 700;
     }
   }
 
@@ -303,27 +308,26 @@
     list-style: none;
     position: relative;
 
-    &.is-folder>.tree-item-content {
-      font-weight: 500;
+    &.is-folder > .tree-item-content {
+      font-weight: 400;
     }
   }
 
   /* ── Chevron & icon slots ────────────────── */
-
   & .tree-chevron {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--sidebar-muted);
+    color: var(--sn-muted);
   }
 
   & .tree-chevron-spacer {
     display: inline-block;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
   }
 
   & .tree-icon {
@@ -333,15 +337,15 @@
     transition: color 0.13s;
 
     &.tree-icon-folder {
-      color: var(--sidebar-folder-color);
+      color: var(--sn-folder);
 
       &.is-open {
-        color: var(--sidebar-folder-open);
+        color: var(--sn-folder-open);
       }
     }
 
     &.tree-icon-file {
-      color: var(--sidebar-file-color);
+      color: var(--sn-file);
     }
   }
 
@@ -363,45 +367,52 @@
     border-radius: 2px;
   }
 
-  /* ── Empty / loading / error states ─────── */
+  /* ── Pending reviews list ────────────────── */
+  & .sidebar-pending-list {
+    list-style: none;
+    margin: 0;
+    padding: 2px 0 8px var(--sn-padding-x);
+  }
 
+  /* ── Empty / loading / error states ─────── */
   & .no-items {
-    padding: 8px 16px 8px 32px;
+    padding: 6px 16px 6px 36px;
     font-style: italic;
-    color: var(--sidebar-muted);
-    font-size: 12px;
+    color: var(--sn-muted);
+    font-size: 13px;
   }
 
   & .no-results {
-    padding: 32px 16px;
+    padding: 32px var(--sn-padding-x);
     text-align: center;
-    color: var(--sidebar-muted);
+    color: var(--sn-muted);
     font-size: 13px;
     font-style: italic;
   }
 
   & .loading {
-    padding: 32px 16px;
+    padding: 32px var(--sn-padding-x);
     text-align: center;
-    color: var(--sidebar-active-color);
+    color: var(--sp-blue-600);
     font-size: 13px;
   }
 
   & .error-state {
-    padding: 16px;
+    padding: var(--sn-padding-x);
     font-size: 13px;
-    color: var(--sidebar-error);
+    color: var(--sn-error);
     display: flex;
     flex-direction: column;
     gap: 8px;
 
     & button {
+      all: unset;
       align-self: flex-start;
       padding: 5px 14px;
       font-size: 12px;
-      border: 1px solid var(--sidebar-error);
+      border: 1px solid var(--sn-error);
       background: transparent;
-      color: var(--sidebar-error);
+      color: var(--sn-error);
       border-radius: var(--sp-radius-md);
       cursor: pointer;
       font-family: inherit;
@@ -414,8 +425,7 @@
 }
 
 /* =============================================
-   HOVER ACTION BUTTONS — Spectrum Action Button
-   (outside .sidebar so they can appear in portals)
+   HOVER ACTION BUTTONS
    ============================================= */
 
 .item-actions {
@@ -438,28 +448,17 @@
   box-sizing: border-box;
   border-radius: var(--sp-radius-md);
   cursor: pointer;
-  color: var(--sidebar-muted);
+  color: var(--sn-muted);
   transition: background 0.13s, color 0.13s;
 
   &:hover {
     background: var(--sp-gray-200);
-    color: var(--sidebar-text);
+    color: var(--sp-gray-800);
   }
 
   &.item-action-btn-delete:hover {
     background: #ffeaea;
     color: var(--sp-red-600);
-  }
-}
-
-/* =============================================
-   MAIN CONTENT OFFSET
-   ============================================= */
-
-@media (width >=768px) {
-  main,
-  .content-wrapper {
-    transition: margin-left var(--sidebar-transition);
   }
 }
 
@@ -521,7 +520,7 @@
 
     & .sp-alert-message {
       font-size: 14px;
-      color: var(--sidebar-secondary-text);
+      color: var(--sp-gray-700);
       margin: 0;
       line-height: 1.6;
     }
@@ -550,13 +549,12 @@
   }
 }
 
-/* ── Spectrum Buttons ── */
-
+/* ── Spectrum 1 Buttons ── */
 .sp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: var(--sp-height-sm);
+  height: var(--sp-height-sm);   /* 32px */
   padding: 0 16px;
   font-size: 14px;
   font-weight: 700;

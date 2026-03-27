@@ -1,6 +1,6 @@
 :root {
   /* --- App Layout Dimensions --- */
-  --nav-width: 220px; /* matched to prototype sidebar width */
+  --nav-width: 256px; /* matched to sidebar-width in sidebar.css */
   --header-height: 64px; /* Hardcoded to match header.css to prevent layout shifts */
 
   /* =============================================

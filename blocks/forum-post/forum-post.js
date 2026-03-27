@@ -76,6 +76,10 @@ function isOwner(post, currentUser) {
   return String(post.createdBy) === String(currentUser._id);
 }
 
+// Module-level variable: set by decorate() when arriving via cross-page
+// navigation. The ForumPost useEffect reads and clears it on mount.
+let pendingCrossPagePostId = null;
+
 // ============================================
 // FORUM POST
 // ============================================
@@ -280,6 +284,24 @@ const ForumPost = ({ blockEl }) => {
     return () => window.removeEventListener('edit-post:saved', handlePostSaved);
   }, [post]);
 
+  // Enforce block + section visibility after every render where post changes.
+  // Runs AFTER Preact commits to the DOM — guaranteed to win over AEM.
+  useEffect(() => {
+    if (!blockEl) return;
+    if (post) {
+      [blockEl, blockEl.closest('.section'), blockEl.parentElement].filter(Boolean).forEach((el) => {
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('visibility', 'visible', 'important');
+        el.style.setProperty('opacity', '1', 'important');
+      });
+      document.querySelectorAll(
+        '.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards',
+      ).forEach((el) => { el.style.setProperty('display', 'none', 'important'); });
+    } else {
+      blockEl.style.display = 'none';
+    }
+  }, [post, blockEl]);
+
   useEffect(() => {
     const handleLoadPost = async (event) => {
       const { postId, sidebarItemId: sid } = event.detail;
@@ -305,9 +327,11 @@ const ForumPost = ({ blockEl }) => {
         }
 
         const response = await fetch(url);
+        console.log('[handleLoadPost] fetch response ok?', response.ok, 'status:', response.status);
 
         if (response.ok) {
           const data = await response.json();
+          console.log('[handleLoadPost] data.success?', data.success, 'has post?', !!data.post);
           if (data.success && data.post) {
             const fetchedPost = data.post;
             const cb = fetchedPost.createdBy;
@@ -329,6 +353,7 @@ const ForumPost = ({ blockEl }) => {
               status: fetchedPost.status || 'published',
               comments: [],
             };
+            console.log('[handleLoadPost] Calling setPost with title:', transformedPost.title);
             setPost(transformedPost);
 
             const fetchedLikes = fetchedPost.likes || [];
@@ -390,6 +415,9 @@ const ForumPost = ({ blockEl }) => {
       if (blockEl) blockEl.style.display = 'none';
       const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
       cardsWrappers.forEach((el) => { el.style.display = ''; });
+
+      const tag = document.getElementById('af-hide-cards-initial');
+      if (tag) tag.remove();
     };
 
     // Navigate away if the currently viewed post is deleted from the sidebar
@@ -403,6 +431,24 @@ const ForumPost = ({ blockEl }) => {
     window.addEventListener('load-forum-post', handleLoadPost);
     window.addEventListener('show-cards', handleShowCards);
     window.addEventListener('sidebar-item-deleted', handleItemDeleted);
+
+    // Cross-page navigation: decorate() already read sessionStorage and
+    // set pendingCrossPagePostId + injected a <style> to hide cards.
+    // Call the handler directly — the listener is already attached above.
+    console.log('[forum-post useEffect] pendingCrossPagePostId =', pendingCrossPagePostId);
+    if (pendingCrossPagePostId) {
+      const pid = pendingCrossPagePostId;
+      pendingCrossPagePostId = null;
+      console.log('[forum-post useEffect] Calling handleLoadPost with pid =', pid);
+      handleLoadPost({ detail: { postId: pid } }).then(() => {
+        // We purposefully leave the `af-hide-cards-initial` style tag in the DOM.
+        // It provides a guaranteed CSS-level block on the cards wrapper.
+        // It will be cleaned up only when the user explicitly clicks "Home" or "Back"
+        // (inside handleShowCards).
+        console.log('[forum-post useEffect] handleLoadPost completed');
+      });
+    }
+
     return () => {
       window.removeEventListener('load-forum-post', handleLoadPost);
       window.removeEventListener('show-cards', handleShowCards);
@@ -666,12 +712,8 @@ const ForumPost = ({ blockEl }) => {
           <div class="review-panel-actions">
             <button
               class="review-btn review-btn-approve"
-              onClick=${() => {
-    if (reviewComment.trim().length > 0) return;
-    handleReviewAction('approved');
-  }}
-              title=${reviewComment.trim().length > 0 ? 'You cannot approve a post while requesting changes.' : 'Approve post'}
-              style=${reviewComment.trim().length > 0 ? 'cursor: not-allowed;' : ''}
+              onClick=${() => handleReviewAction('approved')}
+              title="Approve post"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
@@ -730,8 +772,59 @@ const ForumPost = ({ blockEl }) => {
 };
 
 export default function decorate(block) {
-  // Hide the block initially — it only shows when a post is loaded
-  block.style.display = 'none';
   block.innerHTML = '';
+
+  const storedPostId = sessionStorage.getItem('af_open_post');
+  console.log('[forum-post decorate] storedPostId =', storedPostId);
+
+  if (storedPostId) {
+    sessionStorage.removeItem('af_open_post');
+    pendingCrossPagePostId = storedPostId;
+    console.log('[forum-post decorate] Set pendingCrossPagePostId =', storedPostId);
+
+    // ── Force the block AND every ancestor visible immediately ──
+    // AEM's loadSections() sets sections to display:none and only reveals
+    // them as they scroll into view. We must counteract this for the
+    // forum-post section since it needs to be visible on arrival.
+    const forceVisible = (el) => {
+      if (!el || el === document.body) return;
+      el.style.setProperty('display', 'block', 'important');
+      el.style.setProperty('visibility', 'visible', 'important');
+      el.style.setProperty('opacity', '1', 'important');
+      forceVisible(el.parentElement);
+    };
+    forceVisible(block);
+
+    // MutationObserver: AEM may reset display AFTER decorate() runs.
+    // Watch the block and its parent section — undo any display:none instantly.
+    const section = block.closest('.section') || block.parentElement;
+    const targets = [block, section].filter(Boolean);
+    const observer = new MutationObserver(() => {
+      targets.forEach((t) => {
+        if (t && t.style.display === 'none') {
+          t.style.setProperty('display', 'block', 'important');
+          t.style.setProperty('visibility', 'visible', 'important');
+        }
+      });
+    });
+    targets.forEach((t) => observer.observe(t, { attributes: true, attributeFilter: ['style', 'class'] }));
+    // Disconnect after 5s — by then AEM is done loading
+    setTimeout(() => observer.disconnect(), 5000);
+
+    // CSS rule to hide cards before they even mount
+    if (!document.getElementById('af-hide-cards-initial')) {
+      const style = document.createElement('style');
+      style.id = 'af-hide-cards-initial';
+      style.textContent = [
+        '.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards',
+        '{ display: none !important; }',
+      ].join(' ');
+      document.head.appendChild(style);
+    }
+  } else {
+    // Normal page load — hide until a post is selected
+    block.style.display = 'none';
+  }
+
   render(html`<${ForumPost} blockEl=${block} />`, block);
 }
