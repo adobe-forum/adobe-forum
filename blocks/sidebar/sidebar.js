@@ -486,6 +486,10 @@ function Sidebar() {
       console.warn('Sidebar click failed: No postId available.');
       return;
     }
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      window.location.href = `/?category=${encodeURIComponent(subcategoryId)}&post=${postId}`;
+      return;
+    }
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');

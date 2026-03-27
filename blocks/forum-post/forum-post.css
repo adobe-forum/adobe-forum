@@ -123,7 +123,7 @@
   & .post-meta {
     font-size: 14px;
     color: var(--sp-gray-600);
-    margin-bottom: 40px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -357,11 +357,12 @@
       height: auto;
       border-radius: var(--sp-radius-lg);
       border: 1px solid var(--sp-gray-200);
-      margin: 32px 0;
+      margin: 12px 0;
       display: block;
     }
 
-    /* Code block — two-column flex */
+    /* Old individual code block style — kept for any pre tags
+       that aren't caught by the tab transform */
     & pre.formatted-code-block {
       display: flex;
       background: var(--post-code-bg);
@@ -400,6 +401,261 @@
         font-size: inherit;
         border-radius: 0;
       }
+    }
+  }
+
+  /* ── Code Snippets section label ─────────── */
+
+  .code-snippets-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9a9a9a;
+    margin: 36px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eceef1;
+  }
+
+  /* ── Tabbed code viewer ───────────────────── */
+
+  .code-tabs-wrapper {
+    margin: 28px 0;
+    border-radius: 10px;
+    border: 1px solid #dde1e7;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+  }
+
+  /* Tab bar */
+  .code-tabbar {
+    display: flex;
+    align-items: center;
+    background: #f0f1f3;
+    border-bottom: 1px solid #dde1e7;
+    padding: 0 12px;
+    gap: 0;
+    min-height: 42px;
+  }
+
+  .code-tab-list {
+    display: flex;
+    align-items: stretch;
+    flex: 1;
+    gap: 0;
+    height: 100%;
+  }
+
+  .code-tab {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 18px;
+    height: 42px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b6b6b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+      color: #1a1a1a;
+      background: #e4e6ea;
+    }
+
+    &.active {
+      color: #da1f26;
+      border-bottom-color: #da1f26;
+      background: #fff;
+    }
+  }
+
+  /* Copy button */
+  .code-copy-btn {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #6b6b6b;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+
+    &:hover {
+      background: #dde1e7;
+      color: #1a1a1a;
+    }
+
+    &.copied {
+      color: #1a7b3c;
+      background: #e6f4ec;
+    }
+  }
+
+  /* Code panels */
+  .code-panels {
+    background: #1e1e1e;
+  }
+
+  .code-panel {
+    display: none;
+    position: relative;
+
+    &.active {
+      display: block;
+    }
+  }
+
+  /* Language badge — top-right of panel */
+  .code-lang-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: rgb(255 255 255 / 10%);
+    color: rgb(212 212 212 / 60%);
+    pointer-events: none;
+    user-select: none;
+    z-index: 2;
+  }
+
+  /* Per-language badge colours */
+  .code-badge-html {
+    background: #e44d2622;
+    color: #e44d26;
+  }
+
+  .code-badge-css {
+    background: #2965f122;
+    color: #7aa3f7;
+  }
+
+  .code-badge-javascript {
+    background: #f0db4f22;
+    color: #f0db4f;
+  }
+
+  .code-badge-typescript {
+    background: #007acc22;
+    color: #6ab0f5;
+  }
+
+  .code-badge-python {
+    background: #3572a522;
+    color: #87c1e8;
+  }
+
+  .code-badge-bash {
+    background: #4eaa2522;
+    color: #82d45d;
+  }
+
+  .code-badge-json {
+    background: #8882;
+    color: #b0b0b0;
+  }
+
+  .code-badge-sql {
+    background: #e38c0022;
+    color: #e38c00;
+  }
+
+  .code-badge-dart {
+    background: #0175c222;
+    color: #4db9f5;
+  }
+
+  .code-badge-go {
+    background: #00acd722;
+    color: #29d0f7;
+  }
+
+  .code-badge-c {
+    background: #5552;
+    color: #aaa;
+  }
+
+  .code-badge-cpp {
+    background: #f34b7d22;
+    color: #f34b7d;
+  }
+
+  .code-badge-csharp {
+    background: #7b2fbe22;
+    color: #c07ef7;
+  }
+
+  .code-badge-java {
+    background: #b0721922;
+    color: #d4a24a;
+  }
+
+  .code-badge-graphql {
+    background: #e1009822;
+    color: #f07ac8;
+  }
+
+  /* Code body = gutter + content */
+  .code-body {
+    display: flex;
+    font-family: monospace, 'Courier New', Courier;
+    font-size: 13px;
+    line-height: 1.6;
+    height: 220px;
+    overflow: auto;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(212 212 212 / 20%) transparent;
+    box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgb(212 212 212 / 22%);
+      border-radius: 3px;
+    }
+
+    & .tabs-gutter {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0 10px 0 16px;
+      text-align: right;
+      color: rgb(212 212 212 / 28%);
+      border-right: 1px solid rgb(212 212 212 / 12%);
+      user-select: none;
+      min-width: 2.8em;
+      line-height: 1.6;
+      align-self: flex-start;
+
+      & .tabs-num {
+        display: block;
+      }
+    }
+
+    & .tabs-content {
+      flex: 1;
+      padding: 0 16px 0 14px;
+      color: #d4d4d4;
+      white-space: pre;
+      overflow-x: visible;
+      min-width: 0;
     }
   }
 
