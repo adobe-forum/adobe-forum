@@ -515,18 +515,24 @@ function NotificationsDropdown({ onClose }) {
         const combined = [];
 
         // Reviewer side: posts assigned to me for review
+        // FIX: filter out reviews where postId or authorId was deleted (populate returns null)
         if (pendingRes.success) {
-          pendingRes.reviews.forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
+          pendingRes.reviews
+            .filter((r) => r.postId && r.authorId)
+            .forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
         }
 
         // Author side: my-requests includes BOTH approved + changes_requested
         // Fall back to author-notifications if my-requests endpoint unavailable
+        // FIX: filter out reviews where postId was deleted (populate returns null)
         if (myRequestsRes.success && myRequestsRes.reviews) {
           myRequestsRes.reviews
-            .filter((r) => r.overallStatus === 'approved' || r.overallStatus === 'changes_requested')
+            .filter((r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'))
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         } else if (notifRes.success) {
-          notifRes.reviews.forEach((r) => combined.push({ type: 'author_update', data: r }));
+          notifRes.reviews
+            .filter((r) => r.postId)
+            .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
         // sort by most recent updatedAt
@@ -603,17 +609,14 @@ function NotificationsDropdown({ onClose }) {
       const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
               <li role="none" class="nd-tl-row">
-                <div class="nd-tl-left">
-                  <span class="nd-tl-dot nd-tl-dot--pending">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)}>
+                  <span class="nd-pill-row">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
                       <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
                       <path d="M8 4.5V8l2.5 2" stroke="#1473e6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
+                    <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
-                  <span class="nd-tl-line nd-tl-line--pending"></span>
-                </div>
-                <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)}>
-                  <span class="nd-pill nd-pill--pending">Review Request</span>
                   <span class="nd-tl-title">${r.postId.title}</span>
                   <span class="nd-tl-meta">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
                   <span class="nd-tl-time">${timeAgo}</span>
@@ -630,18 +633,14 @@ function NotificationsDropdown({ onClose }) {
       const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
               <li role="none" class="nd-tl-row">
-                <div class="nd-tl-left">
-                  <span class="nd-tl-dot ${isApproved ? 'nd-tl-dot--approved' : 'nd-tl-dot--changes'}">
-                    ${isApproved
-    ? html`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#268e6c"/><polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-    : html`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#e68619"/><path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="#fff"/></svg>`}
-                  </span>
-                  <span class="nd-tl-line ${isApproved ? 'nd-tl-line--approved' : 'nd-tl-line--changes'}"></span>
-                </div>
                 <a href="#" class="nd-tl-card ${isApproved ? 'nd-tl-card--approved' : 'nd-tl-card--changes'}" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)}>
-                  <span class="nd-pill ${isApproved ? 'nd-pill--approved' : 'nd-pill--changes'}">${isApproved ? 'Approved' : 'Changes Requested'}</span>
+                  <span class="nd-pill-row">
+                    ${isApproved
+    ? html`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="8" fill="#268e6c"/><polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : html`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="8" fill="#e68619"/><path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="#fff"/></svg>`}
+                    <span class="nd-pill ${isApproved ? 'nd-pill--approved' : 'nd-pill--changes'}">${isApproved ? 'Approved' : 'Changes Requested'}</span>
+                  </span>
                   <span class="nd-tl-title">${r.postId.title}</span>
-                  <span class="nd-tl-meta">View the review notes for details.</span>
                   <span class="nd-tl-time">${timeAgo}</span>
                 </a>
               </li>`;
@@ -678,14 +677,17 @@ function HeaderComponent() {
         fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
       ]).then(([pendingRes, myRequestsRes, notifRes]) => {
         let count = 0;
-        if (pendingRes.success) count += pendingRes.reviews.length;
+        // FIX: only count reviews with valid postId/authorId (matches dropdown filter)
+        if (pendingRes.success) {
+          count += pendingRes.reviews.filter((r) => r.postId && r.authorId).length;
+        }
         // Count approved + changes_requested from my-requests (matches dropdown)
         if (myRequestsRes.success && myRequestsRes.reviews) {
           count += myRequestsRes.reviews.filter(
-            (r) => r.overallStatus === 'approved' || r.overallStatus === 'changes_requested',
+            (r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'),
           ).length;
         } else if (notifRes.success) {
-          count += notifRes.reviews.length;
+          count += notifRes.reviews.filter((r) => r.postId).length;
         }
         setPendingCount(count);
       }).catch((err) => {
