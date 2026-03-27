@@ -316,15 +316,8 @@ const ForumPost = ({ blockEl }) => {
       cardsWrappers.forEach((el) => { el.style.display = 'none'; });
 
       try {
-        let url = `${API_BASE}/posts/${postId}`;
-
-        // Unique Views Tracking using LocalStorage
-        const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
-        if (!viewedPosts.includes(postId)) {
-          url += '?view=1';
-          viewedPosts.push(postId);
-          localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
-        }
+        // Always fetch WITHOUT ?view=1 — we decide after we know the author
+        const url = `${API_BASE}/posts/${postId}`;
 
         const response = await fetch(url);
         console.log('[handleLoadPost] fetch response ok?', response.ok, 'status:', response.status);
@@ -356,6 +349,23 @@ const ForumPost = ({ blockEl }) => {
             console.log('[handleLoadPost] Calling setPost with title:', transformedPost.title);
             setPost(transformedPost);
 
+            // ── View increment — skip for the post's own author ───────────────
+            const cu = getCurrentUser();
+            // eslint-disable-next-line no-underscore-dangle
+            const isAuthor = cu && cu._id && String(cu._id) === String(cb?._id || cb || '');
+            if (!isAuthor) {
+              const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
+              if (!viewedPosts.includes(postId)) {
+                // Fire-and-forget — increment on the server
+                fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => {});
+                viewedPosts.push(postId);
+                localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
+                // Show the incremented count locally too
+                fetchedPost.views = (fetchedPost.views || 0) + 1;
+              }
+            }
+            // ─────────────────────────────────────────────────────────────────
+
             const fetchedLikes = fetchedPost.likes || [];
             setLikesCount(fetchedLikes.length);
             setViewsCount(fetchedPost.views || 0);
@@ -370,8 +380,7 @@ const ForumPost = ({ blockEl }) => {
               },
             }));
 
-            // Check if current user explicitly likes this post
-            const cu = getCurrentUser();
+            // Check if current user explicitly likes this post (cu already declared above)
             // eslint-disable-next-line no-underscore-dangle
             if (cu && cu._id) {
               // eslint-disable-next-line no-underscore-dangle
@@ -561,28 +570,9 @@ const ForumPost = ({ blockEl }) => {
         window.dispatchEvent(new CustomEvent('refresh-sidebar'));
         window.dispatchEvent(new CustomEvent('refresh-cards'));
 
-        if (actionStatus === 'changes_requested') {
-          // Go back to the homepage / cards view
-          window.dispatchEvent(new CustomEvent('show-cards'));
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
-
-        // Re-fetch review data
-        // eslint-disable-next-line no-underscore-dangle
-        const rRes = await fetch(`${API_BASE}/reviews/by-post/${post.id}`, { credentials: 'include' });
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          if (rData.success) setReviewData(rData.review);
-        }
-        // Re-fetch post to get updated status
-        const pRes = await fetch(`${API_BASE}/posts/${post.id}`);
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          if (pData.success && pData.post) {
-            setPost((prev) => ({ ...prev, status: pData.post.status }));
-          }
-        }
+        // After any review action, go back to cards view / home
+        window.dispatchEvent(new CustomEvent('show-cards'));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       // eslint-disable-next-line no-console
