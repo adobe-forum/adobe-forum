@@ -435,35 +435,35 @@ function SignupPanel({ active }) {
     </div>`;
 }
 
-  /* ── 10. Forgot-password panel ──────────────────────────────────────────── */
-  function ForgotPanel({ onBack, active }) {
-    const [email, setEmail] = useState('');
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [sent, setSent] = useState(false);
+/* ── 10. Forgot-password panel ──────────────────────────────────────────── */
+function ForgotPanel({ onBack, active }) {
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
-    const handleBlur = (v) => setError(emailValidator(v));
+  const handleBlur = (v) => setError(emailValidator(v));
 
-    const handleSubmit = async () => {
-      const err = emailValidator(email);
-      if (err) { setError(err); return; }
-      setLoading(true);
-      try {
-        // Actually calls POST /api/auth/forgot-password — not a fake timeout
-        await forgotPassword({ email });
-        setSent(true);
-      } catch (fpErr) {
-        setError(fpErr.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleSubmit = async () => {
+    const err = emailValidator(email);
+    if (err) { setError(err); return; }
+    setLoading(true);
+    try {
+      // Actually calls POST /api/auth/forgot-password — not a fake timeout
+      await forgotPassword({ email });
+      setSent(true);
+    } catch (fpErr) {
+      setError(fpErr.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return html`
+  return html`
       <div id="auth-forgot" class=${`auth-panel${active ? ' is-active' : ''}`} role="tabpanel">
 
         ${sent
-      ? html`
+    ? html`
             <div class="auth-form-success is-visible" aria-live="polite">
               <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
               <p class="auth-form-success-title">Check your inbox</p>
@@ -472,7 +472,7 @@ function SignupPanel({ active }) {
                 The link expires in 30${'\u00a0'}minutes.
               </p>
             </div>`
-      : html`
+    : html`
             <button type="button" class="auth-form-back" onClick=${onBack}>
               <${IconArrowLeft}/>${' '}Back to sign in
             </button>
@@ -494,7 +494,7 @@ function SignupPanel({ active }) {
             </form>
           `}
       </div>`;
-  }
+}
 
 /* ── 11. Root AuthForm component ────────────────────────────────────────── */
 function AuthForm({ initPanel }) {

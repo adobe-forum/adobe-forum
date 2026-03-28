@@ -14,6 +14,18 @@ body.pp-scroll-lock {
 :root {
   --header-height: 64px;
   --sidebar-width: 280px;
+  --status-approved-bg:          #ecf8f4;
+  --status-approved-border:      #268e6c;
+  --status-approved-badge:       #d4f0e7;
+  --status-approved-badge-text:  #1e7a5c;
+  --status-changes-bg:           #fff5e6;
+  --status-changes-border:       #e68619;
+  --status-changes-badge:        #fde8c0;
+  --status-changes-badge-text:   #9b5000;
+  --status-pending-bg:           #f4f8ff;
+  --status-pending-border:       #1473e6;
+  --status-pending-badge:        #d8eaff;
+  --status-pending-badge-text:   #0d5dbf;
 }
 
 /* ── Prevent body scroll when sidebar is open on mobile ── */
@@ -26,9 +38,9 @@ body.pp-scroll-lock {
 
 /* ── Sidebar: scroll inside panel, never the body ── */
 .sidebar-wrapper aside.sidebar {
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   overscroll-behavior: contain;
+
   /* height is inherited from the fixed sidebar-wrapper */
   height: 100%;
 }
@@ -1052,23 +1064,6 @@ footer,
    Shared by header notifications + sidebar
    ============================================= */
 
-:root {
-  --status-approved-bg:          #ecf8f4;
-  --status-approved-border:      #268e6c;
-  --status-approved-badge:       #d4f0e7;
-  --status-approved-badge-text:  #1e7a5c;
-
-  --status-changes-bg:           #fff5e6;
-  --status-changes-border:       #e68619;
-  --status-changes-badge:        #fde8c0;
-  --status-changes-badge-text:   #9b5000;
-
-  --status-pending-bg:           #f4f8ff;
-  --status-pending-border:       #1473e6;
-  --status-pending-badge:        #d8eaff;
-  --status-pending-badge-text:   #0d5dbf;
-}
-
 /* ── Notification timeline layout ── */
 
 /* List container */
@@ -1095,11 +1090,26 @@ footer,
   border-left: 3px solid transparent;
 }
 
-.nd-tl-card:hover { filter: brightness(0.97); }
+.nd-tl-card:hover {
+  filter: brightness(0.97);
+}
 
-.nd-tl-card--pending  { background: var(--status-pending-bg);  border-left-color: var(--status-pending-border); }
-.nd-tl-card--approved { background: var(--status-approved-bg); border-left-color: var(--status-approved-border); }
-.nd-tl-card--changes  { background: var(--status-changes-bg);  border-left-color: var(--status-changes-border); }
+/* stylelint-disable selector-class-pattern */
+.nd-tl-card--pending {
+  background: var(--status-pending-bg);
+  border-left-color: var(--status-pending-border);
+}
+
+.nd-tl-card--approved {
+  background: var(--status-approved-bg);
+  border-left-color: var(--status-approved-border);
+}
+
+.nd-tl-card--changes {
+  background: var(--status-changes-bg);
+  border-left-color: var(--status-changes-border);
+}
+/* stylelint-enable selector-class-pattern */
 
 /* Icon + pill inline row */
 .nd-pill-row {
@@ -1117,17 +1127,20 @@ footer,
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
+  display: block;
+}
+
+.nd-tl-time-inline {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: #999;
+  margin-left: 2px;
 }
 
 .nd-tl-meta {
   font-size: 11.5px;
   color: #6e6e6e;
   line-height: 1.3;
-}
-
-.nd-tl-time {
-  font-size: 10.5px;
-  color: #999;
 }
 
 /* ── Small badge pill in header notifications ── */
@@ -1145,9 +1158,22 @@ footer,
   line-height: 1.4;
 }
 
-.nd-pill--pending  { background: var(--status-pending-badge);  color: var(--status-pending-badge-text); }
-.nd-pill--approved { background: var(--status-approved-badge); color: var(--status-approved-badge-text); }
-.nd-pill--changes  { background: var(--status-changes-badge);  color: var(--status-changes-badge-text); }
+/* stylelint-disable selector-class-pattern */
+.nd-pill--pending {
+  background: var(--status-pending-badge);
+  color: var(--status-pending-badge-text);
+}
+
+.nd-pill--approved {
+  background: var(--status-approved-badge);
+  color: var(--status-approved-badge-text);
+}
+
+.nd-pill--changes {
+  background: var(--status-changes-badge);
+  color: var(--status-changes-badge-text);
+}
+/* stylelint-enable selector-class-pattern */
 
 /* ── Sidebar review items (plain, colour-coded left border) ── */
 .sb-review-item {
@@ -1162,11 +1188,26 @@ footer,
   transition: filter 0.12s;
 }
 
-.sb-review-item:hover { filter: brightness(0.95); }
+.sb-review-item:hover {
+  filter: brightness(0.95);
+}
 
-.sb-review-item--pending  { background: var(--status-pending-bg);  border-left-color: var(--status-pending-border); }
-.sb-review-item--approved { background: var(--status-approved-bg); border-left-color: var(--status-approved-border); }
-.sb-review-item--changes  { background: var(--status-changes-bg);  border-left-color: var(--status-changes-border); }
+/* stylelint-disable selector-class-pattern */
+.sb-review-item--pending {
+  background: var(--status-pending-bg);
+  border-left-color: var(--status-pending-border);
+}
+
+.sb-review-item--approved {
+  background: var(--status-approved-bg);
+  border-left-color: var(--status-approved-border);
+}
+
+.sb-review-item--changes {
+  background: var(--status-changes-bg);
+  border-left-color: var(--status-changes-border);
+}
+/* stylelint-enable selector-class-pattern */
 
 .sb-review-title {
   font-size: 12px;

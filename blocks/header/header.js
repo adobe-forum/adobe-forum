@@ -95,26 +95,6 @@ const IconEyeOff = () => html`
     <path d="M8.3 3.1C8.5 3 8.8 3 9 3c5.2 0 8 6 8 6s-.9 1.8-2.6 3.2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" fill="none"/>
   </svg>`;
 
-// ── Status icons for review timeline ────────────────────────────────────────
-const IconStatusApproved = () => html`
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="8" fill="#268e6c"/>
-    <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-
-const IconStatusChanges = () => html`
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="8" fill="#e68619"/>
-    <path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="8" cy="11" r="0.9" fill="#fff"/>
-  </svg>`;
-
-const IconStatusPending = () => html`
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
-    <path d="M8 4.5V8l2.5 2" stroke="#1473e6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-
 // ============================================
 // HELPERS
 // ============================================
@@ -617,9 +597,8 @@ function NotificationsDropdown({ onClose }) {
                     </svg>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
-                  <span class="nd-tl-title">${r.postId.title}</span>
+                  <span class="nd-tl-title">${r.postId.title}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                   <span class="nd-tl-meta">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
-                  <span class="nd-tl-time">${timeAgo}</span>
                 </a>
               </li>`;
     }
@@ -640,8 +619,7 @@ function NotificationsDropdown({ onClose }) {
     : html`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="8" fill="#e68619"/><path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="#fff"/></svg>`}
                     <span class="nd-pill ${isApproved ? 'nd-pill--approved' : 'nd-pill--changes'}">${isApproved ? 'Approved' : 'Changes Requested'}</span>
                   </span>
-                  <span class="nd-tl-title">${r.postId.title}</span>
-                  <span class="nd-tl-time">${timeAgo}</span>
+                  <span class="nd-tl-title">${r.postId.title}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
