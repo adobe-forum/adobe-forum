@@ -621,6 +621,19 @@ function NotificationsDropdown({ onClose }) {
     navigateToPost(postId);
   };
 
+  const approvedIcon = html`
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+      <circle cx="8" cy="8" r="8" fill="#268e6c"/>
+      <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+
+  const changesIcon = html`
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+      <circle cx="8" cy="8" r="8" fill="#e68619"/>
+      <path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="8" cy="11" r="0.9" fill="#fff"/>
+    </svg>`;
+
   return html`
     <div class="pd-dropdown nd-dropdown" role="menu" aria-label="Notifications menu">
       <div class="pd-header">
@@ -664,14 +677,16 @@ function NotificationsDropdown({ onClose }) {
       const rId = getId(r); // eslint-disable-line no-underscore-dangle
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const timeAgo = formatTimeAgo(r.updatedAt);
+      const statusIcon = isApproved ? approvedIcon : changesIcon;
+      const cardClass = isApproved ? 'nd-tl-card--approved' : 'nd-tl-card--changes';
+      const pillClass = isApproved ? 'nd-pill--approved' : 'nd-pill--changes';
+      const pillLabel = isApproved ? 'Approved' : 'Changes Requested';
       return html`
               <li role="none" class="nd-tl-row">
-                <a href="#" class="nd-tl-card ${isApproved ? 'nd-tl-card--approved' : 'nd-tl-card--changes'}" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)}>
+                <a href="#" class="nd-tl-card ${cardClass}" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)}>
                   <span class="nd-pill-row">
-                    ${isApproved
-    ? html`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="8" fill="#268e6c"/><polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-    : html`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="8" fill="#e68619"/><path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="#fff"/></svg>`}
-                    <span class="nd-pill ${isApproved ? 'nd-pill--approved' : 'nd-pill--changes'}">${isApproved ? 'Approved' : 'Changes Requested'}</span>
+                    ${statusIcon}
+                    <span class="nd-pill ${pillClass}">${pillLabel}</span>
                   </span>
                   <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
@@ -706,7 +721,10 @@ function HeaderComponent() {
       // eslint-disable-next-line no-underscore-dangle
       const currentUserId = user._id ? String(user._id) : null;
       // Helper: extract string ID from a populated object or raw string
-      const toStrId = (ref) => (ref && typeof ref === 'object' ? String(ref._id) : (ref ? String(ref) : null)); // eslint-disable-line no-underscore-dangle
+      const toStrId = (ref) => { // eslint-disable-line no-underscore-dangle
+        if (!ref) return null;
+        return typeof ref === 'object' ? String(ref._id) : String(ref); // eslint-disable-line no-underscore-dangle
+      };
 
       Promise.all([
         fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
