@@ -1668,6 +1668,24 @@ function InlinePreview({
   `;
 }
 
+function findSidebarItemInCategories(categories, targetId) {
+  const walk = (items) => {
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (String(item._id || item.id || '') === String(targetId)) return item;
+      const found = walk(item.children || []);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  for (let i = 0; i < categories.length; i += 1) {
+    const found = walk(categories[i].items || []);
+    if (found) return found;
+  }
+  return null;
+}
+
 // EDIT POST
 function EditPost() {
   const [title, setTitle] = useState('');
@@ -1682,6 +1700,7 @@ function EditPost() {
   const [editId, setEditId] = useState(null);
   const [editSidebarItemId, setEditSidebarItemId] = useState(null);
   const [originalCategory, setOriginalCategory] = useState('');
+  const [originalFolderId, setOriginalFolderId] = useState(null);
   const [originalDraft, setOriginalDraft] = useState(null);
 
   const showToast = (message, type = 'success', onConfirm = null) => {
@@ -1754,6 +1773,19 @@ function EditPost() {
         tags: (draft.tags || []).map((tag) => tag.replace(/^#/, '')),
         category: draft.category || '',
       });
+
+      if (draft.sidebarItemId) {
+        fetch('http://localhost:5000/api/sidebar/categories', { credentials: 'include' })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (!data?.success) return;
+            const sidebarItem = findSidebarItemInCategories(data.categories || [], draft.sidebarItemId);
+            const parentId = sidebarItem?.parentId ? String(sidebarItem.parentId) : null;
+            setFolderId(parentId);
+            setOriginalFolderId(parentId);
+          })
+          .catch(() => { /* non-fatal */ });
+      }
     } catch {
       window.location.href = '/';
     }
@@ -1812,21 +1844,29 @@ function EditPost() {
       const result = await response.json();
 
       if (response.ok) {
-        // If category changed, update sidebar item
-        if (category !== originalCategory && editSidebarItemId) {
-          const smartPayload = {
-            title: title.trim(),
-            category: category.split(' > ')[0], // Use root category name
-            postId: editId,
-            parentId: folderId || null,
-          };
+        if (editSidebarItemId) {
           try {
-            await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify(smartPayload),
-            });
+            if (title.trim() !== originalDraft?.title?.trim()) {
+              await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ title: title.trim() }),
+              });
+            }
+
+            const locationChanged = category !== originalCategory || (folderId || null) !== originalFolderId;
+            if (locationChanged) {
+              await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  category: category.split(' > ')[0],
+                  parentId: folderId || null,
+                }),
+              });
+            }
           } catch (sidebarErr) { /* sidebar update failed silently */ }
         }
         localStorage.removeItem('edit-post-draft');
