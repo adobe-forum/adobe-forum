@@ -395,7 +395,7 @@ function ProfilePopup({ onClose }) {
     <div class="pp-overlay" onClick=${handleOverlay} role="dialog" aria-modal="true" aria-label="Profile">
       <div class="pp-modal">
         <button type="button" class="pp-close" aria-label="Close" onClick=${onClose}>
-          <${IconClose}/>
+          <${IconClose}/>cd 
         </button>
         ${renderContent()}
       </div>
@@ -840,7 +840,20 @@ function HeaderComponent() {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         Your session expires in 5 minutes.
-        <a href="/auth-form">Log in again</a> to stay signed in.
+        <button
+          type="button"
+          class="session-warning-login-btn"
+          onClick=${() => {
+    // Destroy session on server FIRST — if we just navigate to auth-form
+    // while the cookie is still valid, auth-form's /me check returns 200
+    // and immediately redirects back to /, causing an infinite loop.
+    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(() => {
+        localStorage.removeItem('af_user');
+        window.location.replace('/auth-form');
+      });
+  }}
+        >Log in again</button> to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
 }
