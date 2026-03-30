@@ -1,20 +1,3 @@
-/**
- * auth-form.js — Adobe EDS / da.live block
- * Preact + htm (vendor imports, no bundler)
- *
- * Block variants:
- *   auth-form                 → Login (default)
- *   auth-form signup          → Sign-up active
- *   auth-form forgot-password → Forgot-password view
- *
- * Auth strategy: httpOnly session cookies (set by the server).
- * No tokens are stored in localStorage — the browser handles the cookie
- * automatically, and JS on the page cannot read it (XSS-safe).
- *
- * All API calls go through auth-api.js so the base URL is managed
- * in one place (window.AUTH_API_BASE or localhost:5000 fallback).
- */
-
 import { h, render } from '../../vendor/preact.js';
 import { useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
@@ -477,40 +460,40 @@ function ForgotPanel({ onBack, active }) {
   };
 
   return html`
-    <div id="auth-forgot" class=${`auth-panel${active ? ' is-active' : ''}`} role="tabpanel">
+      <div id="auth-forgot" class=${`auth-panel${active ? ' is-active' : ''}`} role="tabpanel">
 
-      ${sent
+        ${sent
     ? html`
-          <div class="auth-form-success is-visible" aria-live="polite">
-            <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
-            <p class="auth-form-success-title">Check your inbox</p>
-            <p class="auth-form-success-desc">
-              We've sent a password-reset link to your email.
-              The link expires in 30${'\u00a0'}minutes.
-            </p>
-          </div>`
+            <div class="auth-form-success is-visible" aria-live="polite">
+              <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
+              <p class="auth-form-success-title">Check your inbox</p>
+              <p class="auth-form-success-desc">
+                We've sent a password-reset link to your email.
+                The link expires in 30${'\u00a0'}minutes.
+              </p>
+            </div>`
     : html`
-          <button type="button" class="auth-form-back" onClick=${onBack}>
-            <${IconArrowLeft}/>${' '}Back to sign in
-          </button>
+            <button type="button" class="auth-form-back" onClick=${onBack}>
+              <${IconArrowLeft}/>${' '}Back to sign in
+            </button>
 
-          <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
+            <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>
 
-            <${Field}
-              id="fp-email" label="Email address" type="email"
-              placeholder="you@adobe.com" autocomplete="email" withHint=${true}
-              value=${email} error=${error}
-              onChange=${(v) => { setEmail(v); if (error) setError(null); }}
-              onBlur=${handleBlur}
-            />
+              <${Field}
+                id="fp-email" label="Email address" type="email"
+                placeholder="you@adobe.com" autocomplete="email" withHint=${true}
+                value=${email} error=${error}
+                onChange=${(v) => { setEmail(v); if (error) setError(null); }}
+                onBlur=${handleBlur}
+              />
 
-            <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
-              Send reset link
-            <//>
+              <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+                Send reset link
+              <//>
 
-          </form>
-        `}
-    </div>`;
+            </form>
+          `}
+      </div>`;
 }
 
 /* ── 11. Root AuthForm component ────────────────────────────────────────── */
@@ -602,11 +585,6 @@ export default function decorate(block) {
   const mount = document.createElement('div');
   document.body.append(mount);
 
-  // If user has an active session, skip the form and redirect home.
-  // If session is expired (401), render the form normally.
-  // NOTE: af_user is intentionally kept in localStorage after auto-logout
-  // so the user _id is available for reviewer lookups — we don't redirect
-  // based on localStorage alone, only on a live server session check.
   getMe()
     .then(() => { window.location.replace('/'); })
     .catch(() => { render(html`<${AuthForm} initPanel=${initPanel}/>`, mount); });

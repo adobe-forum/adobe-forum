@@ -112,6 +112,19 @@ function getInitials(firstName, lastName) {
   return (f + l).toUpperCase() || '?';
 }
 
+function formatTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 // ============================================
 // PASSWORD FIELD
 // ============================================
@@ -468,22 +481,73 @@ function NotificationsDropdown({ onClose }) {
 
   useEffect(() => {
     const fetchAll = async () => {
+      // Get the current logged-in user's ID for ownership checks below
+      const currentUser = getStoredUser();
+      // eslint-disable-next-line no-underscore-dangle
+      const currentUserId = currentUser?._id ? String(currentUser._id) : null;
+
       try {
         const fetchSafe = (url) => fetch(url, { credentials: 'include' })
           .then((r) => (r.ok ? r.json() : { success: false }))
           .catch(() => ({ success: false }));
 
-        const [pendingRes, notifRes] = await Promise.all([
+        const [pendingRes, myRequestsRes, notifRes] = await Promise.all([
           fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
+          fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
           fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
         ]);
 
         const combined = [];
+
+        // Reviewer side: posts assigned to ME for review.
+        // Filter: postId & authorId must be populated, and the review must
+        // belong to the current user as the reviewer (reviewerId match).
         if (pendingRes.success) {
-          pendingRes.reviews.forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
+          pendingRes.reviews
+            .filter((r) => {
+              if (!r.postId || !r.authorId) return false;
+              // If the backend already scopes to the session user this is a no-op,
+              // but guard client-side too in case the endpoint returns all reviews.
+              if (currentUserId) {
+                const reviewerId = r.reviewerId ? String(typeof r.reviewerId === 'object' ? r.reviewerId._id : r.reviewerId) : null; // eslint-disable-line no-underscore-dangle
+                if (reviewerId && reviewerId !== currentUserId) return false;
+              }
+              return true;
+            })
+            .forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
         }
-        if (notifRes.success) {
-          notifRes.reviews.forEach((r) => combined.push({ type: 'author_update', data: r }));
+
+        // Author side: use author-notifications as the primary source for
+        // both approved AND changes_requested — it is the authoritative
+        // dismissed/undismissed list maintained by the backend.
+        // CRITICAL: only show notifications where the post's authorId matches
+        // the current logged-in user — prevents reviewer accounts from seeing
+        // author-side notifications that belong to someone else.
+        // my-requests is kept as a fallback only when author-notifications fails.
+        if (notifRes.success && notifRes.reviews) {
+          notifRes.reviews
+            .filter((r) => {
+              if (!r.postId) return false;
+              if (!currentUserId) return true; // can't check, allow through
+              // authorId may be a populated object or a raw string ID
+              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
+                : null;
+              return !authorId || authorId === currentUserId;
+            })
+            .forEach((r) => combined.push({ type: 'author_update', data: r }));
+        } else if (myRequestsRes.success && myRequestsRes.reviews) {
+          myRequestsRes.reviews
+            .filter((r) => {
+              if (!r.postId) return false;
+              if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
+              if (!currentUserId) return true;
+              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
+                : null;
+              return !authorId || authorId === currentUserId;
+            })
+            .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
         // sort by most recent updatedAt
@@ -508,7 +572,14 @@ function NotificationsDropdown({ onClose }) {
     };
   }, [onClose]);
 
-  const loadPost = (postId) => {
+  const navigateToPost = (postId) => {
+    if (!postId) return;
+    // If not on the home page, navigate there and carry the postId
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index') {
+      window.location.href = `/?openPost=${postId}`;
+      return;
+    }
+    // Already on home page — same DOM + event pattern as sidebar
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
@@ -516,10 +587,26 @@ function NotificationsDropdown({ onClose }) {
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
   };
 
-  const handlePendingClick = (e, postId) => {
+  // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.
+  // Using these helpers prevents crashes when population is missing or partial.
+  const getId = (ref) => (ref && typeof ref === 'object' ? ref._id : ref); // eslint-disable-line no-underscore-dangle
+  const getTitle = (ref) => (ref && typeof ref === 'object' ? ref.title : null);
+  const getFirstName = (ref) => (ref && typeof ref === 'object' ? ref.firstName : '');
+  const getLastName = (ref) => (ref && typeof ref === 'object' ? ref.lastName : '');
+
+  const handlePendingClick = async (e, postId, reviewId) => {
     e.preventDefault();
+    // Dismiss the reviewer-side notification so the badge clears after clicking
+    if (reviewId) {
+      try {
+        await fetch(API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+          method: 'PATCH',
+          credentials: 'include',
+        });
+      } catch (err) { /* ignore */ }
+    }
     onClose();
-    loadPost(postId);
+    navigateToPost(postId);
   };
 
   const handleDismiss = async (e, postId, reviewId) => {
@@ -531,8 +618,21 @@ function NotificationsDropdown({ onClose }) {
       });
     } catch (err) { /* ignore */ }
     onClose();
-    loadPost(postId);
+    navigateToPost(postId);
   };
+
+  const approvedIcon = html`
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+      <circle cx="8" cy="8" r="8" fill="#268e6c"/>
+      <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+
+  const changesIcon = html`
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+      <circle cx="8" cy="8" r="8" fill="#e68619"/>
+      <path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="8" cy="11" r="0.9" fill="#fff"/>
+    </svg>`;
 
   return html`
     <div class="pd-dropdown nd-dropdown" role="menu" aria-label="Notifications menu">
@@ -542,38 +642,53 @@ function NotificationsDropdown({ onClose }) {
         </div>
       </div>
       <div class="pd-divider"></div>
-      <ul class="pd-menu nd-menu" role="none">
+      <ul class="pd-menu nd-menu nd-tl-list" role="none">
         ${loading ? html`<li class="nd-msg">Loading...</li>` : null}
         ${!loading && items.length === 0 ? html`<li class="nd-msg">No new notifications.</li>` : null}
         ${!loading && items.map((item) => {
     if (item.type === 'reviewer_pending') {
       const r = item.data;
       // eslint-disable-next-line no-underscore-dangle
-      const pId = r.postId._id;
+      const pId = getId(r.postId);
+      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const postTitle = getTitle(r.postId) || 'Untitled Post';
+      const authorFirst = getFirstName(r.authorId);
+      const authorLast = getLastName(r.authorId);
+      const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
-              <li role="none" style="padding: 0 8px; margin-bottom: 6px;">
-                <a href="#" class="pd-item nd-item" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)} style="border-left: 4px solid #1473e6; background-color: #f4f8ff; padding-left: 12px; border-radius: 4px; box-sizing: border-box;">
-                  <span class="pd-item-label nd-item-title" style="color: #0d66d0; font-weight: 600;">Review Request: ${r.postId.title}</span>
-                  <span class="pd-email">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
+              <li role="none" class="nd-tl-row">
+                <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId, rId)}>
+                  <span class="nd-pill-row">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+                      <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
+                      <path d="M8 4.5V8l2.5 2" stroke="#1473e6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="nd-pill nd-pill--pending">Review Request</span>
+                  </span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
+                  <span class="nd-tl-meta">Requested by ${authorFirst} ${authorLast}</span>
                 </a>
               </li>`;
     }
     if (item.type === 'author_update') {
       const r = item.data;
       const isApproved = r.overallStatus === 'approved';
-      const statusText = isApproved ? 'Post Approved' : 'Changes Requested';
-      const bdColor = isApproved ? '#2d9d78' : '#da1f26';
-      const bgColor = isApproved ? '#ecf8f4' : '#fcf0f0';
-      const titleColor = isApproved ? '#227f60' : '#bd1319';
-      // eslint-disable-next-line no-underscore-dangle
-      const pId = r.postId._id;
-      // eslint-disable-next-line no-underscore-dangle
-      const rId = r._id;
+      const pId = getId(r.postId); // eslint-disable-line no-underscore-dangle
+      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const postTitle = getTitle(r.postId) || 'Untitled Post';
+      const timeAgo = formatTimeAgo(r.updatedAt);
+      const statusIcon = isApproved ? approvedIcon : changesIcon;
+      const cardClass = isApproved ? 'nd-tl-card--approved' : 'nd-tl-card--changes';
+      const pillClass = isApproved ? 'nd-pill--approved' : 'nd-pill--changes';
+      const pillLabel = isApproved ? 'Approved' : 'Changes Requested';
       return html`
-              <li role="none" style="padding: 0 8px; margin-bottom: 6px;">
-                <a href="#" class="pd-item nd-item" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)} style="border-left: 4px solid ${bdColor}; background-color: ${bgColor}; padding-left: 12px; border-radius: 4px; box-sizing: border-box;">
-                  <span class="pd-item-label nd-item-title" style="color: ${titleColor}; font-weight: 600;">${statusText}: ${r.postId.title}</span>
-                  <span class="pd-email" style="color: ${bdColor};">Please view the review notes.</span>
+              <li role="none" class="nd-tl-row">
+                <a href="#" class="nd-tl-card ${cardClass}" role="menuitem" onClick=${(e) => handleDismiss(e, pId, rId)}>
+                  <span class="nd-pill-row">
+                    ${statusIcon}
+                    <span class="nd-pill ${pillClass}">${pillLabel}</span>
+                  </span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
@@ -603,13 +718,48 @@ function HeaderComponent() {
         .then((r) => (r.ok ? r.json() : { success: false }))
         .catch(() => ({ success: false }));
 
+      // eslint-disable-next-line no-underscore-dangle
+      const currentUserId = user._id ? String(user._id) : null;
+      // Helper: extract string ID from a populated object or raw string
+      const toStrId = (ref) => { // eslint-disable-line no-underscore-dangle
+        if (!ref) return null;
+        return typeof ref === 'object' ? String(ref._id) : String(ref); // eslint-disable-line no-underscore-dangle
+      };
+
       Promise.all([
         fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
+        fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
         fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
-      ]).then(([pendingRes, notifRes]) => {
+      ]).then(([pendingRes, myRequestsRes, notifRes]) => {
         let count = 0;
-        if (pendingRes.success) count += pendingRes.reviews.length;
-        if (notifRes.success) count += notifRes.reviews.length;
+
+        // Reviewer badge: only count pending reviews assigned to THIS user
+        if (pendingRes.success) {
+          count += pendingRes.reviews.filter((r) => {
+            if (!r.postId || !r.authorId) return false;
+            if (!currentUserId) return true;
+            const reviewerId = toStrId(r.reviewerId);
+            return !reviewerId || reviewerId === currentUserId;
+          }).length;
+        }
+
+        // Author badge: only count notifications where THIS user is the post author
+        if (notifRes.success && notifRes.reviews) {
+          count += notifRes.reviews.filter((r) => {
+            if (!r.postId) return false;
+            if (!currentUserId) return true;
+            const authorId = toStrId(r.authorId);
+            return !authorId || authorId === currentUserId;
+          }).length;
+        } else if (myRequestsRes.success && myRequestsRes.reviews) {
+          count += myRequestsRes.reviews.filter((r) => {
+            if (!r.postId) return false;
+            if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
+            if (!currentUserId) return true;
+            const authorId = toStrId(r.authorId);
+            return !authorId || authorId === currentUserId;
+          }).length;
+        }
         setPendingCount(count);
       }).catch((err) => {
         // eslint-disable-next-line no-console
@@ -780,20 +930,7 @@ function HeaderComponent() {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         Your session expires in 5 minutes.
-        <button
-          type="button"
-          class="session-warning-login-btn"
-          onClick=${() => {
-        // Destroy session on server FIRST — if we just navigate to auth-form
-        // while the cookie is still valid, auth-form's /me check returns 200
-        // and immediately redirects back to /, causing an infinite loop.
-        fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
-          .finally(() => {
-            localStorage.removeItem('af_user');
-            window.location.replace('/auth-form');
-          });
-      }}
-        >Log in again</button> to stay signed in.
+        <a href="/auth-form">Log in again</a> to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
 }
