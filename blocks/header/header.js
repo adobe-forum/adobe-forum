@@ -395,7 +395,7 @@ function ProfilePopup({ onClose }) {
     <div class="pp-overlay" onClick=${handleOverlay} role="dialog" aria-modal="true" aria-label="Profile">
       <div class="pp-modal">
         <button type="button" class="pp-close" aria-label="Close" onClick=${onClose}>
-          <${IconClose}/>cd 
+          <${IconClose}/>
         </button>
         ${renderContent()}
       </div>
@@ -481,6 +481,11 @@ function NotificationsDropdown({ onClose }) {
 
   useEffect(() => {
     const fetchAll = async () => {
+      // Get the current logged-in user's ID for ownership checks below
+      const currentUser = getStoredUser();
+      // eslint-disable-next-line no-underscore-dangle
+      const currentUserId = currentUser?._id ? String(currentUser._id) : null;
+
       try {
         const fetchSafe = (url) => fetch(url, { credentials: 'include' })
           .then((r) => (r.ok ? r.json() : { success: false }))
@@ -494,26 +499,54 @@ function NotificationsDropdown({ onClose }) {
 
         const combined = [];
 
-        // Reviewer side: posts assigned to me for review
-        // FIX: filter out reviews where postId or authorId was deleted (populate returns null)
+        // Reviewer side: posts assigned to ME for review.
+        // Filter: postId & authorId must be populated, and the review must
+        // belong to the current user as the reviewer (reviewerId match).
         if (pendingRes.success) {
           pendingRes.reviews
-            .filter((r) => r.postId && r.authorId)
+            .filter((r) => {
+              if (!r.postId || !r.authorId) return false;
+              // If the backend already scopes to the session user this is a no-op,
+              // but guard client-side too in case the endpoint returns all reviews.
+              if (currentUserId) {
+                const reviewerId = r.reviewerId ? String(typeof r.reviewerId === 'object' ? r.reviewerId._id : r.reviewerId) : null; // eslint-disable-line no-underscore-dangle
+                if (reviewerId && reviewerId !== currentUserId) return false;
+              }
+              return true;
+            })
             .forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
         }
 
         // Author side: use author-notifications as the primary source for
         // both approved AND changes_requested — it is the authoritative
         // dismissed/undismissed list maintained by the backend.
+        // CRITICAL: only show notifications where the post's authorId matches
+        // the current logged-in user — prevents reviewer accounts from seeing
+        // author-side notifications that belong to someone else.
         // my-requests is kept as a fallback only when author-notifications fails.
-        // FIX: filter out reviews where postId was deleted (populate returns null)
         if (notifRes.success && notifRes.reviews) {
           notifRes.reviews
-            .filter((r) => r.postId)
+            .filter((r) => {
+              if (!r.postId) return false;
+              if (!currentUserId) return true; // can't check, allow through
+              // authorId may be a populated object or a raw string ID
+              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
+                : null;
+              return !authorId || authorId === currentUserId;
+            })
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         } else if (myRequestsRes.success && myRequestsRes.reviews) {
           myRequestsRes.reviews
-            .filter((r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'))
+            .filter((r) => {
+              if (!r.postId) return false;
+              if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
+              if (!currentUserId) return true;
+              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
+                : null;
+              return !authorId || authorId === currentUserId;
+            })
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
@@ -554,8 +587,24 @@ function NotificationsDropdown({ onClose }) {
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
   };
 
-  const handlePendingClick = (e, postId) => {
+  // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.
+  // Using these helpers prevents crashes when population is missing or partial.
+  const getId = (ref) => (ref && typeof ref === 'object' ? ref._id : ref); // eslint-disable-line no-underscore-dangle
+  const getTitle = (ref) => (ref && typeof ref === 'object' ? ref.title : null);
+  const getFirstName = (ref) => (ref && typeof ref === 'object' ? ref.firstName : '');
+  const getLastName = (ref) => (ref && typeof ref === 'object' ? ref.lastName : '');
+
+  const handlePendingClick = async (e, postId, reviewId) => {
     e.preventDefault();
+    // Dismiss the reviewer-side notification so the badge clears after clicking
+    if (reviewId) {
+      try {
+        await fetch(API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+          method: 'PATCH',
+          credentials: 'include',
+        });
+      } catch (err) { /* ignore */ }
+    }
     onClose();
     navigateToPost(postId);
   };
@@ -587,11 +636,15 @@ function NotificationsDropdown({ onClose }) {
     if (item.type === 'reviewer_pending') {
       const r = item.data;
       // eslint-disable-next-line no-underscore-dangle
-      const pId = r.postId._id;
+      const pId = getId(r.postId);
+      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const postTitle = getTitle(r.postId) || 'Untitled Post';
+      const authorFirst = getFirstName(r.authorId);
+      const authorLast = getLastName(r.authorId);
       const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
               <li role="none" class="nd-tl-row">
-                <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId)}>
+                <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId, rId)}>
                   <span class="nd-pill-row">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
                       <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
@@ -599,18 +652,17 @@ function NotificationsDropdown({ onClose }) {
                     </svg>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
-                  <span class="nd-tl-title">${r.postId.title}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
-                  <span class="nd-tl-meta">Requested by ${r.authorId.firstName} ${r.authorId.lastName}</span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
+                  <span class="nd-tl-meta">Requested by ${authorFirst} ${authorLast}</span>
                 </a>
               </li>`;
     }
     if (item.type === 'author_update') {
       const r = item.data;
       const isApproved = r.overallStatus === 'approved';
-      // eslint-disable-next-line no-underscore-dangle
-      const pId = r.postId._id;
-      // eslint-disable-next-line no-underscore-dangle
-      const rId = r._id;
+      const pId = getId(r.postId); // eslint-disable-line no-underscore-dangle
+      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const postTitle = getTitle(r.postId) || 'Untitled Post';
       const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
               <li role="none" class="nd-tl-row">
@@ -621,7 +673,7 @@ function NotificationsDropdown({ onClose }) {
     : html`<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><circle cx="8" cy="8" r="8" fill="#e68619"/><path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11" r="0.9" fill="#fff"/></svg>`}
                     <span class="nd-pill ${isApproved ? 'nd-pill--approved' : 'nd-pill--changes'}">${isApproved ? 'Approved' : 'Changes Requested'}</span>
                   </span>
-                  <span class="nd-tl-title">${r.postId.title}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
@@ -651,24 +703,44 @@ function HeaderComponent() {
         .then((r) => (r.ok ? r.json() : { success: false }))
         .catch(() => ({ success: false }));
 
+      // eslint-disable-next-line no-underscore-dangle
+      const currentUserId = user._id ? String(user._id) : null;
+      // Helper: extract string ID from a populated object or raw string
+      const toStrId = (ref) => (ref && typeof ref === 'object' ? String(ref._id) : (ref ? String(ref) : null)); // eslint-disable-line no-underscore-dangle
+
       Promise.all([
         fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
         fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
         fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
       ]).then(([pendingRes, myRequestsRes, notifRes]) => {
         let count = 0;
-        // FIX: only count reviews with valid postId/authorId (matches dropdown filter)
+
+        // Reviewer badge: only count pending reviews assigned to THIS user
         if (pendingRes.success) {
-          count += pendingRes.reviews.filter((r) => r.postId && r.authorId).length;
+          count += pendingRes.reviews.filter((r) => {
+            if (!r.postId || !r.authorId) return false;
+            if (!currentUserId) return true;
+            const reviewerId = toStrId(r.reviewerId);
+            return !reviewerId || reviewerId === currentUserId;
+          }).length;
         }
-        // FIX: use author-notifications as primary source (same as dropdown)
-        // Fall back to my-requests if author-notifications is unavailable
+
+        // Author badge: only count notifications where THIS user is the post author
         if (notifRes.success && notifRes.reviews) {
-          count += notifRes.reviews.filter((r) => r.postId).length;
+          count += notifRes.reviews.filter((r) => {
+            if (!r.postId) return false;
+            if (!currentUserId) return true;
+            const authorId = toStrId(r.authorId);
+            return !authorId || authorId === currentUserId;
+          }).length;
         } else if (myRequestsRes.success && myRequestsRes.reviews) {
-          count += myRequestsRes.reviews.filter(
-            (r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'),
-          ).length;
+          count += myRequestsRes.reviews.filter((r) => {
+            if (!r.postId) return false;
+            if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
+            if (!currentUserId) return true;
+            const authorId = toStrId(r.authorId);
+            return !authorId || authorId === currentUserId;
+          }).length;
         }
         setPendingCount(count);
       }).catch((err) => {
@@ -840,20 +912,7 @@ function HeaderComponent() {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         Your session expires in 5 minutes.
-        <button
-          type="button"
-          class="session-warning-login-btn"
-          onClick=${() => {
-    // Destroy session on server FIRST — if we just navigate to auth-form
-    // while the cookie is still valid, auth-form's /me check returns 200
-    // and immediately redirects back to /, causing an infinite loop.
-    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
-      .finally(() => {
-        localStorage.removeItem('af_user');
-        window.location.replace('/auth-form');
-      });
-  }}
-        >Log in again</button> to stay signed in.
+        <a href="/auth-form">Log in again</a> to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
 }
