@@ -641,7 +641,7 @@ function HeaderComponent() {
     })();
 
     // No user in localStorage at all — nothing to time out, don't touch session
-    if (!storedUser) return () => {};
+    if (!storedUser) return () => { };
 
     const doLogout = () => {
       if (window.location.pathname.startsWith('/auth-form')) return;
@@ -784,15 +784,15 @@ function HeaderComponent() {
           type="button"
           class="session-warning-login-btn"
           onClick=${() => {
-    // Destroy session on server FIRST — if we just navigate to auth-form
-    // while the cookie is still valid, auth-form's /me check returns 200
-    // and immediately redirects back to /, causing an infinite loop.
-    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
-      .finally(() => {
-        localStorage.removeItem('af_user');
-        window.location.replace('/auth-form');
-      });
-  }}
+        // Destroy session on server FIRST — if we just navigate to auth-form
+        // while the cookie is still valid, auth-form's /me check returns 200
+        // and immediately redirects back to /, causing an infinite loop.
+        fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+          .finally(() => {
+            localStorage.removeItem('af_user');
+            window.location.replace('/auth-form');
+          });
+      }}
         >Log in again</button> to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
