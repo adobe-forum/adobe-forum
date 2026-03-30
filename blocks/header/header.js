@@ -502,16 +502,18 @@ function NotificationsDropdown({ onClose }) {
             .forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
         }
 
-        // Author side: my-requests includes BOTH approved + changes_requested
-        // Fall back to author-notifications if my-requests endpoint unavailable
+        // Author side: use author-notifications as the primary source for
+        // both approved AND changes_requested — it is the authoritative
+        // dismissed/undismissed list maintained by the backend.
+        // my-requests is kept as a fallback only when author-notifications fails.
         // FIX: filter out reviews where postId was deleted (populate returns null)
-        if (myRequestsRes.success && myRequestsRes.reviews) {
-          myRequestsRes.reviews
-            .filter((r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'))
-            .forEach((r) => combined.push({ type: 'author_update', data: r }));
-        } else if (notifRes.success) {
+        if (notifRes.success && notifRes.reviews) {
           notifRes.reviews
             .filter((r) => r.postId)
+            .forEach((r) => combined.push({ type: 'author_update', data: r }));
+        } else if (myRequestsRes.success && myRequestsRes.reviews) {
+          myRequestsRes.reviews
+            .filter((r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'))
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
@@ -659,13 +661,14 @@ function HeaderComponent() {
         if (pendingRes.success) {
           count += pendingRes.reviews.filter((r) => r.postId && r.authorId).length;
         }
-        // Count approved + changes_requested from my-requests (matches dropdown)
-        if (myRequestsRes.success && myRequestsRes.reviews) {
+        // FIX: use author-notifications as primary source (same as dropdown)
+        // Fall back to my-requests if author-notifications is unavailable
+        if (notifRes.success && notifRes.reviews) {
+          count += notifRes.reviews.filter((r) => r.postId).length;
+        } else if (myRequestsRes.success && myRequestsRes.reviews) {
           count += myRequestsRes.reviews.filter(
             (r) => r.postId && (r.overallStatus === 'approved' || r.overallStatus === 'changes_requested'),
           ).length;
-        } else if (notifRes.success) {
-          count += notifRes.reviews.filter((r) => r.postId).length;
         }
         setPendingCount(count);
       }).catch((err) => {
