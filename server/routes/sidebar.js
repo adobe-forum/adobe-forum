@@ -276,6 +276,21 @@ router.delete('/sidebar-items/:id', requireAuth, async (req, res) => {
     const allIds = allItems.map((item) => item.id);
     const allPostIds = allItems.map((item) => item.postId).filter(Boolean);
 
+    // Block deletion if any linked post is currently under review
+    if (allPostIds.length > 0) {
+      const activePosts = await Post.find({
+        _id: { $in: allPostIds },
+        status: { $in: ['pending_review', 'changes_requested'] },
+      }).select('title status');
+
+      if (activePosts.length > 0) {
+        const names = activePosts.map((p) => `"${p.title || 'Untitled'}"`).join(', ');
+        return res.status(409).json({
+          error: `Cannot delete: ${names} inside this folder is currently under review. Wait for the review to complete first.`,
+        });
+      }
+    }
+
     await SidebarItem.deleteMany({ _id: { $in: allIds } });
     if (allPostIds.length > 0) {
       await Post.deleteMany({ _id: { $in: allPostIds } });
@@ -406,6 +421,21 @@ router.delete('/sidebar/categories/:id', requireAuth, async (req, res) => {
     }
 
     const postIds = allItems.map((i) => i.postId).filter(Boolean);
+
+    // Block deletion if any linked post is currently under review
+    if (postIds.length > 0) {
+      const activePosts = await Post.find({
+        _id: { $in: postIds },
+        status: { $in: ['pending_review', 'changes_requested'] },
+      }).select('title status');
+
+      if (activePosts.length > 0) {
+        const names = activePosts.map((p) => `"${p.title || 'Untitled'}"`).join(', ');
+        return res.status(409).json({
+          error: `Cannot delete: ${names} in this category is currently under review. Wait for the review to complete first.`,
+        });
+      }
+    }
 
     await SidebarItem.deleteMany({ category: root.category });
     if (postIds.length > 0) {
