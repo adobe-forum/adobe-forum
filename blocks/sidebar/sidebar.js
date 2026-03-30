@@ -667,7 +667,7 @@ function Sidebar() {
       const catMatches = cat.name.toLowerCase().includes(searchTerm);
       const filteredItems = filterItems(cat.items || [], searchTerm);
       if (catMatches || filteredItems.length > 0) {
-        return { ...cat, items: filteredItems.length > 0 ? filteredItems : cat.items };
+        return { ...cat, items: filteredItems };
       }
       return null;
     }).filter(Boolean)
