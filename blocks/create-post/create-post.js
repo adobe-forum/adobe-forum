@@ -1781,33 +1781,138 @@ function InlinePreview({
 }) {
   const bodyRef = useRef(null);
 
-  // Scroll to top and add line numbers to code blocks on mount
+  // Language label map (same as forum-post)
+  const LANG_LABELS = {
+    html: 'HTML',
+    css: 'CSS',
+    javascript: 'JavaScript',
+    plaintext: 'Plain Text',
+  };
+
+  const COPY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+  // Scroll to top and build tabbed code viewer (same as forum-post)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (!bodyRef.current) return;
-    // Add line numbers to code blocks
-    bodyRef.current.querySelectorAll('pre').forEach((pre) => {
-      if (pre.classList.contains('formatted-code-block')) return;
-      const codeText = pre.textContent;
-      const lines = codeText.split('\n');
+
+    const preTags = bodyRef.current.querySelectorAll('pre');
+    if (preTags.length === 0) return;
+
+    // Collect snippet data before touching the DOM
+    const snippets = Array.from(preTags).map((pre) => ({
+      lang: pre.dataset.language || 'plaintext',
+      code: pre.textContent,
+    }));
+
+    // Build the outer wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-tabs-wrapper';
+
+    // Tab bar
+    const tabBar = document.createElement('div');
+    tabBar.className = 'code-tabbar';
+
+    const tabList = document.createElement('div');
+    tabList.className = 'code-tab-list';
+
+    // Copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'code-copy-btn';
+    copyBtn.title = 'Copy code';
+    copyBtn.innerHTML = COPY_SVG;
+
+    tabBar.appendChild(tabList);
+    tabBar.appendChild(copyBtn);
+
+    // Panels container
+    const panelsContainer = document.createElement('div');
+    panelsContainer.className = 'code-panels';
+
+    let activeIndex = 0;
+
+    const activateTab = (idx) => {
+      activeIndex = idx;
+      tabList.querySelectorAll('.code-tab').forEach((t, ti) => {
+        t.classList.toggle('active', ti === idx);
+      });
+      panelsContainer.querySelectorAll('.code-panel').forEach((p, pi) => {
+        p.classList.toggle('active', pi === idx);
+      });
+    };
+
+    // Build each tab + panel
+    snippets.forEach(({ lang, code }, i) => {
+      const label = LANG_LABELS[lang] || lang.toUpperCase();
+
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = `code-tab${i === 0 ? ' active' : ''}`;
+      tab.textContent = label;
+      tab.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        activateTab(i);
+      });
+      tabList.appendChild(tab);
+
+      const panel = document.createElement('div');
+      panel.className = `code-panel${i === 0 ? ' active' : ''}`;
+
+      // Language badge
+      const badge = document.createElement('span');
+      badge.className = `code-lang-badge code-badge-${lang}`;
+      badge.textContent = lang === 'plaintext' ? 'TEXT' : lang.toUpperCase();
+      panel.appendChild(badge);
+
+      // Line numbers
+      const lines = code.split('\n');
       if (lines[lines.length - 1] === '') lines.pop();
+
       const gutter = document.createElement('div');
-      gutter.className = 'code-gutter';
-      lines.forEach((_, i) => {
+      gutter.className = 'tabs-gutter';
+      lines.forEach((_, idx) => {
         const span = document.createElement('span');
-        span.textContent = i + 1;
+        span.className = 'tabs-num';
+        span.textContent = idx + 1;
         gutter.appendChild(span);
       });
-      const codeContent = document.createElement('div');
-      codeContent.className = 'code-content';
-      codeContent.textContent = codeText;
-      pre.innerHTML = '';
-      pre.classList.add('formatted-code-block');
-      pre.appendChild(gutter);
-      pre.appendChild(codeContent);
+
+      const content = document.createElement('div');
+      content.className = 'tabs-content';
+      content.textContent = code;
+
+      const codeBody = document.createElement('div');
+      codeBody.className = 'code-body';
+      codeBody.appendChild(gutter);
+      codeBody.appendChild(content);
+      panel.appendChild(codeBody);
+
+      panelsContainer.appendChild(panel);
     });
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Copy button click
+    copyBtn.addEventListener('click', () => {
+      const activePanel = panelsContainer.querySelectorAll('.code-panel')[activeIndex];
+      const text = activePanel?.querySelector('.tabs-content')?.textContent || '';
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.title = 'Copied!';
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.title = 'Copy code';
+        }, 1800);
+      }).catch(() => {});
+    });
+
+    wrapper.appendChild(tabBar);
+    wrapper.appendChild(panelsContainer);
+
+    // Remove all <pre>s from the body
+    preTags.forEach((pre) => pre.remove());
+
+    // Append the tabbed viewer at the end of the post body
+    bodyRef.current.appendChild(wrapper);
   }, [body]);
 
   return html`

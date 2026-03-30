@@ -549,7 +549,6 @@ function Sidebar() {
     if (!postViewer && !cardsViewer) {
       // Not on the main forum page — pass the postId via sessionStorage so the
       // forum-post block can read it reliably on mount without any timing issues.
-      console.log('[sidebar] Cross-page nav: setting af_open_post =', postId);
       sessionStorage.setItem('af_open_post', postId);
       window.location.href = 'http://localhost:3000/';
       return;
