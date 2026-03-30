@@ -1053,6 +1053,18 @@ footer,
   }
 }
 
+.session-warning-login-btn {
+  all: unset;
+  color: #1473e6;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: #0d66d0;
+  }
+}
+
 .session-warning-close {
   all: unset;
   cursor: pointer;
