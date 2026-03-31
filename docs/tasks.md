@@ -45,6 +45,10 @@
 ## ✅ Completed
 
 ### 2026-03-31
+- [x] **Sidebar - backdrop interaction fix**: Raised the mobile/tablet backdrop above page content so it now catches touch/scroll gestures outside the panel and prevents background scrolling while the overlay is open
+- [x] **Sidebar - overlay scroll lock fix**: Locked the page's `main` scroll container alongside `body` when the sidebar is open on mobile/tablet so background content no longer scrolls behind the overlay
+- [x] **Auth - expired session loop fix**: Added a one-time auth check gate on `auth-form` and made header `401` handling clear stale client auth without recursive logout redirects
+- [x] **Sidebar - merge regression fix**: Removed duplicated merge fragments from `blocks/sidebar/sidebar.js` so the module parses again and the sidebar renders across desktop and overlay breakpoints
 - [x] **Sidebar — Home button state**: Removed auto-active class; Home is now transparent by default, hover/active only when selected
 - [x] **Sidebar — Padding normalization**: Introduced `--sn-item-pad-y: 6px` / `--sn-item-pad-x: 8px` tokens; all items use consistent `min-height` + symmetric padding
 - [x] **Sidebar — Section header spacing**: Changed from asymmetric `24px/6px` to balanced `16px/4px` with tokens `--sn-section-top` / `--sn-section-bottom`

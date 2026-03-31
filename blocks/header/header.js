@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useEffect } from '../../vendor/preact-hooks.js';
+import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
+import { clearClientAuthState } from '../../scripts/auth-state.js';
 
 // ============================================
 // ICON COMPONENTS
@@ -709,6 +710,7 @@ function HeaderComponent() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [sessionWarning, setSessionWarning] = useState(false);
+  const authRedirectedRef = useRef(false);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
 
@@ -802,6 +804,18 @@ function HeaderComponent() {
         });
     };
 
+    const handleUnauthorized = () => {
+      setSessionWarning(false);
+      clearClientAuthState();
+
+      if (authRedirectedRef.current) return;
+      authRedirectedRef.current = true;
+
+      if (!window.location.pathname.startsWith('/auth-form')) {
+        window.location.replace('/auth-form');
+      }
+    };
+
     const scheduleTimers = (loginAt) => {
       clearTimeout(warnTimer);
       clearTimeout(logoutTimer);
@@ -829,13 +843,12 @@ function HeaderComponent() {
 
     // Ask the server for the authoritative loginAt from the session store.
     // 200 → schedule from server loginAt (most accurate).
-    // 401 → session gone, logout.
+    // 401 → session gone, clear stale client auth and redirect once.
     // network error → fall back to localStorage loginAt, do NOT logout.
     fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
-          // Real session expiry — log out
-          doLogout();
+          handleUnauthorized();
           return null;
         }
         if (!r.ok) return null; // other server error — skip, don't logout

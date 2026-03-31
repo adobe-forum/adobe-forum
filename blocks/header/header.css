@@ -34,6 +34,10 @@ body.pp-scroll-lock {
     overflow: hidden !important;
     overscroll-behavior: none !important;
   }
+
+  body.sidebar-is-open main {
+    overflow: hidden !important;
+  }
 }
 
 /* ── Sidebar: scroll inside panel, never the body ── */

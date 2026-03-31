@@ -1,5 +1,5 @@
 import { h, render } from '../../vendor/preact.js';
-import { useState } from '../../vendor/preact-hooks.js';
+import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import {
   loginUser,
@@ -7,6 +7,7 @@ import {
   forgotPassword,
   getMe,
 } from './auth-api.js';
+import { clearClientAuthState } from '../../scripts/auth-state.js';
 
 const html = htm.bind(h);
 
@@ -568,6 +569,43 @@ function AuthForm({ initPanel }) {
     </div>`;
 }
 
+function AuthEntry({ initPanel }) {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const redirectHandledRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getMe()
+      .then(() => {
+        if (cancelled) return;
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        clearClientAuthState();
+        if (cancelled) return;
+        setIsAuthenticated(false);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked || !isAuthenticated || redirectHandledRef.current) return;
+    redirectHandledRef.current = true;
+    window.location.replace('/');
+  }, [authChecked, isAuthenticated]);
+
+  if (!authChecked) return null;
+  if (isAuthenticated) return null;
+
+  return html`<${AuthForm} initPanel=${initPanel}/>`;
+}
+
 /* ── 12. EDS block decorator ────────────────────────────────────────────── */
 export default function decorate(block) {
   const cls = [...block.classList];
@@ -584,8 +622,5 @@ export default function decorate(block) {
 
   const mount = document.createElement('div');
   document.body.append(mount);
-
-  getMe()
-    .then(() => { window.location.replace('/'); })
-    .catch(() => { render(html`<${AuthForm} initPanel=${initPanel}/>`, mount); });
+  render(html`<${AuthEntry} initPanel=${initPanel}/>`, mount);
 }

@@ -4,6 +4,60 @@
 
 ---
 
+## [2026-03-31] Sidebar Overlay Backdrop - Intercept Background Gestures
+
+**Decision:** In overlay mode, place the sidebar backdrop above the page content and below the sidebar panel so it intercepts taps and scroll gestures outside the panel.
+
+**Root cause:** The backdrop was rendered as a fixed element but given `z-index: -1` inside the sidebar stacking context. That dimmed the page visually without reliably intercepting gestures, so users could still scroll the background by dragging in the uncovered area beside the sidebar.
+
+**Fix:** Keep the existing sidebar structure, but change the backdrop to `z-index: 0` and the sidebar panel to `position: relative; z-index: 1`. Added `touch-action: none` and `overscroll-behavior: none` on the backdrop to block background gesture handling more reliably on mobile browsers.
+
+**Reason:** The scroll lock on `body`/`main` is necessary, but the backdrop also needs to sit on top of the page to prevent stray pointer and touch interactions from reaching the background.
+
+---
+
+## [2026-03-31] Sidebar Overlay Scroll Lock - Lock `main`, Not Just `body`
+
+**Decision:** When the sidebar is open in overlay mode (`<= 1024px`), lock scrolling on both `body` and `main`.
+
+**Root cause:** The sidebar already toggled `body.sidebar-is-open`, but the page's actual scroll container is `main` (`overflow: hidden auto` in `styles.css`). Locking only `body` did not stop the background content from scrolling behind the fixed sidebar overlay.
+
+**Fix:** Keep the existing sidebar open/close JS unchanged and extend the mobile/tablet scroll-lock CSS so `body.sidebar-is-open main { overflow: hidden; }`.
+
+**Reason:** This is the minimal fix because the sidebar state wiring was already correct. The issue was that the scroll lock was applied to the wrong container.
+
+---
+
+## [2026-03-31] Expired Session Handling - Single Auth Check, Single Redirect
+
+**Decision:** When `GET /api/auth/me` returns `401`, treat the client as logged out immediately, clear stale frontend auth state, and redirect to `/auth-form` at most once. Do not call `window.location.reload()` and do not attempt a second logout round-trip for an already-missing session.
+
+**Root cause:** After cookies were cleared, stale `localStorage` auth data could still make parts of the frontend behave as if the user were signed in. The header then performed its own `/api/auth/me` check, received `401`, and redirected, while the auth page also performed a fresh `/me` check on load. With multiple auth entry points making redirect decisions independently, the app could appear to get stuck in a refresh/loading loop.
+
+**Fix:**
+- Added a one-time `authChecked` gate in `auth-form` so its initial auth check runs once on load before deciding whether to render the form or redirect home
+- Updated header session validation so a `401` clears stale client auth state and redirects once without retrying logout
+- Centralised stale client auth cleanup in `scripts/auth-state.js`
+
+**Reason:** The backend session cookie is the source of truth. Once it is gone, the frontend must move to a stable logged-out state instead of retrying or chaining multiple redirect/auth decisions.
+
+---
+
+## [2026-03-31] Sidebar Merge Regression - Restore Module Parseability
+
+**Decision:** Keep the recent sidebar behavior changes, but remove duplicated merge fragments from `blocks/sidebar/sidebar.js` instead of rolling back the feature set.
+
+**Root cause:** The merge commit duplicated helper functions, component props, state hooks, and handlers inside `sidebar.js`. That made the module syntactically invalid (`Identifier 'collectFolderIds' has already been declared`), so the dynamic import from `header.js` failed and the sidebar never rendered.
+
+**Fix:** Delete only the duplicated declarations and duplicated template fragments. Preserve the intended post-merge behavior:
+- Desktop `> 1024px` starts open
+- Tablet/mobile `<= 1024px` stays overlay-accessible via hamburger
+- `closeIfOverlay()` remains in navigation paths
+
+**Reason:** The regression was caused by parse failure, not by sidebar layout CSS. A minimal cleanup restores rendering without undoing the valid responsive/sidebar behavior added before the merge.
+
+---
+
 ## [2026-03-31] Unified Sidebar/Hamburger Breakpoint — 1024px
 
 **Decision:** Standardized all sidebar and hamburger visibility logic to use a single breakpoint: `1024px`.
