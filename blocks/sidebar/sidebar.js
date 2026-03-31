@@ -38,6 +38,21 @@ function sortTreeItems(items) {
   });
 }
 
+function collectFolderIds(items) {
+  return (items || []).reduce((acc, item) => {
+    const nestedIds = collectFolderIds(item.children || []);
+    if (item.isFolder) acc.push(item.id);
+    return acc.concat(nestedIds);
+  }, []);
+}
+
+function sortTreeItems(items) {
+  return [...(items || [])].sort((a, b) => {
+    if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+    return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+  });
+}
+
 // ============================================
 // SPECTRUM DESTRUCTIVE ALERT DIALOG
 // ============================================
@@ -176,8 +191,18 @@ function TreeItem({
   expandedFolders,
   level = 0,
   searchTerm = '',
+  item,
+  activeItem,
+  currentUser,
+  onItemClick,
+  onDelete,
+  onToggleFolder,
+  expandedFolders,
+  level = 0,
+  searchTerm = '',
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const sortedChildren = sortTreeItems(item.children || []);
   const sortedChildren = sortTreeItems(item.children || []);
 
   const hasChildren = item.children && item.children.length > 0;
@@ -187,6 +212,7 @@ function TreeItem({
   const { isFolder } = item;
   const itemId = item.id;
   const isExpanded = !!searchTerm || !!expandedFolders[itemId];
+  const isExpanded = !!searchTerm || !!expandedFolders[itemId];
   const paddingLeft = Math.min(12 + level * 20, 100);
 
   // Only show action buttons if the logged-in user created this item
@@ -194,6 +220,10 @@ function TreeItem({
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
+    if (isFolder) {
+      onToggleFolder(itemId);
+      return;
+    }
     if (isFolder) {
       onToggleFolder(itemId);
       return;
@@ -232,6 +262,18 @@ function TreeItem({
             <span class="tree-chevron-spacer"/>
           </span>
         `}
+        <button class="tree-toggle" type="button" aria-label=${isExpanded ? 'Collapse folder' : 'Expand folder'}
+          aria-expanded=${String(isExpanded)} hidden=${!isFolder}
+          onClick=${(e) => { e.stopPropagation(); onToggleFolder(itemId); }}>
+          <span class="tree-chevron">
+            <${ChevronIcon} expanded=${isExpanded} />
+          </span>
+        </button>
+        ${!isFolder && html`
+          <span class="tree-chevron">
+            <span class="tree-chevron-spacer"/>
+          </span>
+        `}
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
       ? html`<${FolderIcon} expanded=${isExpanded} />`
@@ -253,6 +295,10 @@ function TreeItem({
         <ul class="tree-children" aria-hidden=${String(!isExpanded)}
           style=${{ display: isExpanded ? 'block' : 'none' }}>
           ${sortedChildren.map((child) => html`
+      ${hasChildren && html`
+        <ul class="tree-children" aria-hidden=${String(!isExpanded)}
+          style=${{ display: isExpanded ? 'block' : 'none' }}>
+          ${sortedChildren.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
               onItemClick=${onItemClick}
@@ -260,8 +306,17 @@ function TreeItem({
               onToggleFolder=${onToggleFolder}
               expandedFolders=${expandedFolders}
               level=${level + 1} searchTerm=${searchTerm} />
+              onDelete=${onDelete}
+              onToggleFolder=${onToggleFolder}
+              expandedFolders=${expandedFolders}
+              level=${level + 1} searchTerm=${searchTerm} />
           `)}
         </ul>
+      `}
+      ${isFolder && isExpanded && !hasChildren && html`
+        <div class="no-items no-items-subfolder" style="padding-left: ${paddingLeft + 40}px">
+          No items yet
+        </div>
       `}
       ${isFolder && isExpanded && !hasChildren && html`
         <div class="no-items no-items-subfolder" style="padding-left: ${paddingLeft + 40}px">
@@ -287,8 +342,21 @@ function CategoryItem({
   onToggleFolder,
   expandedFolders,
   searchTerm = '',
+  category,
+  activeSubcategory,
+  currentUser,
+  onSubcategoryClick,
+  onDeleteCategory,
+  onToggleCategory,
+  expandedCategories,
+  onToggleFolder,
+  expandedFolders,
+  searchTerm = '',
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const sortedItems = sortTreeItems(category.items || []);
+  const isExpanded = !!searchTerm || !!expandedCategories[category.id];
+  const isCollapsed = !isExpanded;
   const sortedItems = sortTreeItems(category.items || []);
   const isExpanded = !!searchTerm || !!expandedCategories[category.id];
   const isCollapsed = !isExpanded;
@@ -307,10 +375,21 @@ function CategoryItem({
     onToggleCategory(category.id, category.items || []);
   };
 
+  const handleCategoryToggle = () => {
+    onToggleCategory(category.id, category.items || []);
+  };
+
   return html`
     <li class="category-item">
       <div class="category-header ${!isCollapsed ? 'is-expanded' : ''}" onClick=${handleCategoryToggle}
+      <div class="category-header ${!isCollapsed ? 'is-expanded' : ''}" onClick=${handleCategoryToggle}
         onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}>
+        <button class="tree-toggle category-toggle" type="button"
+          aria-label=${isCollapsed ? 'Expand category' : 'Collapse category'}
+          aria-expanded=${String(!isCollapsed)}
+          onClick=${(e) => { e.stopPropagation(); handleCategoryToggle(); }}>
+          <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
+        </button>
         <button class="tree-toggle category-toggle" type="button"
           aria-label=${isCollapsed ? 'Expand category' : 'Collapse category'}
           aria-expanded=${String(!isCollapsed)}
@@ -364,6 +443,8 @@ function Sidebar() {
   const [myRequests, setMyRequests] = useState([]);
   const [pendingOpen, setPendingOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [expandedFolders, setExpandedFolders] = useState({});
   const [expandedCategories, setExpandedCategories] = useState({});
   const [expandedFolders, setExpandedFolders] = useState({});
 
@@ -605,6 +686,33 @@ function Sidebar() {
     });
   };
 
+  const handleToggleFolder = (itemId) => {
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const handleToggleCategory = (categoryId, items = []) => {
+    const folderIds = collectFolderIds(items);
+    setExpandedCategories((prev) => {
+      const nextExpanded = !prev[categoryId];
+      if (nextExpanded) {
+        setExpandedFolders((prevFolders) => {
+          const nextFolders = { ...prevFolders };
+          folderIds.forEach((folderId) => {
+            nextFolders[folderId] = false;
+          });
+          return nextFolders;
+        });
+      }
+      return {
+        ...prev,
+        [categoryId]: nextExpanded,
+      };
+    });
+  };
+
   const confirmDelete = async () => {
     if (!deleteDialog) return;
     const { categoryId, itemId } = deleteDialog;
@@ -789,6 +897,10 @@ function Sidebar() {
                     currentUser=${currentUser}
                     onSubcategoryClick=${handleSubcategoryClick}
                     onDeleteCategory=${handleDelete}
+                    onToggleCategory=${handleToggleCategory}
+                    expandedCategories=${expandedCategories}
+                    onToggleFolder=${handleToggleFolder}
+                    expandedFolders=${expandedFolders}
                     onToggleCategory=${handleToggleCategory}
                     expandedCategories=${expandedCategories}
                     onToggleFolder=${handleToggleFolder}

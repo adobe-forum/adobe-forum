@@ -13,18 +13,19 @@ body.pp-scroll-lock {
 
 :root {
   --header-height: 64px;
-  --status-approved-bg:          #ecf8f4;
-  --status-approved-border:      #268e6c;
-  --status-approved-badge:       #d4f0e7;
-  --status-approved-badge-text:  #1e7a5c;
-  --status-changes-bg:           #fff5e6;
-  --status-changes-border:       #e68619;
-  --status-changes-badge:        #fde8c0;
-  --status-changes-badge-text:   #9b5000;
-  --status-pending-bg:           #f4f8ff;
-  --status-pending-border:       #1473e6;
-  --status-pending-badge:        #d8eaff;
-  --status-pending-badge-text:   #0d5dbf;
+  --sidebar-width: 280px;
+  --status-approved-bg: #ecf8f4;
+  --status-approved-border: #268e6c;
+  --status-approved-badge: #d4f0e7;
+  --status-approved-badge-text: #1e7a5c;
+  --status-changes-bg: #fff5e6;
+  --status-changes-border: #e68619;
+  --status-changes-badge: #fde8c0;
+  --status-changes-badge-text: #9b5000;
+  --status-pending-bg: #f4f8ff;
+  --status-pending-border: #1473e6;
+  --status-pending-badge: #d8eaff;
+  --status-pending-badge-text: #0d5dbf;
 }
 
 /* ── Prevent body scroll when sidebar is open on mobile/tablet ── */
@@ -93,22 +94,32 @@ nav.spectrum-nav {
 }
 
 .nav-hamburger-icon {
-  &::before { top: -6px; }
-  &::after { top: 4px; }
+  &::before {
+    top: -6px;
+  }
+
+  &::after {
+    top: 4px;
+  }
 }
 
 .nav-hamburger {
   display: none;
 
   & button {
+    /* Full reset — prevent global 'button' styles (blue bg, margin, border-radius) from bleeding in */
+    all: unset;
+    cursor: pointer;
     background: transparent;
     border: none;
-    cursor: pointer;
     padding: var(--spectrum-spacing-200);
     color: var(--spectrum-gray-800);
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0;
+    border-radius: 0;
+    box-sizing: border-box;
   }
 
   &.is-open .nav-hamburger-icon {
@@ -182,15 +193,131 @@ nav.spectrum-nav {
     margin-right: 16px;
   }
 
-  .nav-brand-section { grid-column: 2; }
+  .nav-brand-section {
+    grid-column: 2;
+  }
 
   .nav-tools {
     grid-column: 3;
     justify-self: end;
   }
 
-  .nav-button span { display: none; }
+  /* Text hides — reshape the pill into a 36px circle to match bell/profile size */
+  .nav-button span {
+    display: none;
+  }
+
+  .nav-button.spectrum-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    gap: 0;
+    justify-content: center;
+  }
 }
+
+/* =============================================
+   MOBILE IMPROVEMENTS (≤ 768px)
+   ============================================= */
+
+@media (width <=768px) {
+  /* ── 1. FAB: transform inline Add Post into a floating action button ── */
+
+  /* Hide the inline "Add Post" button from the nav bar */
+  .nav-brand-section .nav-button.spectrum-button {
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    z-index: 400;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgb(218 31 38 / 35%), 0 2px 6px rgb(0 0 0 / 15%);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    gap: 0;
+
+    /* Ensure only the icon shows */
+    & span {
+      display: none;
+    }
+
+    & svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    &:hover {
+      transform: scale(1.06);
+      box-shadow: 0 6px 20px rgb(218 31 38 / 45%), 0 3px 8px rgb(0 0 0 / 18%);
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+
+  /* ── 2. Touch targets: ensure all icon buttons are min 44×44px ── */
+  .spectrum-action-button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+
+  /* Profile avatar: keep visual circle at 36px, expand tap area via padding */
+  .profile-avatar-btn {
+    /* adds invisible tap area, content-box keeps 36px circle size */
+    padding: 4px;
+    box-sizing: content-box;
+  }
+
+  /* ── 3 & 4. Dropdowns: fix to viewport so they never bleed off screen ── */
+  .nd-trigger-wrap .pd-dropdown,
+  .pd-trigger-wrap .pd-dropdown {
+    position: fixed;
+
+    /* just below the fixed header */
+    top: 64px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+
+  /* ── 5. Session warning toast: proper mobile positioning ── */
+  .session-warning-banner {
+    /* Override the left+transform centering with inset-based approach */
+    left: 16px;
+    right: 16px;
+    transform: none;
+
+    /* lift above FAB */
+    bottom: 90px;
+    white-space: normal;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    padding: 10px 14px;
+    gap: 6px;
+  }
+
+  /* ── 6. Nav padding: slightly tighter on small screens ── */
+  nav.spectrum-nav {
+    padding: 0 16px;
+  }
+
+  .nav-hamburger {
+    margin-right: 12px;
+  }
+}
+
 
 /* =============================================
    BRAND / BUTTONS
@@ -232,9 +359,13 @@ nav.spectrum-nav {
   color: var(--spectrum-gray-800);
   transition: background-color 0.15s ease;
 
-  &:hover { background-color: var(--spectrum-gray-100); }
+  &:hover {
+    background-color: var(--spectrum-gray-100);
+  }
 
-  & svg { display: block; }
+  & svg {
+    display: block;
+  }
 }
 
 .profile-avatar {
@@ -307,7 +438,9 @@ footer,
   padding: 0;
   outline: none;
 
-  &:hover { opacity: 0.85; }
+  &:hover {
+    opacity: 0.85;
+  }
 
   &:focus-visible,
   &.is-active {
@@ -333,8 +466,13 @@ footer,
 }
 
 @keyframes pp-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .pp-modal {
@@ -502,7 +640,9 @@ footer,
   font-family: inherit;
   appearance: none;
 
-  &::placeholder { color: #999; }
+  &::placeholder {
+    color: #999;
+  }
 
   &:focus {
     border-color: var(--spectrum-accent-color-900, #da1f26);
@@ -510,7 +650,9 @@ footer,
   }
 
   /* stylelint-disable-next-line selector-class-pattern */
-  &.pp-input--icon { padding-right: 44px; }
+  &.pp-input--icon {
+    padding-right: 44px;
+  }
 
   &::-ms-reveal,
   &::-ms-clear,
@@ -637,7 +779,9 @@ footer,
 }
 
 @keyframes pp-spin {
-  to { transform: translateX(-50%) rotate(360deg); }
+  to {
+    transform: translateX(-50%) rotate(360deg);
+  }
 }
 
 .pp-btn {
@@ -690,8 +834,13 @@ footer,
     }
   }
 
-  &.is-loading .pp-btn-label { opacity: 0; }
-  &.is-loading .pp-spinner { display: block; }
+  &.is-loading .pp-btn-label {
+    opacity: 0;
+  }
+
+  &.is-loading .pp-spinner {
+    display: block;
+  }
 }
 
 /* =============================================
@@ -796,16 +945,20 @@ footer,
    RESPONSIVE
    ============================================= */
 
-@media (width <= 480px) {
+@media (width <=480px) {
   .pp-modal {
     max-width: 100%;
     max-height: 100vh;
     border-radius: 0;
   }
 
-  .pp-body { padding: 24px 20px 28px; }
+  .pp-body {
+    padding: 24px 20px 28px;
+  }
 
-  .pp-actions { flex-direction: column; }
+  .pp-actions {
+    flex-direction: column;
+  }
 }
 
 /* =============================================
@@ -1108,6 +1261,7 @@ footer,
   background: var(--status-changes-bg);
   border-left-color: var(--status-changes-border);
 }
+
 /* stylelint-enable selector-class-pattern */
 
 /* Icon + pill inline row */
@@ -1172,6 +1326,7 @@ footer,
   background: var(--status-changes-badge);
   color: var(--status-changes-badge-text);
 }
+
 /* stylelint-enable selector-class-pattern */
 
 /* ── Sidebar review items (plain, colour-coded left border) ── */
@@ -1206,6 +1361,7 @@ footer,
   background: var(--status-changes-bg);
   border-left-color: var(--status-changes-border);
 }
+
 /* stylelint-enable selector-class-pattern */
 
 .sb-review-title {
@@ -1225,7 +1381,20 @@ footer,
 }
 
 
-/* ── Session expiry warning banner ───────────────────────────────────────── */
+/* ── Session expiry warning banner ── */
+
+.session-warning-login-btn {
+  all: unset;
+  color: #1473e6;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: #0d66d0;
+  }
+}
+
 .session-warning-banner {
   position: fixed;
   bottom: 20px;
@@ -1243,24 +1412,15 @@ footer,
   color: #7d5a00;
   box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
   z-index: 9999;
+
+  /* overridden on mobile below */
   white-space: nowrap;
 
-  & a {
+  & a,
+  & .session-warning-login-btn {
     color: #1473e6;
     font-weight: 600;
     text-decoration: underline;
-  }
-}
-
-.session-warning-login-btn {
-  all: unset;
-  color: #1473e6;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-
-  &:hover {
-    color: #0d66d0;
   }
 }
 
@@ -1272,5 +1432,7 @@ footer,
   margin-left: 4px;
   opacity: 0.7;
 
-  &:hover { opacity: 1; }
+  &:hover {
+    opacity: 1;
+  }
 }
