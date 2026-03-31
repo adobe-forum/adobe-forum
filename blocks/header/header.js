@@ -791,7 +791,7 @@ function HeaderComponent() {
     })();
 
     // No user in localStorage at all — nothing to time out, don't touch session
-    if (!storedUser) return () => {};
+    if (!storedUser) return () => { };
 
     const doLogout = () => {
       if (window.location.pathname.startsWith('/auth-form')) return;
@@ -929,8 +929,19 @@ function HeaderComponent() {
           <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        Your session expires in 5 minutes.
-        <a href="/auth-form">Log in again</a> to stay signed in.
+        Your session expires in 5 minutes.${' '}
+        <button
+          type="button"
+          class="session-warning-login-btn"
+          onClick=${async () => {
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) { /* ignore network errors */ }
+    localStorage.removeItem('af_user');
+    window.location.replace('/auth-form');
+  }}
+        >Log in again</button>${' '}
+        to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
 }
