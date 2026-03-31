@@ -930,7 +930,7 @@ function HeaderComponent() {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         Your session expires in 5 minutes.
-        <a href="/auth-form">Log in again</a> to stay signed in.
+        <a href="http://localhost:3000/auth-form">Log in again</a> to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
 }

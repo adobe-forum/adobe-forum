@@ -234,9 +234,9 @@ function CtxMenu({
   // Subfolder count for Add Subfolder limit check
   const subAtLimit = nodeDepth >= MAX_DEPTH - 1;
 
-  // Rename: only owner, not category root
-  const canRename = !node.isCategoryRoot && isOwner(node, currentUser);
-  // Delete: only owner
+  // Rename: only owner (now applies to all folders including category root)
+  const canRename = isOwner(node, currentUser);
+  // Delete: only owner (now applies to all folders including category root)
   const canDelete = isOwner(node, currentUser);
 
   const left = x + 170 > window.innerWidth ? x - 170 : x;
@@ -596,16 +596,19 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-  // REQ 5: Rename subfolder
+  // REQ 5: Rename folder (now includes category root)
   const handleCommitRename = async (node, name) => {
     setRenamingId(null);
-    if (node.isCategoryRoot || name === node.name) return;
+    if (name === node.name) return;
     try {
-      const res = await fetch(`${API_BASE}/sidebar-items/${node.id}`, {
+      const url = node.isCategoryRoot
+        ? `${API_BASE}/sidebar/categories/${node.id}`
+        : `${API_BASE}/sidebar-items/${node.id}`;
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title: name }),
+        body: JSON.stringify({ name }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -841,14 +844,27 @@ function FolderModal({ isOpen, onClose, onSelect }) {
 function FolderApp() {
   const [isOpen, setIsOpen] = useState(false);
   useEffect(() => {
+    // One-time migration: clear the legacy localStorage key now that
+    // folder selection is persisted on the backend instead.
+    localStorage.removeItem('folder:pending-selection');
+  }, []);
+  useEffect(() => {
     const onOpen = () => setIsOpen(true);
     window.addEventListener('folder:open', onOpen);
     return () => window.removeEventListener('folder:open', onOpen);
   }, []);
-  const handleSelect = (name, path, folderId = null) => {
-    localStorage.setItem('folder:pending-selection', JSON.stringify({
-      name, path: path || name, folderId, ts: Date.now(),
-    }));
+  const handleSelect = async (name, path, folderId = null) => {
+    try {
+      await fetch(`${API_BASE}/user/folder-selection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, path: path || name, folderId, ts: Date.now() }),
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save folder selection:', err);
+    }
     window.dispatchEvent(new CustomEvent('folder:selected', {
       detail: { name, path: path || name, folderId },
     }));
