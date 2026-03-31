@@ -23,6 +23,21 @@ function normalizeItems(items) {
   });
 }
 
+function collectFolderIds(items) {
+  return (items || []).reduce((acc, item) => {
+    const nestedIds = collectFolderIds(item.children || []);
+    if (item.isFolder) acc.push(item.id);
+    return acc.concat(nestedIds);
+  }, []);
+}
+
+function sortTreeItems(items) {
+  return [...(items || [])].sort((a, b) => {
+    if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+    return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+  });
+}
+
 // ============================================
 // SPECTRUM DESTRUCTIVE ALERT DIALOG
 // ============================================
@@ -152,11 +167,18 @@ function isOwner(item, currentUser) {
 // ============================================
 
 function TreeItem({
-  item, activeItem, currentUser, onItemClick, onDelete, level = 0, searchTerm = '',
+  item,
+  activeItem,
+  currentUser,
+  onItemClick,
+  onDelete,
+  onToggleFolder,
+  expandedFolders,
+  level = 0,
+  searchTerm = '',
 }) {
-  const [isExpandedState, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const isExpanded = !!searchTerm || isExpandedState;
+  const sortedChildren = sortTreeItems(item.children || []);
 
   const hasChildren = item.children && item.children.length > 0;
   // IMPORTANT: trust the server's isFolder flag exclusively.
@@ -164,6 +186,7 @@ function TreeItem({
   // that causes post-links to render as folders and duplicate items on create.
   const { isFolder } = item;
   const itemId = item.id;
+  const isExpanded = !!searchTerm || !!expandedFolders[itemId];
   const paddingLeft = Math.min(12 + level * 20, 100);
 
   // Only show action buttons if the logged-in user created this item
@@ -171,7 +194,10 @@ function TreeItem({
 
   const handleClick = (e) => {
     if (e.target.closest('.item-actions')) return;
-    if (isFolder) setIsExpanded((prev) => !prev);
+    if (isFolder) {
+      onToggleFolder(itemId);
+      return;
+    }
     let targetPostId = null;
     if (item.postId) {
       targetPostId = typeof item.postId === 'string'
@@ -194,11 +220,18 @@ function TreeItem({
         style="padding-left: ${paddingLeft}px" onClick=${handleClick}
         onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}
         title=${item.title}>
-        <span class="tree-chevron">
-          ${isFolder
-    ? html`<${ChevronIcon} expanded=${isExpanded} />`
-    : html`<span class="tree-chevron-spacer"/>`}
-        </span>
+        <button class="tree-toggle" type="button" aria-label=${isExpanded ? 'Collapse folder' : 'Expand folder'}
+          aria-expanded=${String(isExpanded)} hidden=${!isFolder}
+          onClick=${(e) => { e.stopPropagation(); onToggleFolder(itemId); }}>
+          <span class="tree-chevron">
+            <${ChevronIcon} expanded=${isExpanded} />
+          </span>
+        </button>
+        ${!isFolder && html`
+          <span class="tree-chevron">
+            <span class="tree-chevron-spacer"/>
+          </span>
+        `}
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
     ? html`<${FolderIcon} expanded=${isExpanded} />`
@@ -216,15 +249,24 @@ function TreeItem({
         `}
       </div>
 
-      ${isExpanded && html`
-        <ul class="tree-children">
-          ${hasChildren && item.children.map((child) => html`
+      ${hasChildren && html`
+        <ul class="tree-children" aria-hidden=${String(!isExpanded)}
+          style=${{ display: isExpanded ? 'block' : 'none' }}>
+          ${sortedChildren.map((child) => html`
             <${TreeItem} key=${child.id} item=${child} activeItem=${activeItem}
               currentUser=${currentUser}
               onItemClick=${onItemClick}
-              onDelete=${onDelete} level=${level + 1} searchTerm=${searchTerm} />
+              onDelete=${onDelete}
+              onToggleFolder=${onToggleFolder}
+              expandedFolders=${expandedFolders}
+              level=${level + 1} searchTerm=${searchTerm} />
           `)}
         </ul>
+      `}
+      ${isFolder && isExpanded && !hasChildren && html`
+        <div class="no-items no-items-subfolder" style="padding-left: ${paddingLeft + 40}px">
+          No items yet
+        </div>
       `}
     </li>
   `;
@@ -235,12 +277,21 @@ function TreeItem({
 // ============================================
 
 function CategoryItem({
-  category, activeSubcategory, currentUser, onSubcategoryClick,
-  onDeleteCategory, searchTerm = '',
+  category,
+  activeSubcategory,
+  currentUser,
+  onSubcategoryClick,
+  onDeleteCategory,
+  onToggleCategory,
+  expandedCategories,
+  onToggleFolder,
+  expandedFolders,
+  searchTerm = '',
 }) {
-  const [isCollapsedState, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
-  const isCollapsed = searchTerm ? false : isCollapsedState;
+  const sortedItems = sortTreeItems(category.items || []);
+  const isExpanded = !!searchTerm || !!expandedCategories[category.id];
+  const isCollapsed = !isExpanded;
 
   const hasItems = category.items && category.items.length > 0;
 
@@ -252,11 +303,20 @@ function CategoryItem({
     onDeleteCategory(category.id, category.name);
   };
 
+  const handleCategoryToggle = () => {
+    onToggleCategory(category.id, category.items || []);
+  };
+
   return html`
     <li class="category-item">
-      <div class="category-header ${!isCollapsed ? 'is-expanded' : ''}" onClick=${() => setIsCollapsed((p) => !p)}
+      <div class="category-header ${!isCollapsed ? 'is-expanded' : ''}" onClick=${handleCategoryToggle}
         onMouseEnter=${() => setIsHovered(true)} onMouseLeave=${() => setIsHovered(false)}>
-        <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
+        <button class="tree-toggle category-toggle" type="button"
+          aria-label=${isCollapsed ? 'Expand category' : 'Collapse category'}
+          aria-expanded=${String(!isCollapsed)}
+          onClick=${(e) => { e.stopPropagation(); handleCategoryToggle(); }}>
+          <span class="category-chevron"><${ChevronIcon} expanded=${!isCollapsed} /></span>
+        </button>
         <span class="category-icon"><${FolderIcon} expanded=${!isCollapsed} /></span>
         <span class="category-name"><${HighlightedText} text=${category.name} highlight=${searchTerm} /></span>
         ${isHovered && canDeleteCategory && html`
@@ -268,20 +328,21 @@ function CategoryItem({
           </span>
         `}
       </div>
-      ${!isCollapsed && html`
-        <ul class="tree-list">
-          ${hasItems
-    ? category.items.map((item) => html`
-                <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
-                  currentUser=${currentUser}
-                  onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
-                  onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
-                  level=${1} searchTerm=${searchTerm} />
-              `)
+      <ul class="tree-list" aria-hidden=${String(isCollapsed)}
+        style=${{ display: isCollapsed ? 'none' : 'block' }}>
+        ${hasItems
+    ? sortedItems.map((item) => html`
+              <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
+                currentUser=${currentUser}
+                onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
+                onDelete=${(itemId, itemTitle) => onDeleteCategory(category.id, itemId, itemTitle, true)}
+                onToggleFolder=${onToggleFolder}
+                expandedFolders=${expandedFolders}
+                level=${1} searchTerm=${searchTerm} />
+            `)
     : html`<div class="no-items">No items yet</div>`
 }
-        </ul>
-      `}
+      </ul>
     </li>
   `;
 }
@@ -291,7 +352,7 @@ function CategoryItem({
 // ============================================
 
 function Sidebar() {
-  const [isOpen, setIsOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+  const [isOpen, setIsOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth > 1024);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -303,6 +364,8 @@ function Sidebar() {
   const [myRequests, setMyRequests] = useState([]);
   const [pendingOpen, setPendingOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [expandedFolders, setExpandedFolders] = useState({});
 
   // ── Auth state ──────────────────────────────────────────────────────────
   // null  = not yet checked
@@ -353,6 +416,14 @@ function Sidebar() {
     window.dispatchEvent(new CustomEvent('sidebar-state-changed', { detail: { isOpen: open } }));
   };
 
+  // Closes the sidebar when in overlay mode (mobile / tablet ≤ 1024px)
+  const closeIfOverlay = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+      setIsOpen(false);
+      applyBodyOffset(false);
+    }
+  };
+
   useEffect(() => {
     const onToggle = (e) => {
       const next = typeof e.detail?.isOpen === 'boolean' ? e.detail.isOpen : !isOpen;
@@ -372,7 +443,7 @@ function Sidebar() {
       // Use ref instead of isOpen to avoid stale closure — the effect has [] deps
       // so isOpen would always be the mount-time value (true), meaning the sidebar
       // would never re-open when resizing from mobile back to desktop.
-      if (window.innerWidth >= 768 && !isOpenRef.current) {
+      if (window.innerWidth > 1024 && !isOpenRef.current) {
         setIsOpen(true);
         applyBodyOffset(true);
       }
@@ -487,6 +558,7 @@ function Sidebar() {
       return;
     }
     if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      closeIfOverlay();
       window.location.href = `/?category=${encodeURIComponent(subcategoryId)}&post=${postId}`;
       return;
     }
@@ -494,6 +566,7 @@ function Sidebar() {
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
     postWrappers.forEach((el) => { el.style.display = 'block'; });
+    closeIfOverlay();
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId, sidebarItemId: subcategoryId } }));
   };
 
@@ -502,6 +575,33 @@ function Sidebar() {
       categoryId,
       itemId: isItemDelete ? itemId : null,
       name: isItemDelete ? itemTitle : itemId,
+    });
+  };
+
+  const handleToggleFolder = (itemId) => {
+    setExpandedFolders((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const handleToggleCategory = (categoryId, items = []) => {
+    const folderIds = collectFolderIds(items);
+    setExpandedCategories((prev) => {
+      const nextExpanded = !prev[categoryId];
+      if (nextExpanded) {
+        setExpandedFolders((prevFolders) => {
+          const nextFolders = { ...prevFolders };
+          folderIds.forEach((folderId) => {
+            nextFolders[folderId] = false;
+          });
+          return nextFolders;
+        });
+      }
+      return {
+        ...prev,
+        [categoryId]: nextExpanded,
+      };
     });
   };
 
@@ -547,9 +647,8 @@ function Sidebar() {
     const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
     const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
     if (!postViewer && !cardsViewer) {
-      // Not on the main forum page — pass the postId via sessionStorage so the
-      // forum-post block can read it reliably on mount without any timing issues.
       sessionStorage.setItem('af_open_post', postId);
+      closeIfOverlay();
       window.location.href = 'http://localhost:3000/';
       return;
     }
@@ -558,6 +657,7 @@ function Sidebar() {
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
     postWrappers.forEach((el) => { el.style.display = 'block'; });
+    closeIfOverlay();
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
   };
 
@@ -577,7 +677,7 @@ function Sidebar() {
       const catMatches = cat.name.toLowerCase().includes(searchTerm);
       const filteredItems = filterItems(cat.items || [], searchTerm);
       if (catMatches || filteredItems.length > 0) {
-        return { ...cat, items: filteredItems.length > 0 ? filteredItems : cat.items };
+        return { ...cat, items: filteredItems };
       }
       return null;
     }).filter(Boolean)
@@ -608,8 +708,8 @@ function Sidebar() {
         </div>
 
         ${currentUser && html`
-          <div class="sidebar-item ${!activeSubcategory && !window.location.search.includes('mine=true') ? 'active' : ''}"
-            onClick=${() => { window.location.href = 'http://localhost:3000'; }}>
+          <div class="sidebar-item"
+            onClick=${() => { closeIfOverlay(); window.location.href = 'http://localhost:3000'; }}>
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             Home
           </div>
@@ -689,6 +789,10 @@ function Sidebar() {
                     currentUser=${currentUser}
                     onSubcategoryClick=${handleSubcategoryClick}
                     onDeleteCategory=${handleDelete}
+                    onToggleCategory=${handleToggleCategory}
+                    expandedCategories=${expandedCategories}
+                    onToggleFolder=${handleToggleFolder}
+                    expandedFolders=${expandedFolders}
                     searchTerm=${searchTerm}
                   />
                 `)

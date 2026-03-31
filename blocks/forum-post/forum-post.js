@@ -257,7 +257,7 @@ const ForumPost = ({ blockEl }) => {
           copyBtn.classList.remove('copied');
           copyBtn.title = 'Copy code';
         }, 1800);
-      }).catch(() => {});
+      }).catch(() => { });
     });
 
     wrapper.appendChild(tabBar);
@@ -320,11 +320,8 @@ const ForumPost = ({ blockEl }) => {
         const url = `${API_BASE}/posts/${postId}`;
 
         const response = await fetch(url);
-        console.log('[handleLoadPost] fetch response ok?', response.ok, 'status:', response.status);
-
         if (response.ok) {
           const data = await response.json();
-          console.log('[handleLoadPost] data.success?', data.success, 'has post?', !!data.post);
           if (data.success && data.post) {
             const fetchedPost = data.post;
             const cb = fetchedPost.createdBy;
@@ -346,7 +343,6 @@ const ForumPost = ({ blockEl }) => {
               status: fetchedPost.status || 'published',
               comments: [],
             };
-            console.log('[handleLoadPost] Calling setPost with title:', transformedPost.title);
             setPost(transformedPost);
 
             // ── View increment — skip for the post's own author ───────────────
@@ -357,7 +353,7 @@ const ForumPost = ({ blockEl }) => {
               const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
               if (!viewedPosts.includes(postId)) {
                 // Fire-and-forget — increment on the server
-                fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => {});
+                fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => { });
                 viewedPosts.push(postId);
                 localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
                 // Show the incremented count locally too
@@ -444,17 +440,14 @@ const ForumPost = ({ blockEl }) => {
     // Cross-page navigation: decorate() already read sessionStorage and
     // set pendingCrossPagePostId + injected a <style> to hide cards.
     // Call the handler directly — the listener is already attached above.
-    console.log('[forum-post useEffect] pendingCrossPagePostId =', pendingCrossPagePostId);
     if (pendingCrossPagePostId) {
       const pid = pendingCrossPagePostId;
       pendingCrossPagePostId = null;
-      console.log('[forum-post useEffect] Calling handleLoadPost with pid =', pid);
       handleLoadPost({ detail: { postId: pid } }).then(() => {
         // We purposefully leave the `af-hide-cards-initial` style tag in the DOM.
         // It provides a guaranteed CSS-level block on the cards wrapper.
         // It will be cleaned up only when the user explicitly clicks "Home" or "Back"
         // (inside handleShowCards).
-        console.log('[forum-post useEffect] handleLoadPost completed');
       });
     }
 
@@ -765,12 +758,9 @@ export default function decorate(block) {
   block.innerHTML = '';
 
   const storedPostId = sessionStorage.getItem('af_open_post');
-  console.log('[forum-post decorate] storedPostId =', storedPostId);
-
   if (storedPostId) {
     sessionStorage.removeItem('af_open_post');
     pendingCrossPagePostId = storedPostId;
-    console.log('[forum-post decorate] Set pendingCrossPagePostId =', storedPostId);
 
     // ── Force the block AND every ancestor visible immediately ──
     // AEM's loadSections() sets sections to display:none and only reveals

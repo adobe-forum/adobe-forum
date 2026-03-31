@@ -55,6 +55,7 @@ router.get('/', async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Number(req.query.limit) || 12);
     const search = req.query.search?.trim();
+    const category = req.query.category?.trim();
     const author = req.query.author?.trim();
     const isMine = req.query.mine === 'true';
 
@@ -107,6 +108,11 @@ router.get('/', async (req, res) => {
 
       query.$and = query.$and || [];
       query.$and.push(searchFilter);
+    }
+
+    if (category) {
+      query.$and = query.$and || [];
+      query.$and.push({ category });
     }
 
     if (query.$and && query.$and.length === 0) delete query.$and;

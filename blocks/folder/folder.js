@@ -846,9 +846,6 @@ function FolderApp() {
     return () => window.removeEventListener('folder:open', onOpen);
   }, []);
   const handleSelect = (name, path, folderId = null) => {
-    localStorage.setItem('folder:pending-selection', JSON.stringify({
-      name, path: path || name, folderId, ts: Date.now(),
-    }));
     window.dispatchEvent(new CustomEvent('folder:selected', {
       detail: { name, path: path || name, folderId },
     }));

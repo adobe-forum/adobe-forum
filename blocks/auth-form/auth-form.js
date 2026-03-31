@@ -1,5 +1,5 @@
 import { h, render } from '../../vendor/preact.js';
-import { useState } from '../../vendor/preact-hooks.js';
+import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import {
   loginUser,
@@ -7,6 +7,7 @@ import {
   forgotPassword,
   getMe,
 } from './auth-api.js';
+import clearClientAuthState from '../../scripts/auth-state.js';
 
 const html = htm.bind(h);
 
@@ -44,6 +45,18 @@ function emailValidator(v) {
   if (!isValidEmailFormat(t)) return 'Enter a valid email address.';
   if (!isAdobeEmail(t)) return 'Only Adobe corporate email addresses are allowed.';
   return null;
+}
+
+function storeClientAuthState(user, loginAt) {
+  if (!user) return;
+
+  /* eslint-disable no-underscore-dangle */
+  const storedUser = { ...user };
+  if (storedUser._id && !storedUser.id) storedUser.id = String(storedUser._id);
+  if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
+  /* eslint-enable no-underscore-dangle */
+  if (loginAt) storedUser.loginAt = loginAt;
+  localStorage.setItem('af_user', JSON.stringify(storedUser));
 }
 
 /* ── 3. SVG icon components ─────────────────────────────────────────────── */
@@ -568,6 +581,44 @@ function AuthForm({ initPanel }) {
     </div>`;
 }
 
+function AuthEntry({ initPanel }) {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const redirectHandledRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getMe()
+      .then((data) => {
+        if (cancelled) return;
+        storeClientAuthState(data.user, data.loginAt);
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        clearClientAuthState();
+        if (cancelled) return;
+        setIsAuthenticated(false);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked || !isAuthenticated || redirectHandledRef.current) return;
+    redirectHandledRef.current = true;
+    window.location.replace('/');
+  }, [authChecked, isAuthenticated]);
+
+  if (!authChecked) return null;
+  if (isAuthenticated) return null;
+
+  return html`<${AuthForm} initPanel=${initPanel}/>`;
+}
+
 /* ── 12. EDS block decorator ────────────────────────────────────────────── */
 export default function decorate(block) {
   const cls = [...block.classList];
@@ -584,8 +635,5 @@ export default function decorate(block) {
 
   const mount = document.createElement('div');
   document.body.append(mount);
-
-  getMe()
-    .then(() => { window.location.replace('/'); })
-    .catch(() => { render(html`<${AuthForm} initPanel=${initPanel}/>`, mount); });
+  render(html`<${AuthEntry} initPanel=${initPanel}/>`, mount);
 }

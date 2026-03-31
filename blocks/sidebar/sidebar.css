@@ -10,33 +10,78 @@
   --sidebar-transition: 0.2s ease;
 
   /* ── Spectrum 1 SideNav color tokens ──────────── */
-  --sn-bg:              var(--sp-gray-50);        /* Panel background  */
-  --sn-border:          var(--sp-gray-200);       /* Right border      */
-  --sn-item-text:       var(--sp-gray-800);       /* Default label     */
-  --sn-item-text-hover: var(--sp-gray-900);       /* Hover label       */
-  --sn-item-bg-hover:   var(--sp-gray-100);       /* Hover fill        */
-  --sn-item-bg-active:  var(--sp-gray-200);       /* Active fill       */
-  --sn-item-text-active:var(--sp-gray-900);       /* Active label      */
-  --sn-section-label:   var(--sp-gray-600);       /* "TOPICS" etc.     */
-  --sn-muted:           var(--sp-gray-500);       /* Icons, placeholders */
-  --sn-folder:          #e68619;                  /* Folder amber      */
-  --sn-folder-open:     #cb6f10;
-  --sn-file:            var(--sp-gray-500);
-  --sn-error:           var(--sp-red-600);
-  --sn-focus-ring:      var(--sp-blue-500);
+  --sn-bg: var(--sp-gray-50);
+
+  /* Panel background  */
+  --sn-border: var(--sp-gray-200);
+
+  /* Right border      */
+  --sn-item-text: var(--sp-gray-800);
+
+  /* Default label     */
+  --sn-item-text-hover: var(--sp-gray-900);
+
+  /* Hover label       */
+  --sn-item-bg-hover: var(--sp-gray-100);
+
+  /* Hover fill        */
+  --sn-item-bg-active: var(--sp-gray-200);
+
+  /* Active fill       */
+  --sn-item-text-active: var(--sp-gray-900);
+
+  /* Active label      */
+  --sn-section-label: var(--sp-gray-600);
+
+  /* "TOPICS" etc.     */
+  --sn-muted: var(--sp-gray-500);
+
+  /* Icons, placeholders */
+  --sn-folder: #e68619;
+
+  /* Folder amber      */
+  --sn-folder-open: #cb6f10;
+  --sn-file: var(--sp-gray-500);
+  --sn-error: var(--sp-red-600);
+  --sn-focus-ring: var(--sp-blue-500);
 
   /* ── Spectrum 1 typography ────────────────────── */
-  --sn-font-size:       14px;   /* Spectrum body-S   */
-  --sn-label-size:      11px;   /* Section label     */
-  --sn-label-tracking:  0.06em;
+  --sn-font-size: 14px;
+
+  /* Spectrum body-S   */
+  --sn-label-size: 11px;
+
+  /* Section label     */
+  --sn-label-tracking: 0.06em;
 
   /* ── Spectrum 1 geometry (medium scale) ───────── */
-  --sn-item-h:          32px;   /* Nav item height   */
-  --sn-padding-x:       16px;   /* Panel side pad    */
-  --sn-padding-y:       20px;   /* Panel top/bottom  */
-  --sn-item-radius:     var(--sp-radius-md);  /* 4px */
-  --sn-section-gap:     24px;   /* Between sections  */
-  --sn-item-gap:        2px;    /* Between items     */
+  --sn-item-h: 32px;
+
+  /* Nav item height   */
+  --sn-item-pad-y: 6px;
+
+  /* Item top/bottom padding */
+  --sn-item-pad-x: 8px;
+
+  /* Item left/right padding */
+  --sn-padding-x: 16px;
+
+  /* Panel side pad    */
+  --sn-padding-y: 20px;
+
+  /* Panel top/bottom  */
+  --sn-item-radius: var(--sp-radius-md);
+
+  /* 4px */
+  --sn-section-top: 16px;
+
+  /* Section header top gap   */
+  --sn-section-bottom: 4px;
+
+  /* Section header bottom gap */
+  --sn-item-gap: 2px;
+
+  /* Between items     */
 }
 
 /* =============================================
@@ -56,7 +101,7 @@
     left: calc(-1 * var(--sidebar-width));
   }
 
-  @media (width < 768px) {
+  @media (width <= 1024px) {
     left: calc(-1 * var(--sidebar-width));
     z-index: 250;
 
@@ -73,12 +118,14 @@
 .sidebar-backdrop {
   display: none;
 
-  @media (width < 768px) {
+  @media (width <= 1024px) {
     display: block;
     position: fixed;
     inset: 0;
     background: rgb(0 0 0 / 40%);
-    z-index: -1;
+    z-index: 0;
+    touch-action: none;
+    overscroll-behavior: none;
   }
 }
 
@@ -87,6 +134,8 @@
    ============================================= */
 
 .sidebar {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   background: var(--sn-bg);
@@ -115,9 +164,7 @@
       font-family: inherit;
       box-sizing: border-box;
       background:
-        var(--sp-gray-100)
-        url('data:image/svg+xml;utf8,<svg fill="none" stroke="%239a958e" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>')
-        no-repeat 10px center / 14px;
+        var(--sp-gray-100) url('data:image/svg+xml;utf8,<svg fill="none" stroke="%239a958e" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>') no-repeat 10px center / 14px;
       color: var(--sn-item-text);
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -139,14 +186,14 @@
     }
   }
 
-  /* ── Quick-nav items (Home, etc.) ─────────── */
+  /* ── Quick-nav items (Home, Pending Reviews, My Requests) ── */
   & .sidebar-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    height: var(--sn-item-h);
+    min-height: var(--sn-item-h);
     margin: 0 8px var(--sn-item-gap);
-    padding: 0 8px;
+    padding: var(--sn-item-pad-y) var(--sn-item-pad-x);
     border-radius: var(--sn-item-radius);
     color: var(--sn-item-text);
     font-size: var(--sn-font-size);
@@ -154,6 +201,7 @@
     cursor: pointer;
     transition: background 0.13s;
     user-select: none;
+    background: transparent;
 
     &:hover {
       background: var(--sn-item-bg-hover);
@@ -183,13 +231,8 @@
     letter-spacing: var(--sn-label-tracking);
     text-transform: uppercase;
     color: var(--sn-section-label);
-    padding: var(--sn-section-gap) var(--sn-padding-x) 6px;
+    padding: var(--sn-section-top) var(--sn-padding-x) var(--sn-section-bottom);
     flex-shrink: 0;
-
-    /* no top gap for very first section */
-    &:first-of-type {
-      padding-top: 12px;
-    }
   }
 
   /* ── Category scrollable list ────────────── */
@@ -202,13 +245,17 @@
     scrollbar-width: thin;
     scrollbar-color: var(--sn-border) transparent;
 
-    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
 
     &::-webkit-scrollbar-thumb {
       background: var(--sn-border);
       border-radius: 2px;
 
-      &:hover { background: var(--sp-gray-300); }
+      &:hover {
+        background: var(--sp-gray-300);
+      }
     }
   }
 
@@ -222,9 +269,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    height: var(--sn-item-h);
+    min-height: var(--sn-item-h);
     margin: 0 8px var(--sn-item-gap);
-    padding: 0 8px;
+    padding: var(--sn-item-pad-y) var(--sn-item-pad-x);
     border-radius: var(--sn-item-radius);
     cursor: pointer;
     font-size: var(--sn-font-size);
@@ -279,7 +326,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    height: var(--sn-item-h);
+    min-height: var(--sn-item-h);
+    padding-top: var(--sn-item-pad-y);
+    padding-bottom: var(--sn-item-pad-y);
     border-radius: var(--sn-item-radius);
     cursor: pointer;
     position: relative;
@@ -308,7 +357,7 @@
     list-style: none;
     position: relative;
 
-    &.is-folder > .tree-item-content {
+    &.is-folder>.tree-item-content {
       font-weight: 400;
     }
   }
@@ -322,6 +371,21 @@
     align-items: center;
     justify-content: center;
     color: var(--sn-muted);
+  }
+
+  & .tree-toggle {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  & .tree-toggle[hidden] {
+    display: none;
   }
 
   & .tree-chevron-spacer {
@@ -371,7 +435,7 @@
   & .sidebar-pending-list {
     list-style: none;
     margin: 0;
-    padding: 2px 0 8px var(--sn-padding-x);
+    padding: 0 0 8px;
   }
 
   /* ── Empty / loading / error states ─────── */
@@ -554,7 +618,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: var(--sp-height-sm);   /* 32px */
+  height: var(--sp-height-sm);
+
+  /* 32px */
   padding: 0 16px;
   font-size: 14px;
   font-weight: 700;
