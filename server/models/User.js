@@ -34,6 +34,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  // Timestamp of the most recent login. Persisted to the DB so it
+  // survives session expiry and page reloads (session loginAt is preferred
+  // when available).
+  loginAt: {
+    type: Date,
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -57,8 +64,7 @@ userSchema.methods.comparePassword = function comparePassword(plain) {
   return bcrypt.compare(plain, this.password);
 };
 
-// Indexes for efficient queries
-// userSchema.index({ email: 1 });
+// The unique:true on email already creates an index — no need to add one manually.
 userSchema.index({ resetToken: 1 });
 
 const User = mongoose.model('User', userSchema);
