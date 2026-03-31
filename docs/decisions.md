@@ -4,6 +4,39 @@
 
 ---
 
+## [2026-03-31] Mobile Page Gutter Standardization - Shared Wrapper Owns Side Padding
+
+**Decision:** Standardize mobile page side spacing by making the shared section wrapper the source of truth for horizontal gutters, and remove extra horizontal padding from page-shell blocks like `create-post`, `edit-post`, and `forum-post`.
+
+**Root cause:** `main > .section > div` in `styles.css` already applied horizontal page padding, but page-shell blocks were also adding their own left/right padding on top. On mobile that stacked the two values, making pages like create-post, edit-post, and forum-post appear narrower than the shared layout intended.
+
+**Fix:**
+- Added shared gutter tokens in `styles.css` (`--page-gutter`, `--page-gutter-lg`)
+- Updated the shared section wrapper to use those tokens
+- Removed horizontal padding from `.create-post`, `.edit-post`, and the mobile `.forum-post-wrapper` rule, leaving only vertical page spacing in those blocks
+
+**Reason:** Horizontal page gutters should be owned globally so pages line up consistently. Page blocks should only add their own horizontal padding when they truly need an internal component-specific offset.
+
+---
+
+## [2026-03-31] Auth Rehydration and Cards Fetch Standardization
+
+**Decision:** Treat the server session as the source of truth when `af_user` is missing, and make the cards view use credentialed `/api/posts` requests for all list, mine, and category states.
+
+**Root cause:** `cards-display` redirected purely on missing `localStorage.af_user`, while `auth-form` could confirm a still-valid session via `/api/auth/me` and redirect home without rebuilding `af_user`. That created a redirect loop when local storage was cleared but the session cookie remained valid. The cards view also used an invalid category endpoint, omitted `credentials: 'include'`, and refetched on broad lifecycle events like `pageshow` and `visibilitychange`.
+
+**Fix:**
+- Rehydrate `af_user` from `/api/auth/me` when a valid session exists
+- Persist the restored user in `auth-form` before redirecting home
+- Add `credentials: 'include'` to cards fetches
+- Route category filtering through `/api/posts?category=...` and support that query on the backend
+- Remove unconditional `pageshow` and `visibilitychange` refetch triggers
+- Preserve "My Posts" state unless a refresh event explicitly asks to reset the view
+
+**Reason:** The client indicator should follow the session, not fight it. Centralizing list fetching on `/api/posts` also keeps frontend filters aligned with the backend API and avoids redundant network churn.
+
+---
+
 ## [2026-03-31] Sidebar Overlay Backdrop - Intercept Background Gestures
 
 **Decision:** In overlay mode, place the sidebar backdrop above the page content and below the sidebar panel so it intercepts taps and scroll gestures outside the panel.

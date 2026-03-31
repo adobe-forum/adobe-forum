@@ -47,6 +47,18 @@ function emailValidator(v) {
   return null;
 }
 
+function storeClientAuthState(user, loginAt) {
+  if (!user) return;
+
+  /* eslint-disable no-underscore-dangle */
+  const storedUser = { ...user };
+  if (storedUser._id && !storedUser.id) storedUser.id = String(storedUser._id);
+  if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
+  /* eslint-enable no-underscore-dangle */
+  if (loginAt) storedUser.loginAt = loginAt;
+  localStorage.setItem('af_user', JSON.stringify(storedUser));
+}
+
 /* ── 3. SVG icon components ─────────────────────────────────────────────── */
 const IconEye = () => html`
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -578,8 +590,9 @@ function AuthEntry({ initPanel }) {
     let cancelled = false;
 
     getMe()
-      .then(() => {
+      .then((data) => {
         if (cancelled) return;
+        storeClientAuthState(data.user, data.loginAt);
         setIsAuthenticated(true);
       })
       .catch(() => {

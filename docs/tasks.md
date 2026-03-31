@@ -45,6 +45,8 @@
 ## ✅ Completed
 
 ### 2026-03-31
+- [x] **Auth + cards state sync fix**: Rehydrated `af_user` from a valid server session, standardized cards fetches to include session credentials, removed duplicate `pageshow`/`visibilitychange` refetches, preserved "My Posts" during refresh events, and moved category filtering onto `/api/posts?category=...`
+- [x] **Mobile page gutter standardization**: Moved page side spacing to shared layout tokens and removed extra horizontal padding from create-post, edit-post, and forum-post so mobile left/right spacing matches the shared page wrapper
 - [x] **Sidebar - backdrop interaction fix**: Raised the mobile/tablet backdrop above page content so it now catches touch/scroll gestures outside the panel and prevents background scrolling while the overlay is open
 - [x] **Sidebar - overlay scroll lock fix**: Locked the page's `main` scroll container alongside `body` when the sidebar is open on mobile/tablet so background content no longer scrolls behind the overlay
 - [x] **Auth - expired session loop fix**: Added a one-time auth check gate on `auth-form` and made header `401` handling clear stale client auth without recursive logout redirects

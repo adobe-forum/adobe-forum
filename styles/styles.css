@@ -111,6 +111,8 @@
 
   /* --- Page spacing tokens --- */
   --page-max-width: 900px;        /* standard content column width     */
+  --page-gutter: 16px;            /* horizontal page gutter, mobile    */
+  --page-gutter-lg: 32px;         /* horizontal page gutter, desktop   */
   --page-v-top: 24px;             /* vertical top padding, mobile       */
   --page-v-bottom: 56px;          /* vertical bottom padding, mobile    */
   --page-v-top-lg: 36px;          /* vertical top padding, desktop      */
@@ -424,7 +426,7 @@ main>.section>div {
 
   /* FIX: explicit width */
   margin: auto;
-  padding: 0 24px;
+  padding: 0 var(--page-gutter, 16px);
   box-sizing: border-box;
 
   /* FIX: padding doesn't add to width */
@@ -470,7 +472,7 @@ footer {
   }
 
   main>.section>div {
-    padding: 0 32px;
+    padding: 0 var(--page-gutter-lg, 32px);
   }
 }
 
@@ -488,6 +490,6 @@ footer {
   }
 
   main>.section>div {
-    padding: 0 16px;
+    padding: 0 var(--page-gutter, 16px);
   }
 }
