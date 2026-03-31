@@ -1687,6 +1687,7 @@ function findSidebarItemInCategories(categories, targetId) {
   const walk = (items) => {
     for (let i = 0; i < items.length; i += 1) {
       const item = items[i];
+      // eslint-disable-next-line no-underscore-dangle
       if (String(item._id || item.id || '') === String(targetId)) return item;
       const found = walk(item.children || []);
       if (found) return found;
@@ -1718,6 +1719,7 @@ function findFolderIdByPath(categories, path) {
     items = currentFolder.children || [];
   }
 
+  // eslint-disable-next-line no-underscore-dangle
   return currentFolder ? String(currentFolder._id || currentFolder.id || '') : null;
 }
 
@@ -1816,7 +1818,10 @@ function EditPost() {
 
           let restoredFolderId = null;
           if (draft.sidebarItemId) {
-            const sidebarItem = findSidebarItemInCategories(data.categories || [], draft.sidebarItemId);
+            const sidebarItem = findSidebarItemInCategories(
+              data.categories || [],
+              draft.sidebarItemId,
+            );
             restoredFolderId = sidebarItem?.parentId ? String(sidebarItem.parentId) : null;
           }
 
@@ -1897,7 +1902,8 @@ function EditPost() {
               if (!renameResponse.ok) throw new Error('Sidebar rename failed');
             }
 
-            const locationChanged = category !== originalCategory || (folderId || null) !== originalFolderId;
+            const locationChanged = category !== originalCategory
+              || (folderId || null) !== originalFolderId;
             if (locationChanged) {
               const moveResponse = await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
                 method: 'PATCH',

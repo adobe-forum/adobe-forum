@@ -1,4 +1,4 @@
-export function clearClientAuthState() {
+export default function clearClientAuthState() {
   try {
     localStorage.removeItem('af_user');
   } catch {

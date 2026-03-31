@@ -7,7 +7,7 @@ import {
   forgotPassword,
   getMe,
 } from './auth-api.js';
-import { clearClientAuthState } from '../../scripts/auth-state.js';
+import clearClientAuthState from '../../scripts/auth-state.js';
 
 const html = htm.bind(h);
 

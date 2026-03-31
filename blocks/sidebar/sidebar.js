@@ -234,8 +234,8 @@ function TreeItem({
         `}
         <span class="tree-icon ${isFolder ? 'tree-icon-folder' : 'tree-icon-file'} ${(isFolder && isExpanded) ? 'is-open' : ''}">
           ${isFolder
-      ? html`<${FolderIcon} expanded=${isExpanded} />`
-      : html`<${FileIcon} />`}
+    ? html`<${FolderIcon} expanded=${isExpanded} />`
+    : html`<${FileIcon} />`}
         </span>
         <span class="tree-label"><${HighlightedText} text=${item.title} highlight=${searchTerm} /></span>
 
@@ -331,7 +331,7 @@ function CategoryItem({
       <ul class="tree-list" aria-hidden=${String(isCollapsed)}
         style=${{ display: isCollapsed ? 'none' : 'block' }}>
         ${hasItems
-      ? sortedItems.map((item) => html`
+    ? sortedItems.map((item) => html`
               <${TreeItem} key=${item.id} item=${item} activeItem=${activeSubcategory}
                 currentUser=${currentUser}
                 onItemClick=${(itemId, postId) => onSubcategoryClick(itemId, postId)}
@@ -340,8 +340,8 @@ function CategoryItem({
                 expandedFolders=${expandedFolders}
                 level=${1} searchTerm=${searchTerm} />
             `)
-      : html`<div class="no-items">No items yet</div>`
-    }
+    : html`<div class="no-items">No items yet</div>`
+}
       </ul>
     </li>
   `;
@@ -695,9 +695,9 @@ function Sidebar() {
     <div class="sidebar-root">
       <button class="sidebar-hamburger" onClick=${toggleSidebar} aria-label=${isOpen ? 'Close sidebar' : 'Open sidebar'}>
         ${isOpen
-      ? html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-      : html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`
-    }
+    ? html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+    : html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`
+}
       </button>
 
       <div class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
@@ -725,18 +725,18 @@ function Sidebar() {
           ${pendingOpen && html`
           <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
             ${pendingReviews.length > 0 ? pendingReviews.map((r) => {
-      // eslint-disable-next-line no-underscore-dangle
-      const reviewId = r._id;
-      const authorName = r.authorId
-        ? (`${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`).trim() || 'Unknown'
-        : 'Unknown';
-      return html`
+    // eslint-disable-next-line no-underscore-dangle
+    const reviewId = r._id;
+    const authorName = r.authorId
+      ? (`${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`).trim() || 'Unknown'
+      : 'Unknown';
+    return html`
               <li key=${reviewId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #BA7517;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
                 <div style="color:var(--text3);font-size:10px;">by ${authorName}</div>
               </li>
             `;
-    }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No reviews pending</li>`}
+  }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No reviews pending</li>`}
           </ul>
           `}
 
@@ -749,21 +749,21 @@ function Sidebar() {
           ${requestsOpen && html`
           <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
             ${myRequests.length > 0 ? myRequests.map((r) => {
-      // eslint-disable-next-line no-underscore-dangle
-      const reqId = r._id;
-      const reviewedCount = (r.reviewers || []).filter((rv) => rv.status !== 'pending').length;
-      const totalCount = (r.reviewers || []).length;
-      let statusLabel;
-      if (r.overallStatus === 'approved') statusLabel = 'Approved';
-      else if (r.overallStatus === 'changes_requested') statusLabel = 'Changes requested';
-      else statusLabel = `${reviewedCount}/${totalCount} reviewed`;
-      return html`
+    // eslint-disable-next-line no-underscore-dangle
+    const reqId = r._id;
+    const reviewedCount = (r.reviewers || []).filter((rv) => rv.status !== 'pending').length;
+    const totalCount = (r.reviewers || []).length;
+    let statusLabel;
+    if (r.overallStatus === 'approved') statusLabel = 'Approved';
+    else if (r.overallStatus === 'changes_requested') statusLabel = 'Changes requested';
+    else statusLabel = `${reviewedCount}/${totalCount} reviewed`;
+    return html`
               <li key=${reqId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #185FA5;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
                 <div style="color:var(--text3);font-size:10px;">${statusLabel}</div>
               </li>
             `;
-    }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No requests sent</li>`}
+  }) : html`<li style="font-size:12px;color:var(--text3);padding:4px 12px 4px 28px;font-style:italic;">No requests sent</li>`}
           </ul>
           `}
         `}
@@ -781,7 +781,7 @@ function Sidebar() {
         ${!loading && !error && html`
           <ul class="category-list">
             ${filteredCategories.length > 0
-        ? filteredCategories.map((category) => html`
+    ? filteredCategories.map((category) => html`
                   <${CategoryItem}
                     key=${category.id}
                     category=${category}
@@ -796,8 +796,8 @@ function Sidebar() {
                     searchTerm=${searchTerm}
                   />
                 `)
-        : html`<div class="no-results">No categories found</div>`
-      }
+    : html`<div class="no-results">No categories found</div>`
+}
           </ul>
         `}
       </aside>

@@ -2,7 +2,7 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import { decorateBlock, loadBlock } from '../../scripts/aem.js';
-import { renderTabbedCodeBlocks } from '../../scripts/code-tabs.js';
+import renderTabbedCodeBlocks from '../../scripts/code-tabs.js';
 
 const html = htm.bind(h);
 
@@ -1347,20 +1347,20 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
               title="Code Block"
               id="ce-code-block-btn"
               onMouseDown=${(e) => {
-      e.preventDefault();
-      const editor = editorRef.current;
-      if (!editor) return;
-      const sel = window.getSelection();
-      let block = sel?.anchorNode;
-      while (block && block.parentNode !== editor) block = block.parentNode;
-      if (block && block.tagName === 'PRE') {
-        // toggle off directly
-        execFormat('codeBlock', '');
-        setShowCodeLangPicker(false);
-      } else {
-        setShowCodeLangPicker((v) => !v);
-      }
-    }}
+    e.preventDefault();
+    const editor = editorRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    let block = sel?.anchorNode;
+    while (block && block.parentNode !== editor) block = block.parentNode;
+    if (block && block.tagName === 'PRE') {
+      // toggle off directly
+      execFormat('codeBlock', '');
+      setShowCodeLangPicker(false);
+    } else {
+      setShowCodeLangPicker((v) => !v);
+    }
+  }}
               dangerouslySetInnerHTML=${{ __html: icons.codeBlock || '' }}
             />
             ${showCodeLangPicker && html`
@@ -1372,10 +1372,10 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
                     role="option"
                     className=${`ce-lang-option ce-lang-${lang.value}`}
                     onMouseDown=${(e) => {
-        e.preventDefault();
-        setShowCodeLangPicker(false);
-        execFormat('codeBlock', lang.value);
-      }}
+    e.preventDefault();
+    setShowCodeLangPicker(false);
+    execFormat('codeBlock', lang.value);
+  }}
                   >
                     ${lang.label}
                   </button>
@@ -1652,7 +1652,6 @@ function ConfidentialityDialog({ isOpen, onAgree, onDecline }) {
   `;
 }
 
-
 // REVIEWER PICKER DIALOG
 function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
   const [users, setUsers] = useState([]);
@@ -1829,6 +1828,7 @@ function findFolderIdByPath(categories, path) {
     items = currentFolder.children || [];
   }
 
+  // eslint-disable-next-line no-underscore-dangle
   return currentFolder ? String(currentFolder._id || currentFolder.id || '') : null;
 }
 

@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
-import { clearClientAuthState } from '../../scripts/auth-state.js';
+import clearClientAuthState from '../../scripts/auth-state.js';
 
 // ============================================
 // ICON COMPONENTS
