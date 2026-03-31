@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useEffect } from '../../vendor/preact-hooks.js';
+import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
+import clearClientAuthState from '../../scripts/auth-state.js';
 
 // ============================================
 // ICON COMPONENTS
@@ -709,6 +710,7 @@ function HeaderComponent() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [sessionWarning, setSessionWarning] = useState(false);
+  const authRedirectedRef = useRef(false);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
 
@@ -791,7 +793,7 @@ function HeaderComponent() {
     })();
 
     // No user in localStorage at all — nothing to time out, don't touch session
-    if (!storedUser) return () => {};
+    if (!storedUser) return () => { };
 
     const doLogout = () => {
       if (window.location.pathname.startsWith('/auth-form')) return;
@@ -800,6 +802,18 @@ function HeaderComponent() {
           localStorage.removeItem('af_user');
           window.location.replace('/auth-form');
         });
+    };
+
+    const handleUnauthorized = () => {
+      setSessionWarning(false);
+      clearClientAuthState();
+
+      if (authRedirectedRef.current) return;
+      authRedirectedRef.current = true;
+
+      if (!window.location.pathname.startsWith('/auth-form')) {
+        window.location.replace('/auth-form');
+      }
     };
 
     const scheduleTimers = (loginAt) => {
@@ -829,13 +843,12 @@ function HeaderComponent() {
 
     // Ask the server for the authoritative loginAt from the session store.
     // 200 → schedule from server loginAt (most accurate).
-    // 401 → session gone, logout.
+    // 401 → session gone, clear stale client auth and redirect once.
     // network error → fall back to localStorage loginAt, do NOT logout.
     fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
-          // Real session expiry — log out
-          doLogout();
+          handleUnauthorized();
           return null;
         }
         if (!r.ok) return null; // other server error — skip, don't logout
@@ -929,8 +942,19 @@ function HeaderComponent() {
           <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        Your session expires in 5 minutes.
-        <a href="http://localhost:3000/auth-form">Log in again</a> to stay signed in.
+        Your session expires in 5 minutes.${' '}
+        <button
+          type="button"
+          class="session-warning-login-btn"
+          onClick=${async () => {
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) { /* ignore network errors */ }
+    localStorage.removeItem('af_user');
+    window.location.replace('/auth-form');
+  }}
+        >Log in again</button>${' '}
+        to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
       </div>`}`;
 }

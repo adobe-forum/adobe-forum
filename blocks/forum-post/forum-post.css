@@ -10,12 +10,12 @@
   --post-line-nums: rgb(212 212 212 / 30%);
   --post-line-nums-border: rgb(212 212 212 / 15%);
 
-  max-width: 800px;
+  max-width: var(--page-max-width, 900px);
   margin: 0 auto;
   font-family: var(--body-font-family);
   font-size: 1rem;
   color: var(--sp-gray-800);
-  padding: 20px 20px 60px;
+  padding: 20px 0 60px;
   line-height: 1.7;
 
   /* ── Loading state ───────────────────────── */
@@ -972,6 +972,80 @@
       &:active:not(:disabled) {
         background: #0b5cb8;
       }
+    }
+  }
+
+  /* ── Mobile responsive ───────────────────── */
+
+  @media (width <= 768px) {
+    padding: 12px 0 48px;
+
+    /* Smaller post title */
+    & .post-title {
+      font-size: 1.5rem;
+      line-height: 1.25;
+    }
+
+    /* Title row: stack title and edit button vertically */
+    & .post-title-row {
+      flex-direction: column;
+      gap: 10px;
+
+      & .post-edit-btn {
+        align-self: flex-start;
+        margin-top: 0;
+      }
+    }
+
+    /* Meta row: stays inline — like and views on same line like desktop */
+    & .post-meta {
+      flex-wrap: wrap;
+      row-gap: 8px;
+      align-items: center;
+    }
+
+    /* Code tab bar: allow horizontal scroll instead of overflow */
+    .code-tabbar {
+      overflow-x: auto;
+      scrollbar-width: none; /* hide scrollbar on mobile */
+      -ms-overflow-style: none;
+      padding: 0 8px;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    /* Tab list: don't shrink tabs */
+    .code-tab-list {
+      flex-shrink: 0;
+    }
+
+    .code-tab {
+      padding: 0 14px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* Code body: taller height and smaller font for readability */
+    .code-body {
+      height: 260px;
+      font-size: 12px;
+
+      & .tabs-content {
+        overflow-x: auto;
+      }
+    }
+
+    /* Code lang badge: hidden on mobile — active tab already shows the language */
+    .code-lang-badge {
+      display: none;
+    }
+
+    /* Code tabs wrapper: no horizontal overflow leak */
+    .code-tabs-wrapper {
+      overflow: hidden;
+      margin: 16px 0;
     }
   }
 }

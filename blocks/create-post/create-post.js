@@ -2,6 +2,7 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import { decorateBlock, loadBlock } from '../../scripts/aem.js';
+import renderTabbedCodeBlocks from '../../scripts/code-tabs.js';
 
 const html = htm.bind(h);
 
@@ -1651,28 +1652,6 @@ function ConfidentialityDialog({ isOpen, onAgree, onDecline }) {
   `;
 }
 
-// STEP INDICATOR
-function StepIndicator({ currentStep }) {
-  const steps = ['Write', 'Confirm', 'Choose Reviewers'];
-  return html`
-    <div className="cp-step-indicator">
-      ${steps.map((label, i) => {
-    const stepNum = i + 1;
-    let cls = 'cp-step';
-    if (stepNum < currentStep) cls += ' cp-step-done';
-    else if (stepNum === currentStep) cls += ' cp-step-active';
-    return html`
-          <div key=${label} className=${cls}>
-            <div className="cp-step-circle">${stepNum < currentStep ? '\u2713' : stepNum}</div>
-            <span className="cp-step-label">${label}</span>
-          </div>
-          ${i < steps.length - 1 ? html`<div className="cp-step-line ${stepNum < currentStep ? 'cp-step-line-done' : ''}" />` : null}
-        `;
-  })}
-    </div>
-  `;
-}
-
 // REVIEWER PICKER DIALOG
 function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
   const [users, setUsers] = useState([]);
@@ -1690,7 +1669,7 @@ function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
       .then((data) => {
         if (data.success) setUsers(data.users || []);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingUsers(false));
   }, [isOpen]);
 
@@ -1781,138 +1760,10 @@ function InlinePreview({
 }) {
   const bodyRef = useRef(null);
 
-  // Language label map (same as forum-post)
-  const LANG_LABELS = {
-    html: 'HTML',
-    css: 'CSS',
-    javascript: 'JavaScript',
-    plaintext: 'Plain Text',
-  };
-
-  const COPY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-
-  // Scroll to top and build tabbed code viewer (same as forum-post)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (!bodyRef.current) return;
-
-    const preTags = bodyRef.current.querySelectorAll('pre');
-    if (preTags.length === 0) return;
-
-    // Collect snippet data before touching the DOM
-    const snippets = Array.from(preTags).map((pre) => ({
-      lang: pre.dataset.language || 'plaintext',
-      code: pre.textContent,
-    }));
-
-    // Build the outer wrapper
-    const wrapper = document.createElement('div');
-    wrapper.className = 'code-tabs-wrapper';
-
-    // Tab bar
-    const tabBar = document.createElement('div');
-    tabBar.className = 'code-tabbar';
-
-    const tabList = document.createElement('div');
-    tabList.className = 'code-tab-list';
-
-    // Copy button
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'code-copy-btn';
-    copyBtn.title = 'Copy code';
-    copyBtn.innerHTML = COPY_SVG;
-
-    tabBar.appendChild(tabList);
-    tabBar.appendChild(copyBtn);
-
-    // Panels container
-    const panelsContainer = document.createElement('div');
-    panelsContainer.className = 'code-panels';
-
-    let activeIndex = 0;
-
-    const activateTab = (idx) => {
-      activeIndex = idx;
-      tabList.querySelectorAll('.code-tab').forEach((t, ti) => {
-        t.classList.toggle('active', ti === idx);
-      });
-      panelsContainer.querySelectorAll('.code-panel').forEach((p, pi) => {
-        p.classList.toggle('active', pi === idx);
-      });
-    };
-
-    // Build each tab + panel
-    snippets.forEach(({ lang, code }, i) => {
-      const label = LANG_LABELS[lang] || lang.toUpperCase();
-
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = `code-tab${i === 0 ? ' active' : ''}`;
-      tab.textContent = label;
-      tab.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        activateTab(i);
-      });
-      tabList.appendChild(tab);
-
-      const panel = document.createElement('div');
-      panel.className = `code-panel${i === 0 ? ' active' : ''}`;
-
-      // Language badge
-      const badge = document.createElement('span');
-      badge.className = `code-lang-badge code-badge-${lang}`;
-      badge.textContent = lang === 'plaintext' ? 'TEXT' : lang.toUpperCase();
-      panel.appendChild(badge);
-
-      // Line numbers
-      const lines = code.split('\n');
-      if (lines[lines.length - 1] === '') lines.pop();
-
-      const gutter = document.createElement('div');
-      gutter.className = 'tabs-gutter';
-      lines.forEach((_, idx) => {
-        const span = document.createElement('span');
-        span.className = 'tabs-num';
-        span.textContent = idx + 1;
-        gutter.appendChild(span);
-      });
-
-      const content = document.createElement('div');
-      content.className = 'tabs-content';
-      content.textContent = code;
-
-      const codeBody = document.createElement('div');
-      codeBody.className = 'code-body';
-      codeBody.appendChild(gutter);
-      codeBody.appendChild(content);
-      panel.appendChild(codeBody);
-
-      panelsContainer.appendChild(panel);
-    });
-
-    // Copy button click
-    copyBtn.addEventListener('click', () => {
-      const activePanel = panelsContainer.querySelectorAll('.code-panel')[activeIndex];
-      const text = activePanel?.querySelector('.tabs-content')?.textContent || '';
-      navigator.clipboard.writeText(text).then(() => {
-        copyBtn.classList.add('copied');
-        copyBtn.title = 'Copied!';
-        setTimeout(() => {
-          copyBtn.classList.remove('copied');
-          copyBtn.title = 'Copy code';
-        }, 1800);
-      }).catch(() => {});
-    });
-
-    wrapper.appendChild(tabBar);
-    wrapper.appendChild(panelsContainer);
-
-    // Remove all <pre>s from the body
-    preTags.forEach((pre) => pre.remove());
-
-    // Append the tabbed viewer at the end of the post body
-    bodyRef.current.appendChild(wrapper);
+    renderTabbedCodeBlocks(bodyRef.current);
   }, [body]);
 
   return html`
@@ -1958,6 +1809,27 @@ function InlinePreview({
       </div>
     </div>
   `;
+}
+
+function findFolderIdByPath(categories, path) {
+  if (!path) return null;
+  const parts = path.split(' > ').map((part) => part.trim()).filter(Boolean);
+  if (parts.length <= 1) return null;
+
+  const [rootCategory, ...folderParts] = parts;
+  const category = (categories || []).find((cat) => cat.name === rootCategory);
+  if (!category) return null;
+
+  let items = category.items || [];
+  let currentFolder = null;
+  for (let i = 0; i < folderParts.length; i += 1) {
+    currentFolder = items.find((item) => item.isFolder && item.title === folderParts[i]);
+    if (!currentFolder) return null;
+    items = currentFolder.children || [];
+  }
+
+  // eslint-disable-next-line no-underscore-dangle
+  return currentFolder ? String(currentFolder._id || currentFolder.id || '') : null;
 }
 
 // CREATE POST
@@ -2017,29 +1889,27 @@ function CreatePost() {
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
-  // On mount: check sessionStorage for a saved draft (in case of refresh)
+  // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
   useEffect(() => {
+    const restoreFolderId = (draftCategory) => {
+      fetch('http://localhost:5000/api/sidebar/categories', { credentials: 'include' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data?.success) return;
+          setFolderId(findFolderIdByPath(data.categories || [], draftCategory || ''));
+        })
+        .catch(() => { /* non-fatal */ });
+    };
+
     const raw = sessionStorage.getItem('create-post-draft');
-    if (raw) {
-      try {
-        const draft = JSON.parse(raw);
-        localStorage.setItem('create-post-draft', raw);
-        sessionStorage.removeItem('create-post-draft');
-        setTitle(draft.title || '');
-        setBody(draft.body || '');
-        setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
-        setCategory(draft.category || '');
-      } catch { /* ignore corrupted draft */ }
-      return;
-    }
-    const saved = localStorage.getItem('create-post-draft');
-    if (!saved) return;
+    if (!raw) return;
     try {
-      const draft = JSON.parse(saved);
+      const draft = JSON.parse(raw);
       setTitle(draft.title || '');
       setBody(draft.body || '');
       setTags((draft.tags || []).map((tag) => tag.replace(/^#/, '')));
       setCategory(draft.category || '');
+      restoreFolderId(draft.category || '');
     } catch { /* ignore corrupted draft */ }
   }, []);
 
@@ -2122,7 +1992,7 @@ function CreatePost() {
         window.dispatchEvent(new CustomEvent('refresh-sidebar'));
         window.dispatchEvent(new CustomEvent('refresh-cards'));
         showToast('Your post has been submitted for review!', 'success');
-        localStorage.removeItem('create-post-draft');
+        sessionStorage.removeItem('create-post-draft');
         setTimeout(() => { window.history.back(); }, 2000);
       } else {
         showToast(result.error || 'Failed to create post', 'error');
@@ -2134,7 +2004,7 @@ function CreatePost() {
 
   const handleCancel = () => {
     showToast('Are you sure you want to discard this post?', 'warning', () => {
-      localStorage.removeItem('create-post-draft');
+      sessionStorage.removeItem('create-post-draft');
       window.location.href = '/';
     });
   };
@@ -2163,8 +2033,6 @@ function CreatePost() {
             <span><span className="required">*</span> Required fields</span>
           </div>
         </div>
-
-        <${StepIndicator} currentStep=${1} />
 
         <form onSubmit=${handleSubmit}>
           <div className="cp-form-section">

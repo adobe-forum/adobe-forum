@@ -853,20 +853,7 @@ function FolderApp() {
     window.addEventListener('folder:open', onOpen);
     return () => window.removeEventListener('folder:open', onOpen);
   }, []);
-  const handleSelect = async (name, path, folderId = null) => {
-    try {
-      await fetch(`${API_BASE}/user/folder-selection`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name, path: path || name, folderId, ts: Date.now(),
-        }),
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to save folder selection:', err);
-    }
+  const handleSelect = (name, path, folderId = null) => {
     window.dispatchEvent(new CustomEvent('folder:selected', {
       detail: { name, path: path || name, folderId },
     }));

@@ -11,7 +11,7 @@
   /* Block — minimal padding to reduce gap from nav */
   .search-bar {
     background: transparent;
-    padding: var(--spectrum-spacing-200) 0;  /* 8px — tight, no big gap */
+    padding: var(--spectrum-spacing-400) 0;  /* 16px — uniform gap matching cards-display */
     margin: 0;
     width: 100%;
     box-sizing: border-box;
@@ -124,6 +124,6 @@
   /* Mobile */
   @media (width <= 768px) {
     .search-bar { 
-      padding: var(--spectrum-spacing-100) 0; /* 4px — even tighter on mobile */
+      padding: 8px 0 4px; /* 4px bottom — stacks with cards 8px top = 12px total gap */
     } 
   }
