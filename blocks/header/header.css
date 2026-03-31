@@ -13,7 +13,6 @@ body.pp-scroll-lock {
 
 :root {
   --header-height: 64px;
-  --sidebar-width: 280px;
   --status-approved-bg:          #ecf8f4;
   --status-approved-border:      #268e6c;
   --status-approved-badge:       #d4f0e7;
@@ -28,8 +27,8 @@ body.pp-scroll-lock {
   --status-pending-badge-text:   #0d5dbf;
 }
 
-/* ── Prevent body scroll when sidebar is open on mobile ── */
-@media (width < 768px) {
+/* ── Prevent body scroll when sidebar is open on mobile/tablet ── */
+@media (width <= 1024px) {
   body.sidebar-is-open {
     overflow: hidden !important;
     overscroll-behavior: none !important;
@@ -171,7 +170,7 @@ nav.spectrum-nav {
    MOBILE (< 900px)
    ============================================= */
 
-@media (width < 900px) {
+@media (width <= 1024px) {
   nav.spectrum-nav {
     grid-template-columns: auto auto 1fr;
     padding: 0 20px;

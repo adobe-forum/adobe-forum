@@ -157,6 +157,27 @@
   }
 }
 
+/* ---- Tablet layout (768px–1024px) ---- */
+@media (768px <= width <= 1024px) {
+  .edit-post {
+    max-width: 100%;
+    padding: 24px 12px 48px;
+  }
+
+  .cp-page-header {
+    margin-bottom: 28px;
+  }
+
+  .cp-form-section {
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .ce-container {
+    min-height: 280px;
+  }
+}
+
 /* ---- Form section layout (icon + content) ---- */
 .cp-form-section {
   display: flex;
@@ -275,6 +296,73 @@
   cursor: pointer;
   background: #fff;
   color: #1a1a1a;
+}
+
+/* ── Tablet (768px–1024px): horizontal scroll allowed ── */
+@media (768px <= width <= 1024px) {
+  .ce-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .ce-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ce-toolbar-group {
+    flex: 0 0 auto;
+  }
+
+  .ce-size-select {
+    flex: 0 0 auto;
+  }
+}
+
+/* ── Mobile (<768px): wrap to rows, no scroll ── */
+@media (width < 768px) {
+  .ce-editor-wrapper {
+    border-radius: 12px;
+  }
+
+  .ce-toolbar {
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 6px;
+    gap: 2px;
+  }
+
+  .ce-toolbar-group {
+    flex: 0 0 auto;
+    gap: 1px;
+    padding: 0 2px;
+  }
+
+  .ce-toolbar-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+  }
+
+  .ce-toolbar-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ce-size-select {
+    height: 24px;
+    min-width: 60px;
+    font-size: 11px;
+    flex: 0 0 auto;
+  }
+
+  .ce-lang-picker {
+    left: 0;
+    right: auto;
+    max-width: min(200px, calc(100vw - 32px));
+  }
 }
 
 /* ---- Code-block split button & language picker ---- */
@@ -711,6 +799,19 @@
   }
 }
 
+@media (width < 768px) {
+  .ce-editor {
+    min-height: 240px;
+    padding: 12px 12px 16px;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  .ce-editor p {
+    margin: 0 0 10px;
+  }
+}
+
 /* Table context toolbar */
 .table-toolbar {
   display: flex;
@@ -720,6 +821,30 @@
   padding: 6px 8px;
   border-top: 1px solid #eceef1;
   background: #eef6ff;
+}
+
+@media (width < 768px) {
+  .table-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .table-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .table-toolbar-group {
+    flex: 0 0 auto;
+  }
+
+  .table-toolbar-btn {
+    min-height: 32px;
+    padding: 5px 10px;
+  }
 }
 
 .table-toolbar-group {

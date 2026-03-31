@@ -10,12 +10,12 @@
   --post-line-nums: rgb(212 212 212 / 30%);
   --post-line-nums-border: rgb(212 212 212 / 15%);
 
-  max-width: 800px;
+  max-width: var(--page-max-width, 900px);
   margin: 0 auto;
   font-family: var(--body-font-family);
   font-size: 1rem;
   color: var(--sp-gray-800);
-  padding: 20px 20px 60px;
+  padding: 20px 0 60px;
   line-height: 1.7;
 
   /* ── Loading state ───────────────────────── */

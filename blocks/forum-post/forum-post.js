@@ -257,7 +257,7 @@ const ForumPost = ({ blockEl }) => {
           copyBtn.classList.remove('copied');
           copyBtn.title = 'Copy code';
         }, 1800);
-      }).catch(() => {});
+      }).catch(() => { });
     });
 
     wrapper.appendChild(tabBar);
@@ -357,7 +357,7 @@ const ForumPost = ({ blockEl }) => {
               const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
               if (!viewedPosts.includes(postId)) {
                 // Fire-and-forget — increment on the server
-                fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => {});
+                fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => { });
                 viewedPosts.push(postId);
                 localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
                 // Show the incremented count locally too
