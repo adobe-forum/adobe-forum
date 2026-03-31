@@ -859,7 +859,9 @@ function FolderApp() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, path: path || name, folderId, ts: Date.now() }),
+        body: JSON.stringify({
+          name, path: path || name, folderId, ts: Date.now(),
+        }),
       });
     } catch (err) {
       // eslint-disable-next-line no-console
