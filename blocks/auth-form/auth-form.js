@@ -47,18 +47,6 @@ function emailValidator(v) {
   return null;
 }
 
-function storeClientAuthState(user, loginAt) {
-  if (!user) return;
-
-  /* eslint-disable no-underscore-dangle */
-  const storedUser = { ...user };
-  if (storedUser._id && !storedUser.id) storedUser.id = String(storedUser._id);
-  if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
-  /* eslint-enable no-underscore-dangle */
-  if (loginAt) storedUser.loginAt = loginAt;
-  localStorage.setItem('af_user', JSON.stringify(storedUser));
-}
-
 /* ── 3. SVG icon components ─────────────────────────────────────────────── */
 const IconEye = () => html`
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -224,13 +212,12 @@ function Field({
 }
 
 /* ── 6. Primary button with loading spinner ─────────────────────────────── */
-function SubmitBtn({ loading, onClick, children }) {
+function SubmitBtn({ loading, children }) {
   return html`
     <button
-      type="button"
+      type="submit"
       class=${`auth-form-btn${loading ? ' is-loading' : ''}`}
       disabled=${loading}
-      onClick=${onClick}
     >
       <span class="auth-form-btn-spinner" aria-hidden="true"/>
       <span class="auth-form-btn-label">${children}</span>
@@ -267,14 +254,7 @@ function LoginPanel({ onForgot, active }) {
 
     setLoading(true);
     try {
-      const data = await loginUser({ email, password });
-      if (data.user) {
-        // Store loginAt alongside user so session timer works across page reloads.
-        // _id is always preserved — needed for reviewer assignments even after expiry.
-        const toStore = { ...data.user };
-        if (data.loginAt) toStore.loginAt = data.loginAt;
-        localStorage.setItem('af_user', JSON.stringify(toStore));
-      }
+      await loginUser({ email, password });
       window.location.href = '/';
     } catch (err) {
       setErrors({ password: err.message });
@@ -319,7 +299,7 @@ function LoginPanel({ onForgot, active }) {
           Forgot password?
         </button>
 
-        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+        <${SubmitBtn} loading=${loading}>
           Sign in
         <//>
 
@@ -440,7 +420,7 @@ function SignupPanel({ active }) {
           onChange=${setField('confirm')} onBlur=${handleBlur('confirm')}
         />
 
-        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+        <${SubmitBtn} loading=${loading}>
           Create account
         <//>
 
@@ -500,7 +480,7 @@ function ForgotPanel({ onBack, active }) {
                 onBlur=${handleBlur}
               />
 
-              <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
+              <${SubmitBtn} loading=${loading}>
                 Send reset link
               <//>
 
@@ -592,7 +572,6 @@ function AuthEntry({ initPanel }) {
     getMe()
       .then((data) => {
         if (cancelled) return;
-        storeClientAuthState(data.user, data.loginAt);
         setIsAuthenticated(true);
       })
       .catch(() => {

@@ -1544,7 +1544,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
       <div className="tags-field">
         <div className="tags-input-container">
           ${tags.map((tag) => html`
-            <span key=${tag} className="tag-chip">
+            <div key=${tag} className="tag-chip">
               ${tag}
               <button
                 type="button"
@@ -1554,7 +1554,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
               >
                 ×
               </button>
-            </span>
+            </div>
           `)}
           <input
             ref=${inputRef}
@@ -1845,6 +1845,9 @@ function CreatePost() {
   const [showReviewerPicker, setShowReviewerPicker] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Pre-warm the folder block on mount so first click opens instantly
+  useEffect(() => { ensureFolder(); }, []);
+
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
     if (!onConfirm) {
@@ -1888,6 +1891,30 @@ function CreatePost() {
     window.addEventListener('folder:selected', onSelected);
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
+
+  // Truncate deep paths for display:
+  // Desktop: "Root / Sub1 / Sub2 / Sub3" — full path with / separators (CSS truncates if too long)
+  // The chip has overflow:hidden + text-overflow:ellipsis so it clips naturally on desktop
+  // Mobile: "Root / … / Last" when more than 2 parts
+  // Smart path truncation:
+  // - Short paths (≤ 30 chars or ≤ 3 parts): show full  e.g. "Test / test4 / test5"
+  // - Long paths: show "First / … / SecondLast / Last"
+  // - On mobile (narrow): CSS clips with ellipsis, but JS ensures at minimum First + Last visible
+  const truncatePath = (path) => {
+    if (!path) return '';
+    const parts = path.split(' > ');
+    if (parts.length === 1) return parts[0];
+    const full = parts.join(' / ');
+    if (full.length <= 30 || parts.length <= 3) return full;
+    return `${parts[0]} / … / ${parts[parts.length - 2]} / ${parts[parts.length - 1]}`;
+  };
+
+  const truncatePathMobile = (path) => {
+    if (!path) return '';
+    const parts = path.split(' > ');
+    if (parts.length <= 3) return parts.join(' / ');
+    return `${parts[0]} / ${parts[parts.length - 2]} / ${parts[parts.length - 1]}`;
+  };
 
   // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
   useEffect(() => {
@@ -2066,14 +2093,17 @@ function CreatePost() {
               <div className="cp-category-field">
                 ${category ? html`
                   <div className="cp-category-selected">
-                    <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0;color:#6b6b6b">
+                    <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0">
                       <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                     </svg>
-                    <span className="cp-category-value">${category}</span>
+                      <span className="cp-category-value" title=${category}>
+                        <span className="cp-cat-desktop">${truncatePath(category)}</span>
+                        <span className="cp-cat-mobile">${truncatePathMobile(category)}</span>
+                      </span>
                     <button
                       type="button"
                       className="cp-category-clear"
-                      onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); setCategory(''); }}
+                      onClick=${(e) => { e.preventDefault(); e.stopPropagation(); setCategory(''); }}
                       aria-label="Clear category"
                     >×</button>
                   </div>
@@ -2081,7 +2111,7 @@ function CreatePost() {
                 <button
                   type="button"
                   className="cp-folder-btn"
-                  onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); openFolder(); }}
+                  onClick=${(e) => { e.stopPropagation(); openFolder(); }}
                 >
                   <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
                     <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>

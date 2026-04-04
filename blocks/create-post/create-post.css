@@ -169,11 +169,32 @@
   }
 
   .cp-required-badge {
-    width: 100%;
-    justify-content: center;
-    white-space: normal;
+    width: auto;
+    align-self: flex-start;
+    white-space: nowrap;
     margin-top: 0;
   }
+
+  /* ── Category field: chip full width, button wraps below ── */
+  .cp-category-field {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .cp-category-selected {
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+
+  .cp-folder-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Mobile path: show First / SecondLast / Last ── */
+  .cp-cat-desktop { display: none; }
+  .cp-cat-mobile { display: inline; }
 }
 
 /* ---- Tablet layout (768px–1024px) ---- */
@@ -1033,12 +1054,13 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 4px 6px 4px 10px;
   background: #eff0f2;
   border-radius: 99px;
   font-size: 13px;
   font-weight: 500;
   color: #333;
+  line-height: 1;
 }
 
 .tag-remove {
@@ -1048,7 +1070,8 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1;
   cursor: pointer;
   color: #6b6b6b;
   background: transparent;
@@ -1056,6 +1079,8 @@
   padding: 0;
   margin: 0;
   border-radius: 50%;
+  flex-shrink: 0;
+  vertical-align: middle;
 
   &:hover {
     color: #1a1a1a;
@@ -1573,20 +1598,36 @@
 /* ---- Folder button (replaces category-selector) ---- */
 .cp-category-field {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
 }
 
 .cp-category-selected {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 8px 10px 8px 14px;
   background: #f8f9fb;
   border: 1.5px solid #dde1e7;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   color: #333;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  transition: background 0.15s;
+
+  & svg {
+    color: #e68619;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: #f0f1f3;
+  }
 }
 
 .cp-category-value {
@@ -1596,27 +1637,32 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
+
+/* Desktop: show full path, hide mobile version */
+.cp-cat-mobile { display: none; }
+.cp-cat-desktop { display: inline; }
 
 .cp-category-clear {
   all: unset;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #dde1e7;
-  color: #555;
-  font-size: 15px;
+  background: transparent;
+  color: #6b6b6b;
+  font-size: 13px;
   cursor: pointer;
   flex-shrink: 0;
   line-height: 1;
   transition: background 0.12s, color 0.12s;
 
   &:hover {
-    background: #da1f26;
-    color: #fff;
+    background: #d8d9dc;
+    color: #1a1a1a;
   }
 }
 
@@ -1624,36 +1670,36 @@
   all: unset;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
+  gap: 6px;
+  padding: 8px 14px;
   background: #fff;
   border: 1.5px solid #dde1e7;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 500;
+  color: #555;
   cursor: pointer;
-  align-self: flex-start;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
 
   & svg {
-    color: #888;
+    color: #e68619;
     flex-shrink: 0;
   }
 
   &:hover {
-    border-color: #da1f26;
-    color: #da1f26;
-    background: #fff0f1;
-    box-shadow: 0 0 0 3px rgb(218 31 38 / 8%);
+    border-color: #9a9a9a;
+    background: #f0f1f3;
+    color: #1a1a1a;
 
     & svg {
-      color: #da1f26;
+      color: #e68619;
     }
   }
 
   &:active {
-    background: #ffe0e1;
+    background: #e4e6ea;
   }
 }
 

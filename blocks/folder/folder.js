@@ -363,12 +363,12 @@ function GridPanel({
               onClick=${(e) => {
     e.stopPropagation();
     if (isTouchDevice.current) {
-      // On touch: first tap selects, second tap opens
       if (sel) { onOpen(node); } else { onSelect(node.id); }
     } else {
       onSelect(node.id);
     }
   }}
+              onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
               onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
               onKeyDown=${(e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(node); }
@@ -441,6 +441,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const [ctx, setCtx] = useState(null);
   const [folderError, setFolderError] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(null); // REQ 6: Spectrum dialog
+  const [deleteError, setDeleteError] = useState(null);
   // REQ 2: session-based current user (same as sidebar)
   const [currentUser, setCurrentUser] = useState(null);
   // REQ 7: in-memory cache so re-opens are instant
@@ -627,53 +628,33 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   // REQ 6: opens Spectrum dialog (not window.confirm)
   // Walks a node's children recursively to find the first item (file or subfolder)
   // not owned by currentUser
-  const findBlockingChild = useCallback((node, user) => {
-    const children = node.children || [];
-    for (let i = 0; i < children.length; i += 1) {
-      const child = children[i];
-      if (!isOwner(child, user)) return child; // files and folders both checked
-      if (child.isFolder) {
-        const nested = findBlockingChild(child, user);
-        if (nested) return nested;
-      }
-    }
-    return null;
-  }, []);
-
-  // Show "Are you sure?" first — blocker check happens on confirm
+  // Show "Are you sure?" first — server enforces all blocking rules on confirm
   const handleDelete = (node) => setDeleteDialog(node);
 
   const confirmDelete = async () => {
+    if (!deleteDialog) return;
     const node = deleteDialog;
     setDeleteDialog(null);
-    if (!node || node.blocked) return;
-
-    // After user confirms, check if any descendant is owned by another user
-    const blocker = findBlockingChild(node, currentUser);
-    if (blocker) {
-      setFolderError(null);
-      setDeleteDialog({
-        blocked: true,
-        blockerName: blocker.name,
-        blockerType: blocker.isFolder ? 'subfolder' : 'file',
-        parentName: node.name,
-      });
-      return;
-    }
-
+    setDeleteError(null);
     try {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
         : `${API_BASE}/sidebar-items/${node.id}`;
-      await fetch(url, { method: 'DELETE', credentials: 'include' });
-      if (selected === node.id) setSelected(null);
-      if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
-      treeCache.current = null;
-      await fetchFolders(true);
-      window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+      const response = await fetch(url, { method: 'DELETE', credentials: 'include' });
+      const data = await response.json();
+      if (data.success) {
+        if (selected === node.id) setSelected(null);
+        if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
+        treeCache.current = null;
+        await fetchFolders(true);
+        window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+      } else {
+        setDeleteError(data.error || 'Delete failed.');
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Delete failed:', err);
+      setDeleteError('Network error. Please try again.');
     }
   };
 
@@ -821,20 +802,21 @@ function FolderModal({ isOpen, onClose, onSelect }) {
           onClose=${() => setCtx(null)}/>`}
 
       <${SpectrumAlertDialog}
-        isOpen=${!!(deleteDialog && !deleteDialog.blocked)}
+        isOpen=${!!deleteDialog}
         title="Delete Folder"
-        message=${deleteDialog && !deleteDialog.blocked ? `Are you sure you want to delete "${deleteDialog.name}"? This action cannot be undone.` : ''}
+        message=${`Are you sure you want to delete "${deleteDialog ? deleteDialog.name : ''}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm=${confirmDelete}
         onCancel=${() => setDeleteDialog(null)}
       />
+
       <${SpectrumAlertDialog}
-        isOpen=${!!(deleteDialog && deleteDialog.blocked)}
+        isOpen=${!!deleteError}
         title="Cannot Delete"
-        message=${deleteDialog && deleteDialog.blocked ? `Cannot delete: "${deleteDialog.blockerName}" ${deleteDialog.blockerType === 'file' ? '(a file)' : '(a subfolder)'} in this folder was created by another user. Ask them to remove it first.` : ''}
+        message=${deleteError || ''}
         confirmLabel="OK"
-        onConfirm=${() => setDeleteDialog(null)}
-        onCancel=${() => setDeleteDialog(null)}
+        onConfirm=${() => setDeleteError(null)}
+        onCancel=${() => setDeleteError(null)}
       />
     </div>`;
 }

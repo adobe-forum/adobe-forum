@@ -57,16 +57,6 @@ function normalizeApiData(data) {
   return data.posts || data || [];
 }
 
-function buildStoredUser(user, loginAt) {
-  if (!user) return null;
-
-  const storedUser = { ...user };
-  if (storedUser._id && !storedUser.id) storedUser.id = String(storedUser._id);
-  if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
-  if (loginAt) storedUser.loginAt = loginAt;
-  return storedUser;
-}
-
 async function restoreClientAuthFromSession() {
   const res = await fetch(`${AUTH_API_BASE}/me`, {
     credentials: 'include',
@@ -78,11 +68,6 @@ async function restoreClientAuthFromSession() {
     const error = new Error(data.error || 'Not authenticated.');
     error.status = res.status;
     throw error;
-  }
-
-  const storedUser = buildStoredUser(data.user, data.loginAt);
-  if (storedUser) {
-    localStorage.setItem('af_user', JSON.stringify(storedUser));
   }
 
   return data;
@@ -544,17 +529,15 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 }
 
 export default async function decorate(block) {
-  if (!localStorage.getItem('af_user')) {
-    try {
-      await restoreClientAuthFromSession();
-    } catch (err) {
-      clearClientAuthState();
-      if (err.status === 401) {
-        window.location.replace('/auth-form');
-        return;
-      }
-      throw err;
+  try {
+    await restoreClientAuthFromSession();
+  } catch (err) {
+    clearClientAuthState();
+    if (err.status === 401) {
+      window.location.replace('/auth-form');
+      return;
     }
+    throw err;
   }
 
   const rows = [...block.children];

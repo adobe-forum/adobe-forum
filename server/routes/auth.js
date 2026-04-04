@@ -43,14 +43,13 @@ router.post('/register', async (req, res) => {
     req.session.userId = String(user._id);
     req.session.loginAt = loginAt;
 
-    // Persist loginAt on User doc so it survives session expiry and page reloads.
     await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
 
     await new Promise((resolve, reject) =>
       req.session.save((err) => (err ? reject(err) : resolve()))
     );
 
-    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, createdAt: _ca, updatedAt: _ua, ...safeUser } = user.toObject();
     return res.status(201).json({ success: true, user: { ...safeUser, _id: String(user._id) }, loginAt });
 
   } catch (err) {
@@ -81,17 +80,13 @@ router.post('/login', async (req, res) => {
     req.session.userId = String(user._id);
     req.session.loginAt = loginAt;
 
-    // Persist loginAt on User doc so it survives session expiry and page reloads.
     await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
 
-    // Explicitly save session before responding — ensures the session is written
-    // to MongoDB before the client redirects and calls /me. Without this, the
-    // session may not be persisted yet and /me returns 401 causing instant logout.
     await new Promise((resolve, reject) =>
       req.session.save((err) => (err ? reject(err) : resolve()))
     );
 
-    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, createdAt: _ca, updatedAt: _ua, ...safeUser } = user.toObject();
     return res.json({ success: true, user: { ...safeUser, _id: String(user._id) }, loginAt });
 
   } catch (err) {
@@ -116,10 +111,8 @@ router.post('/logout', (req, res) => {
 
 /**
  * GET /api/auth/me
- * req.user is already attached by requireAuth — no extra DB call needed.
  */
 router.get('/me', requireAuth, (req, res) => {
-  // Prefer session loginAt (precise); fall back to User doc loginAt (survives page reloads).
   const loginAt = req.session.loginAt
     || (req.user.loginAt ? new Date(req.user.loginAt).getTime() : null);
   return res.json({ success: true, user: req.user, loginAt });
@@ -135,7 +128,6 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ error: 'Email address is required.' });
 
     const user = await User.findOne({ email: email.trim().toLowerCase() });
-    // Always respond with success to avoid leaking which emails are registered.
     if (!user) return res.json({ success: true });
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -204,7 +196,6 @@ router.post('/reset-password', async (req, res) => {
 
 /**
  * PATCH /api/auth/profile
- * Updates firstName and lastName for the logged-in user.
  */
 router.patch('/profile', requireAuth, async (req, res) => {
   try {
@@ -217,13 +208,13 @@ router.patch('/profile', requireAuth, async (req, res) => {
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { firstName: firstName.trim(), lastName: lastName.trim(), updatedAt: Date.now() },
+      { firstName: firstName.trim(), lastName: lastName.trim() },
       { new: true },
     );
 
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
+    const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, createdAt: _ca, updatedAt: _ua, ...safeUser } = user.toObject();
     return res.json({ success: true, user: safeUser });
 
   } catch (err) {
@@ -234,7 +225,6 @@ router.patch('/profile', requireAuth, async (req, res) => {
 
 /**
  * PATCH /api/auth/change-password
- * Verifies the current password then updates to the new one.
  */
 router.patch('/change-password', requireAuth, async (req, res) => {
   try {

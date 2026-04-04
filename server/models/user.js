@@ -34,19 +34,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
 });
 
 // Hash password before saving (only if modified)
 userSchema.pre('save', async function hashPassword() {
-  this.updatedAt = Date.now();
   if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);

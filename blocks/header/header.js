@@ -103,10 +103,6 @@ const IconEyeOff = () => html`
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE = isLocal ? 'http://localhost:5000/api/auth' : 'https://your-production-api.com/api/auth';
 
-function getStoredUser() {
-  try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
-}
-
 function getInitials(firstName, lastName) {
   const f = (firstName || '').trim()[0] || '';
   const l = (lastName || '').trim()[0] || '';
@@ -243,7 +239,6 @@ function ProfileView({ user, onLogout, onChangePassword }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Update failed.');
-      localStorage.setItem('af_user', JSON.stringify(data.user));
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -332,9 +327,8 @@ function ProfileView({ user, onLogout, onChangePassword }) {
 // PROFILE POPUP
 // ============================================
 
-function ProfilePopup({ onClose }) {
+function ProfilePopup({ onClose, user }) {
   const [view, setView] = useState('profile');
-  const user = getStoredUser();
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -359,7 +353,6 @@ function ProfilePopup({ onClose }) {
     // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
       .finally(() => {
-        localStorage.removeItem('af_user');
         window.location.replace('/auth-form');
       });
   };
@@ -422,12 +415,8 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
   }, [onClose]);
 
   const handleLogout = () => {
-    // Always destroy the server session first — otherwise the session cookie
-    // remains valid and auth-form's getMe() call returns 200, which immediately
-    // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
       .finally(() => {
-        localStorage.removeItem('af_user');
         window.location.replace('/auth-form');
       });
   };
@@ -476,16 +465,12 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
 // ============================================
 // NOTIFICATIONS DROPDOWN
 // ============================================
-function NotificationsDropdown({ onClose }) {
+function NotificationsDropdown({ onClose, currentUserId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
-      // Get the current logged-in user's ID for ownership checks below
-      const currentUser = getStoredUser();
-      // eslint-disable-next-line no-underscore-dangle
-      const currentUserId = currentUser?._id ? String(currentUser._id) : null;
 
       try {
         const fetchSafe = (url) => fetch(url, { credentials: 'include' })
@@ -710,9 +695,26 @@ function HeaderComponent() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [sessionWarning, setSessionWarning] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loginAt, setLoginAt] = useState(null);
   const authRedirectedRef = useRef(false);
-  const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
+
+  // Fetch user from session on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/me`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((data) => {
+        setUser(data.user);
+        setLoginAt(data.loginAt || null);
+      })
+      .catch(() => {
+        clearClientAuthState();
+        if (!window.location.pathname.startsWith('/auth-form')) {
+          window.location.replace('/auth-form');
+        }
+      });
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -777,29 +779,18 @@ function HeaderComponent() {
   }, []);
 
   // ── Session timeout ─────────────────────────────────────────────────────
-  // Reads loginAt from /me (authoritative) or localStorage (fallback).
-  // At 25 min: show warning banner. At 30 min: logout and redirect.
-  // The effect re-runs whenever the stored user changes so timers are
-  // always anchored to the current loginAt — not a stale captured value.
   useEffect(() => {
-    const SESSION_MS = 30 * 60 * 1000; // 30 min
-    const WARNING_MS = 5 * 60 * 1000; //  5 min before logout = 25 min mark
+    const SESSION_MS = 30 * 60 * 1000;
+    const WARNING_MS = 5 * 60 * 1000;
     let warnTimer;
     let logoutTimer;
 
-    // Read user fresh from localStorage each time the effect runs
-    const storedUser = (() => {
-      try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
-    })();
-
-    // No user in localStorage at all — nothing to time out, don't touch session
-    if (!storedUser) return () => { };
+    if (!loginAt) return () => { };
 
     const doLogout = () => {
       if (window.location.pathname.startsWith('/auth-form')) return;
       fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
         .finally(() => {
-          localStorage.removeItem('af_user');
           window.location.replace('/auth-form');
         });
     };
@@ -816,11 +807,11 @@ function HeaderComponent() {
       }
     };
 
-    const scheduleTimers = (loginAt) => {
+    const scheduleTimers = (at) => {
       clearTimeout(warnTimer);
       clearTimeout(logoutTimer);
       const now = Date.now();
-      const elapsed = now - loginAt;
+      const elapsed = now - at;
       const remaining = SESSION_MS - elapsed;
 
       // loginAt is in the future or wildly wrong — treat as fresh login
@@ -833,7 +824,6 @@ function HeaderComponent() {
 
       const warnIn = safeRemaining - WARNING_MS;
       if (warnIn <= 0) {
-        // Already past the 25-min mark — show warning immediately
         setSessionWarning(true);
       } else {
         warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
@@ -841,41 +831,25 @@ function HeaderComponent() {
       logoutTimer = setTimeout(doLogout, safeRemaining);
     };
 
-    // Ask the server for the authoritative loginAt from the session store.
-    // 200 → schedule from server loginAt (most accurate).
-    // 401 → session gone, clear stale client auth and redirect once.
-    // network error → fall back to localStorage loginAt, do NOT logout.
     fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
           handleUnauthorized();
           return null;
         }
-        if (!r.ok) return null; // other server error — skip, don't logout
+        if (!r.ok) return null;
         return r.json();
       })
       .then((data) => {
         if (!data) return;
-        const serverLoginAt = data.loginAt;
-        if (serverLoginAt) {
-          // Keep localStorage in sync
-          try {
-            const s = JSON.parse(localStorage.getItem('af_user') || 'null');
-            if (s) localStorage.setItem('af_user', JSON.stringify({ ...s, loginAt: serverLoginAt }));
-          } catch { /* ignore */ }
-          scheduleTimers(serverLoginAt);
-        } else {
-          // Session alive but loginAt missing — fall back to localStorage
-          scheduleTimers(storedUser.loginAt || Date.now());
-        }
+        scheduleTimers(data.loginAt || loginAt);
       })
       .catch(() => {
-        // Network error — keep the user logged in, schedule from localStorage
-        if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
+        scheduleTimers(loginAt);
       });
 
     return () => { clearTimeout(warnTimer); clearTimeout(logoutTimer); };
-  }, []);
+  }, [loginAt]);
 
   const toggleSidebar = () => {
     const next = !sidebarOpen;
@@ -910,7 +884,7 @@ function HeaderComponent() {
                 <${IconBell}/>
                 ${pendingCount > 0 ? html`<span class="nd-badge"></span>` : null}
               </button>
-              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} />` : null}
+              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} currentUserId=${user ? String(user._id) : null} />` : null}
             </div>
           </li>
           `}
@@ -934,7 +908,7 @@ function HeaderComponent() {
       </div>
     </nav>
 
-    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)} user=${user}/>`}
 
     ${sessionWarning && html`
       <div class="session-warning-banner">
@@ -950,7 +924,6 @@ function HeaderComponent() {
     try {
       await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) { /* ignore network errors */ }
-    localStorage.removeItem('af_user');
     window.location.replace('/auth-form');
   }}
         >Log in again</button>${' '}

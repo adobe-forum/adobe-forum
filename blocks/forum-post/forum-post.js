@@ -43,14 +43,6 @@ const HeartIcon = ({ filled }) => html`
 // ============================================
 
 /**
- * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
- * Returns null if not logged in.
- */
-function getCurrentUser() {
-  try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
-}
-
-/**
  * Opens /create-post in edit mode by stashing the post data in sessionStorage
  * and navigating — avoids URL length limits (body can be large HTML).
  */
@@ -107,12 +99,17 @@ const ForumPost = ({ blockEl }) => {
     }
   }, [post?.comments]);
 
-  // Load current user on mount + re-load when auth state changes
+  // Load current user from session on mount + re-load when auth state changes
   useEffect(() => {
-    setCurrentUser(getCurrentUser());
-    const onAuthChanged = () => setCurrentUser(getCurrentUser());
-    window.addEventListener('forum-auth-changed', onAuthChanged);
-    return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
+    const loadUser = () => {
+      fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => { if (data?.user) setCurrentUser(data.user); })
+        .catch(() => {});
+    };
+    loadUser();
+    window.addEventListener('forum-auth-changed', loadUser);
+    return () => window.removeEventListener('forum-auth-changed', loadUser);
   }, []);
 
   // Language label map
@@ -346,17 +343,15 @@ const ForumPost = ({ blockEl }) => {
             setPost(transformedPost);
 
             // ── View increment — skip for the post's own author ───────────────
-            const cu = getCurrentUser();
+            // Use currentUser from state (set via /me on mount)
             // eslint-disable-next-line no-underscore-dangle
-            const isAuthor = cu && cu._id && String(cu._id) === String(cb?._id || cb || '');
+            const isAuthor = currentUser && currentUser._id && String(currentUser._id) === String(cb?._id || cb || '');
             if (!isAuthor) {
               const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
               if (!viewedPosts.includes(postId)) {
-                // Fire-and-forget — increment on the server
                 fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => { });
                 viewedPosts.push(postId);
                 localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
-                // Show the incremented count locally too
                 fetchedPost.views = (fetchedPost.views || 0) + 1;
               }
             }
@@ -366,7 +361,6 @@ const ForumPost = ({ blockEl }) => {
             setLikesCount(fetchedLikes.length);
             setViewsCount(fetchedPost.views || 0);
 
-            // Broadcast the loaded view count to any listening components (like the cards)
             window.dispatchEvent(new CustomEvent('af-post-updated', {
               detail: {
                 // eslint-disable-next-line no-underscore-dangle
@@ -376,11 +370,11 @@ const ForumPost = ({ blockEl }) => {
               },
             }));
 
-            // Check if current user explicitly likes this post (cu already declared above)
+            // Check if current user likes this post
             // eslint-disable-next-line no-underscore-dangle
-            if (cu && cu._id) {
+            if (currentUser && currentUser._id) {
               // eslint-disable-next-line no-underscore-dangle
-              setHasLiked(fetchedLikes.includes(String(cu._id)));
+              setHasLiked(fetchedLikes.includes(String(currentUser._id)));
             } else {
               setHasLiked(false);
             }
@@ -457,6 +451,22 @@ const ForumPost = ({ blockEl }) => {
       window.removeEventListener('sidebar-item-deleted', handleItemDeleted);
     };
   }, [blockEl, sidebarItemId]);
+
+  // Re-evaluate likes/hasLiked when currentUser arrives asynchronously after post loads
+  useEffect(() => {
+    if (!post || !currentUser) return;
+    fetch(`${API_BASE}/posts/${post.id}`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.post) return;
+        const likes = data.post.likes || [];
+        // eslint-disable-next-line no-underscore-dangle
+        setHasLiked(likes.includes(String(currentUser._id)));
+        setLikesCount(likes.length);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, post?.id]);
 
   if (!post) {
     return html`
