@@ -1,110 +1,16 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
+import {
+  PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
+  UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
+  BellIcon,
+} from '../../scripts/utils/icons.js';
+import { AUTH_API_BASE as API_BASE } from '../../scripts/utils/constants.js';
 
-// ============================================
-// ICON COMPONENTS
-// ============================================
-
-const PlusIcon = () => html`
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-        <line x1="12" y1="5" x2="12" y2="19"/>
-        <line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>`;
-
-const IconClose = () => html`
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>`;
-
-const IconEdit = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>`;
-
-const IconLogout = () => html`
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-    <polyline points="16 17 21 12 16 7"/>
-    <line x1="21" y1="12" x2="9" y2="12"/>
-  </svg>`;
-
-const IconLock = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-  </svg>`;
-
-const IconPosts = () => html`
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="16" y1="13" x2="8" y2="13"/>
-    <line x1="16" y1="17" x2="8" y2="17"/>
-  </svg>`;
-
-const IconUser = () => html`
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
-  </svg>`;
-
-const IconChevron = () => html`
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="9 18 15 12 9 6"/>
-  </svg>`;
-
-const IconCheck = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>`;
-
-const IconAlert = () => html`
-  <svg width="13" height="13" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;margin-top:1px">
-    <circle cx="6" cy="6" r="5.25" stroke="#d7373f" stroke-width="1.2"/>
-    <path d="M6 3.5V6.5" stroke="#d7373f" stroke-width="1.2" stroke-linecap="round"/>
-    <circle cx="6" cy="8.5" r="0.65" fill="#d7373f"/>
-  </svg>`;
-
-const IconEye = () => html`
-  <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-    <path d="M1 9s2.8-5 8-5 8 5 8 5-2.8 5-8 5-8-5-8-5Z" stroke="currentColor" stroke-width="1.35" fill="none"/>
-    <circle cx="9" cy="9" r="2.2" stroke="currentColor" stroke-width="1.35" fill="none"/>
-  </svg>`;
-
-const IconBell = () => html`
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-  </svg>`;
-
-const IconEyeOff = () => html`
-  <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-    <line x1="2" y1="2" x2="16" y2="16" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
-    <path d="M5.3 5.4C3.2 6.5 1 9 1 9s2.8 5 8 5c1.7 0 3.2-.6 4.4-1.4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" fill="none"/>
-    <path d="M8.3 3.1C8.5 3 8.8 3 9 3c5.2 0 8 6 8 6s-.9 1.8-2.6 3.2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" fill="none"/>
-  </svg>`;
-
-// ============================================
-// HELPERS
-// ============================================
-
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE = isLocal ? 'http://localhost:5000/api/auth' : 'https://your-production-api.com/api/auth';
-
-// Helper: safely extract MongoDB _id without triggering no-underscore-dangle
-const getId = (obj) => (obj && typeof obj === 'object' ? obj[Object.keys(obj).find((k) => k === '_id')] : obj);
-const getStrId = (obj) => (obj ? String(getId(obj) ?? obj) : null);
+function getStoredUser() {
+  try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+}
 
 function getInitials(firstName, lastName) {
   const f = (firstName || '').trim()[0] || '';
@@ -142,10 +48,10 @@ function PwField({
           onInput=${(e) => onChange(e.target.value)} onBlur=${onBlur}/>
         <button type="button" class="pp-pw-toggle"
           aria-label=${show ? 'Hide' : 'Show'} onClick=${() => setShow((s) => !s)}>
-          ${show ? html`<${IconEyeOff}/>` : html`<${IconEye}/>`}
+          ${show ? html`<${EyeOffIcon}/>` : html`<${EyeIcon}/>`}
         </button>
       </div>
-      ${error && html`<p class="pp-field-error"><${IconAlert}/>${error}</p>`}
+      ${error && html`<p class="pp-field-error"><${AlertIcon}/>${error}</p>`}
     </div>`;
 }
 
@@ -187,9 +93,9 @@ function ChangePasswordView({ userId, onBack, onSuccess }) {
 
   return html`
     <div class="pp-body">
-      <button type="button" class="pp-back" onClick=${onBack}>← Back to Profile</button>
+      <button type="button" class="pp-back" onClick=${onBack}>â† Back to Profile</button>
       <h2 class="pp-section-title">Change Password</h2>
-      ${globalErr && html`<div class="pp-msg pp-msg--error"><${IconAlert}/><span>${globalErr}</span></div>`}
+      ${globalErr && html`<div class="pp-msg pp-msg--error"><${AlertIcon}/><span>${globalErr}</span></div>`}
       <${PwField} id="cp-cur" label="Current password" placeholder="Enter current password"
         value=${current} error=${errors.current}
         onChange=${(v) => { setCurrent(v); setErrors((er) => ({ ...er, current: undefined })); }}
@@ -207,7 +113,7 @@ function ChangePasswordView({ userId, onBack, onSuccess }) {
         <button type="button" class="pp-btn pp-btn--primary${loading ? ' is-loading' : ''}"
           disabled=${loading} onClick=${handleSubmit}>
           <span class="pp-spinner" aria-hidden="true"/>
-          <span class="pp-btn-label">${loading ? 'Saving…' : 'Update Password'}</span>
+          <span class="pp-btn-label">${loading ? 'Savingâ€¦' : 'Update Password'}</span>
         </button>
       </div>
     </div>`;
@@ -271,8 +177,8 @@ function ProfileView({ user, onLogout, onChangePassword }) {
       <div class="pp-divider"></div>
       <h2 class="pp-section-title">Profile Details</h2>
 
-      ${globalErr && html`<div class="pp-msg pp-msg--error"><${IconAlert}/><span>${globalErr}</span></div>`}
-      ${saved && html`<div class="pp-msg pp-msg--success"><${IconCheck}/><span>Profile saved!</span></div>`}
+      ${globalErr && html`<div class="pp-msg pp-msg--error"><${AlertIcon}/><span>${globalErr}</span></div>`}
+      ${saved && html`<div class="pp-msg pp-msg--success"><${CheckIcon}/><span>Profile saved!</span></div>`}
 
       <div class="pp-field${errors.firstName ? ' is-invalid' : ''}">
         <label class="pp-label" for="pf-first">First Name</label>
@@ -280,7 +186,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
           class="pp-input${!isEditing ? ' pp-input--disabled' : ''}"
           value=${firstName} disabled=${!isEditing} placeholder="First name"
           onInput=${(e) => { setFirstName(e.target.value); setErrors((er) => ({ ...er, firstName: undefined })); }}/>
-        ${errors.firstName && html`<p class="pp-field-error"><${IconAlert}/>${errors.firstName}</p>`}
+        ${errors.firstName && html`<p class="pp-field-error"><${AlertIcon}/>${errors.firstName}</p>`}
       </div>
 
       <div class="pp-field${errors.lastName ? ' is-invalid' : ''}">
@@ -289,7 +195,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
           class="pp-input${!isEditing ? ' pp-input--disabled' : ''}"
           value=${lastName} disabled=${!isEditing} placeholder="Last name"
           onInput=${(e) => { setLastName(e.target.value); setErrors((er) => ({ ...er, lastName: undefined })); }}/>
-        ${errors.lastName && html`<p class="pp-field-error"><${IconAlert}/>${errors.lastName}</p>`}
+        ${errors.lastName && html`<p class="pp-field-error"><${AlertIcon}/>${errors.lastName}</p>`}
       </div>
 
       <div class="pp-field pp-field--no-req">
@@ -302,25 +208,25 @@ function ProfileView({ user, onLogout, onChangePassword }) {
       <div class="pp-actions">
         ${!isEditing ? html`
           <button type="button" class="pp-btn pp-btn--ghost" onClick=${() => setIsEditing(true)}>
-            <${IconEdit}/> Edit Profile
+            <${EditIcon}/> Edit Profile
           </button>
         ` : html`
           <button type="button" class="pp-btn pp-btn--ghost" onClick=${handleCancel}>Cancel</button>
           <button type="button" class="pp-btn pp-btn--primary${loading ? ' is-loading' : ''}"
             disabled=${loading} onClick=${handleSave}>
             <span class="pp-spinner" aria-hidden="true"/>
-            <span class="pp-btn-label">${loading ? 'Saving…' : 'Save Changes'}</span>
+            <span class="pp-btn-label">${loading ? 'Savingâ€¦' : 'Save Changes'}</span>
           </button>
         `}
       </div>
 
       <div class="pp-divider"></div>
       <button type="button" class="pp-text-btn pp-text-btn--blue" onClick=${onChangePassword}>
-        <${IconLock}/> Change Password
+        <${LockIcon}/> Change Password
       </button>
       <div class="pp-divider"></div>
       <button type="button" class="pp-text-btn pp-text-btn--red" onClick=${onLogout}>
-        <${IconLogout}/> Sign Out
+        <${LogoutIcon}/> Sign Out
       </button>
     </div>`;
 }
@@ -350,7 +256,7 @@ function ProfilePopup({ onClose, user }) {
   const handleOverlay = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const handleLogout = () => {
-    // Always destroy the server session first — otherwise the session cookie
+    // Always destroy the server session first â€” otherwise the session cookie
     // remains valid and auth-form's getMe() call returns 200, which immediately
     // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
@@ -372,7 +278,7 @@ function ProfilePopup({ onClose, user }) {
     if (view === 'pw-success') {
       return html`
         <div class="pp-body pp-success-view">
-          <div class="pp-success-icon"><${IconCheck}/></div>
+          <div class="pp-success-icon"><${CheckIcon}/></div>
           <h2 class="pp-section-title">Password Updated!</h2>
           <p class="pp-success-desc">Your password has been changed successfully.</p>
           <button type="button" class="pp-btn pp-btn--primary" onClick=${() => setView('profile')}>
@@ -390,7 +296,7 @@ function ProfilePopup({ onClose, user }) {
     <div class="pp-overlay" onClick=${handleOverlay} role="dialog" aria-modal="true" aria-label="Profile">
       <div class="pp-modal">
         <button type="button" class="pp-close" aria-label="Close" onClick=${onClose}>
-          <${IconClose}/>
+          <${CloseIcon}/>
         </button>
         ${renderContent()}
       </div>
@@ -416,6 +322,9 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
   }, [onClose]);
 
   const handleLogout = () => {
+    // Always destroy the server session first â€” otherwise the session cookie
+    // remains valid and auth-form's getMe() call returns 200, which immediately
+    // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
       .finally(() => {
         window.location.replace('/auth-form');
@@ -440,23 +349,23 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
       <ul class="pd-menu" role="none">
         <li role="none">
           <button type="button" class="pd-item" role="menuitem" onClick=${onOpenProfile}>
-            <span class="pd-item-icon"><${IconUser}/></span>
+            <span class="pd-item-icon"><${UserIcon}/></span>
             <span class="pd-item-label">View Profile</span>
-            <span class="pd-item-chevron"><${IconChevron}/></span>
+            <span class="pd-item-chevron"><${ChevronIcon}/></span>
           </button>
         </li>
         <li role="none">
           <button type="button" class="pd-item" role="menuitem" onClick=${handleMyPosts}>
-            <span class="pd-item-icon"><${IconPosts}/></span>
+            <span class="pd-item-icon"><${PostsIcon}/></span>
             <span class="pd-item-label">My Posts</span>
-            <span class="pd-item-chevron"><${IconChevron}/></span>
+            <span class="pd-item-chevron"><${ChevronIcon}/></span>
           </button>
         </li>
       </ul>
       <div class="pd-divider"></div>
       <div class="pd-footer">
         <button type="button" class="pd-signout" role="menuitem" onClick=${handleLogout}>
-          <${IconLogout}/> Sign Out
+          <${LogoutIcon}/> Sign Out
         </button>
       </div>
     </div>`;
@@ -506,10 +415,10 @@ function NotificationsDropdown({ onClose, currentUserId }) {
         }
 
         // Author side: use author-notifications as the primary source for
-        // both approved AND changes_requested — it is the authoritative
+        // both approved AND changes_requested â€” it is the authoritative
         // dismissed/undismissed list maintained by the backend.
         // CRITICAL: only show notifications where the post's authorId matches
-        // the current logged-in user — prevents reviewer accounts from seeing
+        // the current logged-in user â€” prevents reviewer accounts from seeing
         // author-side notifications that belong to someone else.
         // my-requests is kept as a fallback only when author-notifications fails.
         if (notifRes.success && notifRes.reviews) {
@@ -577,7 +486,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
       window.location.href = `/?openPost=${postId}`;
       return;
     }
-    // Already on home page — same DOM + event pattern as sidebar
+    // Already on home page â€” same DOM + event pattern as sidebar
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
     cardsWrappers.forEach((el) => { el.style.display = 'none'; });
     const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
@@ -661,7 +570,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
                     </svg>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> Â· ${timeAgo}</span></span>
                   <span class="nd-tl-meta">Requested by ${authorFirst} ${authorLast}</span>
                 </a>
               </li>`;
@@ -684,7 +593,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
                     ${statusIcon}
                     <span class="nd-pill ${pillClass}">${pillLabel}</span>
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> Â· ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
@@ -797,14 +706,24 @@ function HeaderComponent() {
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
   }, []);
 
-  // ── Session timeout ─────────────────────────────────────────────────────
+  // â”€â”€ Session timeout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Reads loginAt from /me (authoritative) or localStorage (fallback).
+  // At 25 min: show warning banner. At 30 min: logout and redirect.
+  // The effect re-runs whenever the stored user changes so timers are
+  // always anchored to the current loginAt â€” not a stale captured value.
   useEffect(() => {
     const SESSION_MS = 30 * 60 * 1000;
     const WARNING_MS = 5 * 60 * 1000;
     let warnTimer;
     let logoutTimer;
 
-    if (!loginAt) return () => { };
+    // Read user fresh from localStorage each time the effect runs
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+    })();
+
+    // No user in localStorage at all â€” nothing to time out, don't touch session
+    if (!storedUser) return () => { };
 
     const doLogout = () => {
       if (window.location.pathname.startsWith('/auth-form')) return;
@@ -833,7 +752,7 @@ function HeaderComponent() {
       const elapsed = now - at;
       const remaining = SESSION_MS - elapsed;
 
-      // loginAt is in the future or wildly wrong — treat as fresh login
+      // loginAt is in the future or wildly wrong â€” treat as fresh login
       const safeRemaining = (remaining > SESSION_MS || remaining < 0) ? SESSION_MS : remaining;
 
       if (safeRemaining <= 0) {
@@ -843,6 +762,7 @@ function HeaderComponent() {
 
       const warnIn = safeRemaining - WARNING_MS;
       if (warnIn <= 0) {
+        // Already past the 25-min mark â€” show warning immediately
         setSessionWarning(true);
       } else {
         warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
@@ -850,21 +770,37 @@ function HeaderComponent() {
       logoutTimer = setTimeout(doLogout, safeRemaining);
     };
 
+    // Ask the server for the authoritative loginAt from the session store.
+    // 200 â†’ schedule from server loginAt (most accurate).
+    // 401 â†’ session gone, clear stale client auth and redirect once.
+    // network error â†’ fall back to localStorage loginAt, do NOT logout.
     fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
           handleUnauthorized();
           return null;
         }
-        if (!r.ok) return null;
+        if (!r.ok) return null; // other server error â€” skip, don't logout
         return r.json();
       })
       .then((data) => {
         if (!data) return;
-        scheduleTimers(data.loginAt || loginAt);
+        const serverLoginAt = data.loginAt;
+        if (serverLoginAt) {
+          // Keep localStorage in sync
+          try {
+            const s = JSON.parse(localStorage.getItem('af_user') || 'null');
+            if (s) localStorage.setItem('af_user', JSON.stringify({ ...s, loginAt: serverLoginAt }));
+          } catch { /* ignore */ }
+          scheduleTimers(serverLoginAt);
+        } else {
+          // Session alive but loginAt missing â€” fall back to localStorage
+          scheduleTimers(storedUser.loginAt || Date.now());
+        }
       })
       .catch(() => {
-        scheduleTimers(loginAt);
+        // Network error â€” keep the user logged in, schedule from localStorage
+        if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
       });
 
     return () => { clearTimeout(warnTimer); clearTimeout(logoutTimer); };
@@ -900,7 +836,7 @@ function HeaderComponent() {
           <li class="profile-item">
             <div class="nd-trigger-wrap">
               <button type="button" class="spectrum-action-button nd-bell-btn" aria-label="Notifications" aria-expanded=${String(notifOpen)} onClick=${() => { setNotifOpen((o) => !o); setDropdownOpen(false); }}>
-                <${IconBell}/>
+                <${BellIcon}/>
                 ${pendingCount > 0 ? html`<span class="nd-badge"></span>` : null}
               </button>
               ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} currentUserId=${user ? getStrId(user) : null} />` : null}
@@ -947,7 +883,7 @@ function HeaderComponent() {
   }}
         >Log in again</button>${' '}
         to stay signed in.
-        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>✕</button>
+        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>âœ•</button>
       </div>`}`;
 }
 

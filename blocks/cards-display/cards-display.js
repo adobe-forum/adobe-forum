@@ -3,17 +3,16 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isLocalhost
-  ? 'http://localhost:5000/api'
-  : 'https://api.yourproductiondomain.com/api'; // TODO: Update with your production API URL
+const AUTH_API_BASE = isLocalhost
+  ? 'http://localhost:5000/api/auth'
+  : 'https://api.yourproductiondomain.com/api/auth'; // TODO: Update with your production API URL
 
 const PAGE_SIZE = 12;
-const AUTH_API_BASE = (typeof window !== 'undefined' && window.AUTH_API_BASE)
-  || 'http://localhost:5000/api/auth';
 const domParser = new DOMParser();
 
 function extractExcerpt(body, max = 100) {
@@ -328,7 +327,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       setLoading(true);
       setError(false);
       try {
-        const url = new URL(`${API_BASE_URL}/posts`);
+        const url = new URL(`${API_BASE}/posts`);
         url.searchParams.append('page', currentPage);
         url.searchParams.append('limit', PAGE_SIZE);
         url.searchParams.append('sort', sortOption);

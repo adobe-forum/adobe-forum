@@ -3,14 +3,7 @@ import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 const API_BASE = 'http://localhost:5000/api';
 
-// Helper: safely extract MongoDB _id without triggering no-underscore-dangle
-const getId = (obj) => (obj && typeof obj === 'object' ? obj[Object.keys(obj).find((k) => k === '_id')] : obj);
-const getStrId = (obj) => (obj ? String(getId(obj) ?? obj) : null);
-
-// ============================================
-// ICONS
-// ============================================
-
+// ArrowIcon remains local — it is the Spectrum-specific RTL arrow (18x18 variant)
 const ArrowIcon = () => html`
   <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
     <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
@@ -45,6 +38,14 @@ const HeartIcon = ({ filled }) => html`
 // ============================================
 // HELPERS
 // ============================================
+
+/**
+ * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
+ * Returns null if not logged in.
+ */
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
+}
 
 /**
  * Opens /create-post in edit mode by stashing the post data in sessionStorage
