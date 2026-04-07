@@ -1,27 +1,24 @@
 /* eslint-disable no-underscore-dangle */
 import { h, render } from '../../vendor/preact.js';
-import { useEffect, useState } from '../../vendor/preact-hooks.js';
+import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
+import clearClientAuthState from '../../scripts/auth-state.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
 
-// ── Environment & Config ──────────────────────────────────────────────
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_BASE_URL = isLocalhost
-  ? 'http://localhost:5000/api'
-  : 'https://api.yourproductiondomain.com/api'; // TODO: Update with your production API URL
+const AUTH_API_BASE = isLocalhost
+  ? 'http://localhost:5000/api/auth'
+  : 'https://api.yourproductiondomain.com/api/auth'; // TODO: Update with your production API URL
 
 const PAGE_SIZE = 12;
-
-// ── Shared Instances ──────────────────────────────────────────────────
 const domParser = new DOMParser();
 
 function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
 
-  // YOUR FIX: Insert a space after every block-level element so that list items,
-  // paragraphs, headings etc. don't run together when textContent is read.
   doc.querySelectorAll('p, li, div, h1, h2, h3, h4, h5, h6, br, td, th, dt, dd').forEach((el) => {
     el.appendChild(doc.createTextNode(' '));
   });
@@ -30,7 +27,6 @@ function extractExcerpt(body, max = 100) {
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
-// Extract the first <img> src from the post body HTML (for card thumbnail)
 function firstImageFromBody(body) {
   if (!body) return null;
   const doc = domParser.parseFromString(body, 'text/html');
@@ -56,45 +52,71 @@ function avatarColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-function normalizeApiData(data, category) {
-  if (category) {
-    return (data.items || []).map((item) => item.postId).filter(Boolean);
-  }
+function normalizeApiData(data) {
   return data.posts || data || [];
 }
 
-function toggleViews(showCards) {
-  const cws = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
-  const fw = document.querySelector('.forum-post-wrapper');
-  const sw = document.querySelector('.search-bar-wrapper');
+function buildStoredUser(user, loginAt) {
+  if (!user) return null;
 
-  cws.forEach((cw) => { if (cw) { const c = cw; c.style.display = showCards ? '' : 'none'; } });
-  if (fw) fw.style.display = showCards ? 'none' : '';
-  if (sw) sw.style.display = showCards ? '' : 'none';
+  const storedUser = { ...user };
+  if (storedUser._id && !storedUser.id) storedUser.id = String(storedUser._id);
+  if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
+  if (loginAt) storedUser.loginAt = loginAt;
+  return storedUser;
+}
+
+async function restoreClientAuthFromSession() {
+  const res = await fetch(`${AUTH_API_BASE}/me`, {
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    const error = new Error(data.error || 'Not authenticated.');
+    error.status = res.status;
+    throw error;
+  }
+
+  const storedUser = buildStoredUser(data.user, data.loginAt);
+  if (storedUser) {
+    localStorage.setItem('af_user', JSON.stringify(storedUser));
+  }
+
+  return data;
+}
+
+function toggleViews(showCards) {
+  const cardWrappers = document.querySelectorAll('.cards-display-wrapper, .cards-wrapper, .cards-container, .cards-display, .cards');
+  const forumWrapper = document.querySelector('.forum-post-wrapper');
+  const searchWrapper = document.querySelector('.search-bar-wrapper');
+
+  cardWrappers.forEach((wrapper) => {
+    if (wrapper) {
+      const container = wrapper;
+      container.style.display = showCards ? '' : 'none';
+    }
+  });
+  if (forumWrapper) forumWrapper.style.display = showCards ? 'none' : '';
+  if (searchWrapper) searchWrapper.style.display = showCards ? '' : 'none';
 
   document.body.classList.toggle('is-viewing-post', !showCards);
 }
 
-// ── Preact Components ─────────────────────────────────────────────────
-
 function Card({ post, onClick }) {
   const id = post._id || post.id;
-
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
-
   const imgSrc = firstImageFromBody(post.body || post.description || post.content || '')
     || '../../icons/adobe_logo.svg';
   const isPlaceholder = imgSrc === '../../icons/adobe_logo.svg';
-
   const author = post.author?.name || post.author?.username || post.author
     || (post.createdBy?.firstName && `${post.createdBy.firstName} ${post.createdBy.lastName || ''}`.trim())
     || post.createdBy?.name || post.createdBy?.username
     || post.userId?.name || post.userId?.username || 'Anonymous';
-
   const initials = avatarInitials(author);
   const avColor = avatarColor(author);
   const excerpt = extractExcerpt(post.body || post.description || post.content || '');
-
   const rawCategory = post.category || '';
   const displayCategory = rawCategory ? rawCategory.split(' > ').pop().trim() : '';
   const fullCategoryPath = rawCategory.trim();
@@ -108,20 +130,20 @@ function Card({ post, onClick }) {
   };
 
   return html`
-    <article 
-      class="card" 
-      role="button" 
-      tabIndex="0" 
+    <article
+      class="card"
+      role="button"
+      tabIndex="0"
       onClick=${() => onClick(id)}
       onKeyDown=${handleKeyDown}
       aria-label="Read post: ${post.title}"
     >
       <div class="card-img-wrapper">
-        <img 
-          src="${imgSrc}" 
-          alt="" 
-          class="card-img-box ${isPlaceholder ? 'card-img--placeholder' : ''}" 
-          loading="lazy" 
+        <img
+          src="${imgSrc}"
+          alt=""
+          class="card-img-box ${isPlaceholder ? 'card-img--placeholder' : ''}"
+          loading="lazy"
         />
         <div class="card-img-overlay-metrics">
           <div class="spectrum-Badge spectrum-Badge--sizeS spectrum-Badge--neutral card-metric-badge" title="Likes">
@@ -193,8 +215,8 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 
   for (let i = start; i <= end; i += 1) {
     pages.push(html`
-      <button 
-        class="page-btn ${i === currentPage ? 'is-active' : ''}" 
+      <button
+        class="page-btn ${i === currentPage ? 'is-active' : ''}"
         aria-label="Page ${i}"
         aria-current=${i === currentPage ? 'page' : 'false'}
         onClick=${() => onPageChange(i)}
@@ -241,29 +263,23 @@ function SkeletonLoaders() {
   `;
 }
 
-// ── Main Controller Component ─────────────────────────────────────────
-
 function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(null); // {n} badge count
-  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get('search') || '');
+  const [totalCount, setTotalCount] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('');
   const [sortOption, setSortOption] = useState('latest');
   const [refreshTick, setRefreshTick] = useState(0);
   const [isMine, setIsMine] = useState(false);
-  // "My Posts" — read ?author= from URL once on mount
   const [authorId, setAuthorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
 
-  // ── Resolve display title ─────────────────────────────────────────
-  // Priority: My Posts (authorId) > Category filter > Search > {n} token default
   const hasTitleToken = initialTitle.includes('{n}');
 
-  // Title: My Posts > Category filter > Search > default
   let displayTitle = initialTitle;
   if (authorId || isMine) {
     displayTitle = 'My Posts';
@@ -278,37 +294,24 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   }
 
   useEffect(() => {
-    // Handle browser Back/Forward navigation
     const handleReturn = (e) => {
-      // If returning from a post view (popstate with no post state, or pageshow)
-      // restore the cards grid and refresh data
       const isPopstate = e?.type === 'popstate';
       const leavingPost = isPopstate && e.state?.view !== 'post';
-      const isPageshow = e?.type === 'pageshow';
 
-      if (leavingPost || isPageshow) {
-        // Make sure cards are visible (in case we're returning from a post)
-        toggleViews(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      if (!leavingPost) return;
 
+      toggleViews(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setRefreshTick((t) => t + 1);
     };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        setRefreshTick((t) => t + 1);
-      }
-    };
-
-    // Listen for real-time post metric updates (views/likes) from the forum-post view
     const handlePostUpdated = (e) => {
       const { id, views, likes } = e.detail;
       if (!id) return;
 
       setPosts((currentPosts) => currentPosts.map((p) => {
-        const pId = p._id || p.id;
-        if (String(pId) === String(id)) {
+        const postId = p._id || p.id;
+        if (String(postId) === String(id)) {
           const newViews = views !== undefined ? views : p.views;
           const newLikes = likes !== undefined ? likes : p.likes?.length;
 
@@ -322,15 +325,11 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       }));
     };
 
-    window.addEventListener('pageshow', handleReturn);
     window.addEventListener('popstate', handleReturn);
-    document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('af-post-updated', handlePostUpdated);
 
     return () => {
-      window.removeEventListener('pageshow', handleReturn);
       window.removeEventListener('popstate', handleReturn);
-      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('af-post-updated', handlePostUpdated);
     };
   }, []);
@@ -343,27 +342,24 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       setLoading(true);
       setError(false);
       try {
-        let url;
-        if (category) {
-          url = new URL(`${API_BASE_URL}/sidebar-items/category/${encodeURIComponent(category)}`);
-          url.searchParams.append('page', currentPage);
-          url.searchParams.append('limit', PAGE_SIZE);
-          url.searchParams.append('sort', sortOption);
-        } else {
-          url = new URL(`${API_BASE_URL}/posts`);
-          url.searchParams.append('page', currentPage);
-          url.searchParams.append('limit', PAGE_SIZE);
-          url.searchParams.append('sort', sortOption);
-          if (searchQuery) url.searchParams.append('search', searchQuery);
-          if (authorId) url.searchParams.append('author', authorId);
-          if (isMine) url.searchParams.append('mine', 'true');
-        }
+        const url = new URL(`${API_BASE}/posts`);
+        url.searchParams.append('page', currentPage);
+        url.searchParams.append('limit', PAGE_SIZE);
+        url.searchParams.append('sort', sortOption);
+        if (searchQuery) url.searchParams.append('search', searchQuery);
+        if (category) url.searchParams.append('category', category);
+        if (authorId) url.searchParams.append('author', authorId);
+        if (isMine) url.searchParams.append('mine', 'true');
 
-        const res = await fetch(url, { signal, cache: 'no-store' });
+        const res = await fetch(url, {
+          signal,
+          cache: 'no-store',
+          credentials: 'include',
+        });
         if (!res.ok) throw new Error('Network response was not ok');
         const data = await res.json();
 
-        setPosts(normalizeApiData(data, category));
+        setPosts(normalizeApiData(data));
         setTotalPages(data.totalPages || 1);
 
         const count = data.totalCount ?? data.total ?? data.count ?? data.totalItems ?? null;
@@ -379,7 +375,9 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     };
 
     fetchPosts();
-    return () => { controller.abort(); };
+    return () => {
+      controller.abort();
+    };
   }, [currentPage, searchQuery, category, refreshTick, authorId, sortOption, isMine]);
 
   // Sync search state to the browser URL dynamically
@@ -406,6 +404,8 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     const handleFilter = (e) => {
       setCategory(e.detail.category);
       setSearchQuery('');
+      setIsMine(false);
+      setAuthorId('');
       setCurrentPage(1);
     };
 
@@ -414,19 +414,21 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    window.addEventListener('search-posts', handleSearch);
-    window.addEventListener('filter-category', handleFilter);
-    window.addEventListener('show-cards', handleShowCards);
     const handleRefresh = (e) => {
-      if (e && e.detail && e.detail.mine) {
+      if (e?.detail?.mine) {
         setIsMine(true);
-      } else {
+        if (e.detail.authorId) setAuthorId(e.detail.authorId);
+      } else if (e?.detail?.resetView) {
         setIsMine(false);
         setAuthorId('');
         window.history.replaceState({}, '', '/');
       }
       setRefreshTick((t) => t + 1);
     };
+
+    window.addEventListener('search-posts', handleSearch);
+    window.addEventListener('filter-category', handleFilter);
+    window.addEventListener('show-cards', handleShowCards);
     window.addEventListener('refresh-cards', handleRefresh);
     window.addEventListener('edit-post:saved', handleRefresh);
     toggleViews(true);
@@ -439,6 +441,15 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       window.removeEventListener('edit-post:saved', handleRefresh);
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasLoadedOnceRef.current) {
+      hasLoadedOnceRef.current = true;
+      return;
+    }
+
+    setCurrentPage(1);
+  }, [searchQuery, category, authorId, sortOption, isMine]);
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
@@ -470,7 +481,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const getEmptyStateContent = () => {
-    // My Posts — user hasn't created anything yet
     if ((authorId || isMine) && !searchQuery && !category) {
       return html`
         <div class="cards-no-results">
@@ -488,6 +498,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
         </div>
       `;
     }
+
     if (searchQuery || category) {
       return html`
         <div class="cards-no-results">
@@ -499,14 +510,11 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
         </div>
       `;
     }
+
     return html`<p class="cards-empty">No posts found.</p>`;
   };
 
-  // ── Split title into text + count parts for styled badge rendering ─────
-  // If the title has {n}, render the number as a styled badge.
-  // When authorId/category/search is active, skip the badge — just plain title.
   const renderTitle = () => {
-    // My Posts — always show badge with total count
     if (authorId || isMine) {
       const countLabel = totalCount !== null ? totalCount : '…';
       return html`
@@ -516,9 +524,11 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
         </h2>
       `;
     }
+
     if (!hasTitleToken || category || searchQuery) {
       return html`<h2 class="cards-title">${displayTitle}</h2>`;
     }
+
     const parts = initialTitle.split('{n}');
     const countLabel = totalCount !== null ? totalCount : '…';
     return html`
@@ -550,9 +560,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     </div>
 
     ${loading && html`<${SkeletonLoaders} />`}
-    
     ${error && !loading && html`<p class="cards-error" role="alert">Failed to load posts. Please try again.</p>`}
-
     ${!loading && !error && posts.length === 0 && getEmptyStateContent()}
 
     ${!loading && !error && posts.length > 0 && html`
@@ -576,13 +584,18 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   `;
 }
 
-// ── Exported Decorator ────────────────────────────────────────────────
-
 export default async function decorate(block) {
-  // Auth guard — redirect to sign in if not logged in
   if (!localStorage.getItem('af_user')) {
-    window.location.replace('/auth-form');
-    return;
+    try {
+      await restoreClientAuthFromSession();
+    } catch (err) {
+      clearClientAuthState();
+      if (err.status === 401) {
+        window.location.replace('/auth-form');
+        return;
+      }
+      throw err;
+    }
   }
 
   const rows = [...block.children];

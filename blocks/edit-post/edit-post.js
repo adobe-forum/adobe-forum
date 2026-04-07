@@ -121,6 +121,7 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   const resizeRef = useRef(null);
   const fileInputRef = useRef(null);
   const codePickerRef = useRef(null);
+  const langPickerDropdownRef = useRef(null);
   const [showTableTools, setShowTableTools] = useState(false);
   const [icons, setIcons] = useState(iconCache);
   const [activeFormats, setActiveFormats] = useState({});
@@ -132,16 +133,23 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
     loadIcons().then((loaded) => setIcons({ ...loaded }));
   }, []);
 
-  // Close code-language picker when clicking outside
+  // Close code-language picker when clicking/tapping outside
   useEffect(() => {
     if (!showCodeLangPicker) return undefined;
     const onDocClick = (e) => {
-      if (codePickerRef.current && !codePickerRef.current.contains(e.target)) {
+      const inBtn = codePickerRef.current && codePickerRef.current.contains(e.target);
+      const inDropdown = langPickerDropdownRef.current
+        && langPickerDropdownRef.current.contains(e.target);
+      if (!inBtn && !inDropdown) {
         setShowCodeLangPicker(false);
       }
     };
     document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener('touchstart', onDocClick);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('touchstart', onDocClick);
+    };
   }, [showCodeLangPicker]);
 
   const emitChange = () => {
@@ -1345,6 +1353,9 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
               id="ce-code-block-btn"
               onMouseDown=${(e) => {
     e.preventDefault();
+    e.stopPropagation();
+  }}
+              onClick=${() => {
     const editor = editorRef.current;
     if (!editor) return;
     const sel = window.getSelection();
@@ -1359,25 +1370,6 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
   }}
               dangerouslySetInnerHTML=${{ __html: icons.codeBlock || '' }}
             />
-            ${showCodeLangPicker && html`
-              <div className="ce-lang-picker" role="listbox" aria-label="Select language">
-                ${CODE_LANGUAGES.map((lang) => html`
-                  <button
-                    key=${lang.value}
-                    type="button"
-                    role="option"
-                    className=${`ce-lang-option ce-lang-${lang.value}`}
-                    onMouseDown=${(e) => {
-    e.preventDefault();
-    setShowCodeLangPicker(false);
-    execFormat('codeBlock', lang.value);
-  }}
-                  >
-                    ${lang.label}
-                  </button>
-                `)}
-              </div>
-            `}
           </span>
         </span>
         <span className="ce-toolbar-group">
@@ -1401,6 +1393,29 @@ function RichTextEditor({ onChange, minChars = 20, initialValue = '' }) {
         </span>
       </div>
       <div className="ce-container" ref=${containerRef}>
+        ${showCodeLangPicker && html`
+          <div className="ce-lang-picker" ref=${langPickerDropdownRef}
+            role="listbox" aria-label="Select language">
+            <span className="ce-lang-picker-label">Language</span>
+            ${CODE_LANGUAGES.map((lang) => html`
+              <button
+                key=${lang.value}
+                type="button"
+                role="option"
+                className=${`ce-lang-option ce-lang-${lang.value}`}
+                onMouseDown=${(e) => {
+    e.preventDefault();
+  }}
+                onClick=${() => {
+    setShowCodeLangPicker(false);
+    execFormat('codeBlock', lang.value);
+  }}
+              >
+                ${lang.label}
+              </button>
+            `)}
+          </div>
+        `}
         <div className="ce-editor" ref=${editorRef}
           contentEditable="true"
           data-placeholder="Write your question details here..."
@@ -1668,6 +1683,46 @@ function InlinePreview({
   `;
 }
 
+function findSidebarItemInCategories(categories, targetId) {
+  const walk = (items) => {
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      // eslint-disable-next-line no-underscore-dangle
+      if (String(item._id || item.id || '') === String(targetId)) return item;
+      const found = walk(item.children || []);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  for (let i = 0; i < categories.length; i += 1) {
+    const found = walk(categories[i].items || []);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findFolderIdByPath(categories, path) {
+  if (!path) return null;
+  const parts = path.split(' > ').map((part) => part.trim()).filter(Boolean);
+  if (parts.length <= 1) return null;
+
+  const [rootCategory, ...folderParts] = parts;
+  const category = (categories || []).find((cat) => cat.name === rootCategory);
+  if (!category) return null;
+
+  let items = category.items || [];
+  let currentFolder = null;
+  for (let i = 0; i < folderParts.length; i += 1) {
+    currentFolder = items.find((item) => item.isFolder && item.title === folderParts[i]);
+    if (!currentFolder) return null;
+    items = currentFolder.children || [];
+  }
+
+  // eslint-disable-next-line no-underscore-dangle
+  return currentFolder ? String(currentFolder._id || currentFolder.id || '') : null;
+}
+
 // EDIT POST
 function EditPost() {
   const [title, setTitle] = useState('');
@@ -1682,6 +1737,7 @@ function EditPost() {
   const [editId, setEditId] = useState(null);
   const [editSidebarItemId, setEditSidebarItemId] = useState(null);
   const [originalCategory, setOriginalCategory] = useState('');
+  const [originalFolderId, setOriginalFolderId] = useState(null);
   const [originalDraft, setOriginalDraft] = useState(null);
 
   const showToast = (message, type = 'success', onConfirm = null) => {
@@ -1754,6 +1810,27 @@ function EditPost() {
         tags: (draft.tags || []).map((tag) => tag.replace(/^#/, '')),
         category: draft.category || '',
       });
+
+      fetch('http://localhost:5000/api/sidebar/categories', { credentials: 'include' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data?.success) return;
+
+          let restoredFolderId = null;
+          if (draft.sidebarItemId) {
+            const sidebarItem = findSidebarItemInCategories(
+              data.categories || [],
+              draft.sidebarItemId,
+            );
+            restoredFolderId = sidebarItem?.parentId ? String(sidebarItem.parentId) : null;
+          }
+
+          if (!restoredFolderId) restoredFolderId = findFolderIdByPath(data.categories || [], draft.category || '');
+
+          setFolderId(restoredFolderId);
+          setOriginalFolderId(restoredFolderId);
+        })
+        .catch(() => { /* non-fatal */ });
     } catch {
       window.location.href = '/';
     }
@@ -1812,22 +1889,38 @@ function EditPost() {
       const result = await response.json();
 
       if (response.ok) {
-        // If category changed, update sidebar item
-        if (category !== originalCategory && editSidebarItemId) {
-          const smartPayload = {
-            title: title.trim(),
-            category: category.split(' > ')[0], // Use root category name
-            postId: editId,
-            parentId: folderId || null,
-          };
+        if (editSidebarItemId) {
           try {
-            await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify(smartPayload),
-            });
-          } catch (sidebarErr) { /* sidebar update failed silently */ }
+            const titleChanged = title.trim() !== originalDraft?.title?.trim();
+            if (titleChanged) {
+              const renameResponse = await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ title: title.trim() }),
+              });
+              if (!renameResponse.ok) throw new Error('Sidebar rename failed');
+            }
+
+            const locationChanged = category !== originalCategory
+              || (folderId || null) !== originalFolderId;
+            if (locationChanged) {
+              const moveResponse = await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  category: category.split(' > ')[0],
+                  parentId: folderId || null,
+                  postCategory: category,
+                }),
+              });
+              if (!moveResponse.ok) throw new Error('Sidebar move failed');
+            }
+          } catch (sidebarErr) {
+            showToast('Post saved, but sidebar location failed to update.', 'error');
+            return;
+          }
         }
         localStorage.removeItem('edit-post-draft');
         window.dispatchEvent(new CustomEvent('refresh-sidebar'));

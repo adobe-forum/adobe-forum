@@ -177,7 +177,7 @@ router.patch('/sidebar-items/:id', requireAuth, async (req, res) => {
  */
 router.patch('/sidebar-items/:id/move', requireAuth, async (req, res) => {
   try {
-    const { category, parentId = null } = req.body;
+    const { category, parentId = null, postCategory = null } = req.body;
     if (!category)
       return res.status(400).json({ error: 'category is required' });
 
@@ -202,11 +202,18 @@ router.patch('/sidebar-items/:id/move', requireAuth, async (req, res) => {
     }
 
     item.category = resolvedCategory;
+    item.order = await SidebarItem.countDocuments({
+      category: resolvedCategory,
+      parentId: item.parentId,
+      _id: { $ne: item._id },
+    });
     item.updatedAt = Date.now();
     await item.save();
 
     if (item.postId) {
-      await Post.findByIdAndUpdate(item.postId, { category: resolvedCategory });
+      await Post.findByIdAndUpdate(item.postId, {
+        category: postCategory?.trim() || resolvedCategory,
+      });
     }
 
     return res.json({ success: true, item });

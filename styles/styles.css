@@ -1,3 +1,6 @@
+/* ── Global Responsive Utilities (must be first) ───────────────────────── */
+@import url('./responsive.css');
+
 :root {
   /* --- App Layout Dimensions --- */
   --nav-width: 256px; /* matched to sidebar-width in sidebar.css */
@@ -109,6 +112,16 @@
   --heading-font-family: "adobe-clean", "Source Sans Pro", sans-serif;
   --post-code-font: monaco, 'Courier New', monospace;
 
+  /* --- Page spacing tokens --- */
+  --page-max-width: 900px;        /* standard content column width     */
+  --page-gutter: 16px;            /* horizontal page gutter, mobile    */
+  --page-gutter-lg: 32px;         /* horizontal page gutter, desktop   */
+  --page-v-top: 24px;             /* vertical top padding, mobile       */
+  --page-v-bottom: 56px;          /* vertical bottom padding, mobile    */
+  --page-v-top-lg: 36px;          /* vertical top padding, desktop      */
+  --page-v-bottom-lg: 72px;       /* vertical bottom padding, desktop   */
+
+
   /* Font Sizes */
   --body-font-size-m: 18px;
   --body-font-size-s: 16px;
@@ -203,7 +216,8 @@ header {
   position: relative;
 }
 
-aside.sidebar-wrapper {
+/* .sidebar-mount is the direct <body> grid child that header.js appends */
+.sidebar-mount {
   grid-area: sidebar;
   background-color: var(--spectrum-gray-50);
   border-right: 1px solid var(--spectrum-gray-200);
@@ -211,9 +225,16 @@ aside.sidebar-wrapper {
   height: 100%;
   display: none;
 
-  @media (width >=768px) {
+  @media (width >= 768px) {
     display: block;
   }
+}
+
+/* Keep aside.sidebar-wrapper as a non-grid layout host (desktop fixed panel) */
+aside.sidebar-wrapper {
+  background-color: var(--spectrum-gray-50);
+  border-right: 1px solid var(--spectrum-gray-200);
+  z-index: 10;
 }
 
 main {
@@ -416,7 +437,7 @@ main>.section>div {
 
   /* FIX: explicit width */
   margin: auto;
-  padding: 0 24px;
+  padding: 0 var(--page-gutter, 16px);
   box-sizing: border-box;
 
   /* FIX: padding doesn't add to width */
@@ -462,6 +483,34 @@ footer {
   }
 
   main>.section>div {
-    padding: 0 32px;
+    padding: 0 var(--page-gutter-lg, 32px);
+  }
+}
+
+/* —— Mobile/tablet (≤ 1024px): single-column stacked layout
+   header → sidebar row (tap bar + panel) → content
+   The sidebar area expands/contracts with the tap bar in normal flow. */
+@media (width <= 1024px) {
+  body {
+    grid-template:
+      "header"  var(--header-height)
+      "sidebar" auto
+      "content" 1fr
+      "footer"  auto
+      / minmax(0, 1fr);
+  }
+
+  .sidebar-mount {
+    /* Must be block so the sidebar grid area is visible */
+    display: block;
+    height: auto;
+  }
+
+  main {
+    max-width: 100%;
+  }
+
+  main > .section > div {
+    padding: 0 var(--page-gutter, 16px);
   }
 }

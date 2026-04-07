@@ -10,40 +10,92 @@
   --sidebar-transition: 0.2s ease;
 
   /* ── Spectrum 1 SideNav color tokens ──────────── */
-  --sn-bg:              var(--sp-gray-50);        /* Panel background  */
-  --sn-border:          var(--sp-gray-200);       /* Right border      */
-  --sn-item-text:       var(--sp-gray-800);       /* Default label     */
-  --sn-item-text-hover: var(--sp-gray-900);       /* Hover label       */
-  --sn-item-bg-hover:   var(--sp-gray-100);       /* Hover fill        */
-  --sn-item-bg-active:  var(--sp-gray-200);       /* Active fill       */
-  --sn-item-text-active:var(--sp-gray-900);       /* Active label      */
-  --sn-section-label:   var(--sp-gray-600);       /* "TOPICS" etc.     */
-  --sn-muted:           var(--sp-gray-500);       /* Icons, placeholders */
-  --sn-folder:          #e68619;                  /* Folder amber      */
-  --sn-folder-open:     #cb6f10;
-  --sn-file:            var(--sp-gray-500);
-  --sn-error:           var(--sp-red-600);
-  --sn-focus-ring:      var(--sp-blue-500);
+  --sn-bg: var(--sp-gray-50);
+
+  /* Panel background  */
+  --sn-border: var(--sp-gray-200);
+
+  /* Right border      */
+  --sn-item-text: var(--sp-gray-800);
+
+  /* Default label     */
+  --sn-item-text-hover: var(--sp-gray-900);
+
+  /* Hover label       */
+  --sn-item-bg-hover: var(--sp-gray-100);
+
+  /* Hover fill        */
+  --sn-item-bg-active: var(--sp-gray-200);
+
+  /* Active fill       */
+  --sn-item-text-active: var(--sp-gray-900);
+
+  /* Active label      */
+  --sn-section-label: var(--sp-gray-600);
+
+  /* "TOPICS" etc.     */
+  --sn-muted: var(--sp-gray-500);
+
+  /* Icons, placeholders */
+  --sn-folder: #e68619;
+
+  /* Folder amber      */
+  --sn-folder-open: #cb6f10;
+  --sn-file: var(--sp-gray-500);
+  --sn-error: var(--sp-red-600);
+  --sn-focus-ring: var(--sp-blue-500);
 
   /* ── Spectrum 1 typography ────────────────────── */
-  --sn-font-size:       14px;   /* Spectrum body-S   */
-  --sn-label-size:      11px;   /* Section label     */
-  --sn-label-tracking:  0.06em;
+  --sn-font-size: 14px;
+
+  /* Spectrum body-S   */
+  --sn-label-size: 11px;
+
+  /* Section label     */
+  --sn-label-tracking: 0.06em;
 
   /* ── Spectrum 1 geometry (medium scale) ───────── */
-  --sn-item-h:          32px;   /* Nav item height   */
-  --sn-padding-x:       16px;   /* Panel side pad    */
-  --sn-padding-y:       20px;   /* Panel top/bottom  */
-  --sn-item-radius:     var(--sp-radius-md);  /* 4px */
-  --sn-section-gap:     24px;   /* Between sections  */
-  --sn-item-gap:        2px;    /* Between items     */
+  --sn-item-h: 32px;
+
+  /* Nav item height   */
+  --sn-item-pad-y: 6px;
+
+  /* Item top/bottom padding */
+  --sn-item-pad-x: 8px;
+
+  /* Item left/right padding */
+  --sn-padding-x: 16px;
+
+  /* Panel side pad    */
+  --sn-padding-y: 20px;
+
+  /* Panel top/bottom  */
+  --sn-item-radius: var(--sp-radius-md);
+
+  /* 4px */
+  --sn-section-top: 16px;
+
+  /* Section header top gap   */
+  --sn-section-bottom: 4px;
+
+  /* Section header bottom gap */
+  --sn-item-gap: 2px;
+
+  /* Between items     */
+  --sn-icon-w: 16px;
+
+  /* Unified icon column width — keeps all rows on same text grid */
+  --sn-icon-gap: 10px;
+
+  /* Icon → label gap  */
 }
 
 /* =============================================
-   WRAPPER — sliding panel
+   WRAPPER — desktop: fixed panel; mobile: in-flow collapsible
    ============================================= */
 
 .sidebar-wrapper {
+  /* Desktop (> 1024px): fixed panel anchored to viewport */
   position: fixed;
   top: var(--header-height, 64px);
   left: 0;
@@ -56,30 +108,33 @@
     left: calc(-1 * var(--sidebar-width));
   }
 
-  @media (width < 768px) {
-    left: calc(-1 * var(--sidebar-width));
-    z-index: 250;
+  /* Mobile / tablet (≤1024px): Fixed 50vh panel with internal scroll */
+  @media (width <= 1024px) {
+    /* --- Closed state (default) --- */
+    position: static;
+    width: 100%;
+    height: 0;
+    overflow: hidden;
+    z-index: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, height 0.2s; /* smooth reveal */
 
+    /* --- Open state: 50vh panel with internal scroll --- */
     &.is-open {
-      left: 0;
+      height: 50vh;
+      opacity: 1;
+      pointer-events: auto;
+      overflow-y: auto;
+      border-bottom: 1px solid var(--sn-border);
+      box-shadow: none;
     }
   }
 }
 
-/* =============================================
-   MOBILE BACKDROP
-   ============================================= */
-
+/* Backdrop — only meaningful on desktop fixed overlay (tablet/mobile no longer need it) */
 .sidebar-backdrop {
   display: none;
-
-  @media (width < 768px) {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgb(0 0 0 / 40%);
-    z-index: -1;
-  }
 }
 
 /* =============================================
@@ -87,6 +142,8 @@
    ============================================= */
 
 .sidebar {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   background: var(--sn-bg);
@@ -99,11 +156,74 @@
   color: var(--sn-item-text);
   padding: var(--sn-padding-y) 0 var(--sn-padding-y);
 
+  /* —— Mobile/tablet (≤1024px): fixed 50vh panel, internal scroll handled by wrapper —— */
+  @media (width <= 1024px) {
+    padding-top: 0;
+    height: 100%;
+    max-height: 50vh;
+    overflow-y: auto;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  /* ── Overlay header (mobile only): title + close button ── */
+  & .sidebar-overlay-header {
+    display: none;
+
+    @media (width <= 1024px) {
+      display: none; /* We don't need the close 'X' header for a 50vh panel, users can tap bar to close */
+    }
+  }
+
+
+  & .sidebar-overlay-title {
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sn-item-text);
+    letter-spacing: 0.01em;
+  }
+
+  & .sidebar-close-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--sp-radius-md);
+    cursor: pointer;
+    color: var(--sn-muted);
+    transition: background 0.13s, color 0.13s;
+    flex-shrink: 0;
+
+    &:hover {
+      background: var(--sn-item-bg-hover);
+      color: var(--sn-item-text);
+    }
+
+    &:active {
+      background: var(--sn-item-bg-active);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--sn-focus-ring);
+      outline-offset: 1px;
+    }
+  }
+
   /* ── Search Input ────────────────────────────── */
   & .search-container {
     flex-shrink: 0;
     padding: 0 var(--sn-padding-x);
     margin-bottom: 16px;
+
+    /* Balance vertical spacing on mobile since outer wrapper drops its padding */
+    @media (width <= 1024px) {
+      padding: 16px var(--sn-padding-x);
+      margin-bottom: 8px;
+    }
 
     & .sidebar-search-input {
       width: 100%;
@@ -115,9 +235,7 @@
       font-family: inherit;
       box-sizing: border-box;
       background:
-        var(--sp-gray-100)
-        url('data:image/svg+xml;utf8,<svg fill="none" stroke="%239a958e" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>')
-        no-repeat 10px center / 14px;
+        var(--sp-gray-100) url('data:image/svg+xml;utf8,<svg fill="none" stroke="%239a958e" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>') no-repeat 10px center / 14px;
       color: var(--sn-item-text);
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -139,21 +257,24 @@
     }
   }
 
-  /* ── Quick-nav items (Home, etc.) ─────────── */
+  /* ── Quick-nav items (Home, Pending Reviews, My Requests) ── */
   & .sidebar-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    height: var(--sn-item-h);
-    margin: 0 8px var(--sn-item-gap);
-    padding: 0 8px;
-    border-radius: var(--sn-item-radius);
+    gap: var(--sn-icon-gap);
+    min-height: var(--sn-item-h);
+
+    /* margin:0 — no side margin; padding-x drives the 16px rail */
+    margin: 0 0 var(--sn-item-gap);
+    padding: var(--sn-item-pad-y) var(--sn-padding-x);
+    border-radius: 0; /* full-width rows on mobile feel cleaner */
     color: var(--sn-item-text);
     font-size: var(--sn-font-size);
     font-weight: 400;
     cursor: pointer;
     transition: background 0.13s;
     user-select: none;
+    background: transparent;
 
     &:hover {
       background: var(--sn-item-bg-hover);
@@ -183,13 +304,8 @@
     letter-spacing: var(--sn-label-tracking);
     text-transform: uppercase;
     color: var(--sn-section-label);
-    padding: var(--sn-section-gap) var(--sn-padding-x) 6px;
+    padding: var(--sn-section-top) var(--sn-padding-x) var(--sn-section-bottom);
     flex-shrink: 0;
-
-    /* no top gap for very first section */
-    &:first-of-type {
-      padding-top: 12px;
-    }
   }
 
   /* ── Category scrollable list ────────────── */
@@ -202,13 +318,17 @@
     scrollbar-width: thin;
     scrollbar-color: var(--sn-border) transparent;
 
-    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
 
     &::-webkit-scrollbar-thumb {
       background: var(--sn-border);
       border-radius: 2px;
 
-      &:hover { background: var(--sp-gray-300); }
+      &:hover {
+        background: var(--sp-gray-300);
+      }
     }
   }
 
@@ -221,11 +341,14 @@
   & .category-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    height: var(--sn-item-h);
-    margin: 0 8px var(--sn-item-gap);
-    padding: 0 8px;
-    border-radius: var(--sn-item-radius);
+    gap: var(--sn-icon-gap);
+    min-height: var(--sn-item-h);
+
+    /* margin:0 — same 16px rail as .sidebar-item */
+    margin: 0 0 var(--sn-item-gap);
+    padding: var(--sn-item-pad-y) var(--sn-padding-x);
+    border-radius: var(--sn-item-radius); /* desktop: 4px; mobile: 0 via @media below */
+    background: transparent;
     cursor: pointer;
     font-size: var(--sn-font-size);
     font-weight: 400;
@@ -239,10 +362,20 @@
       background: var(--sn-item-bg-hover);
     }
 
+    /* Expanded state: text color darkens, but background stays neutral —
+       expanded ≠ selected, so no fill change.
+       Explicit transparent prevents any stale hover bg from sticking. */
     &.is-expanded {
       color: var(--sn-item-text-active);
+      background: transparent;
     }
 
+    /* Full-width on mobile only — desktop keeps 4px radius */
+    @media (width <= 1024px) {
+      border-radius: 0;
+    }
+
+    /* Always-on child styles (desktop + mobile) */
     & .category-chevron {
       display: flex;
       align-items: center;
@@ -264,6 +397,25 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    /* Mobile: reorder chevron to right so folder icon aligns with sidebar-item
+       icons on the 16px rail. CSS order is purely visual — no markup change. */
+    @media (width <= 1024px) {
+      & .category-chevron {
+        order: 3;        /* move '>' to right side */
+        margin-left: auto;
+        width: auto;     /* let it size naturally when float-right */
+      }
+
+      & .category-icon {
+        order: 1;        /* folder icon first — aligns with sidebar-item icons */
+      }
+
+      & .category-name {
+        order: 2;
+        flex: 1;
+      }
+    }
   }
 
   /* ── Tree lists ──────────────────────────── */
@@ -274,12 +426,14 @@
     margin: 0;
   }
 
-  /* ── Tree item row ───────────────────────── */
+  /* ── Tree item row ─────────────────── */
   & .tree-item-content {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: var(--sn-item-h);
+    min-height: var(--sn-item-h);
+    padding-top: var(--sn-item-pad-y);
+    padding-bottom: var(--sn-item-pad-y);
     border-radius: var(--sn-item-radius);
     cursor: pointer;
     position: relative;
@@ -289,8 +443,12 @@
     font-weight: 400;
     color: var(--sn-item-text);
 
-    /* horizontal margin mirrors category header; left padding set via inline style (indentation) */
-    margin-right: 8px;
+    /* mobile: align right edge with the 16px rail */
+    margin-right: 0;
+
+    @media (width <= 1024px) {
+      border-radius: 0;
+    }
 
     &:hover {
       background: var(--sn-item-bg-hover);
@@ -308,7 +466,7 @@
     list-style: none;
     position: relative;
 
-    &.is-folder > .tree-item-content {
+    &.is-folder>.tree-item-content {
       font-weight: 400;
     }
   }
@@ -322,6 +480,21 @@
     align-items: center;
     justify-content: center;
     color: var(--sn-muted);
+  }
+
+  & .tree-toggle {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  & .tree-toggle[hidden] {
+    display: none;
   }
 
   & .tree-chevron-spacer {
@@ -371,15 +544,15 @@
   & .sidebar-pending-list {
     list-style: none;
     margin: 0;
-    padding: 2px 0 8px var(--sn-padding-x);
+    padding: 0 0 8px;
   }
 
   /* ── Empty / loading / error states ─────── */
-  & .no-items {
-    padding: 6px 16px 6px 36px;
-    font-style: italic;
-    color: var(--sn-muted);
-    font-size: 13px;
+  & .no-items-placeholder {
+    &:hover {
+      background: transparent !important;
+      color: inherit !important;
+    }
   }
 
   & .no-results {
@@ -554,7 +727,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: var(--sp-height-sm);   /* 32px */
+  height: var(--sp-height-sm);
+
+  /* 32px */
   padding: 0 16px;
   font-size: 14px;
   font-weight: 700;
@@ -602,6 +777,95 @@
 
     &:focus-visible {
       box-shadow: 0 0 0 2px var(--sp-gray-50), 0 0 0 4px var(--sp-red-600);
+    }
+  }
+}
+
+/* =============================================
+   TAP BAR — mobile/tablet trigger (≤ 1024px)
+   ============================================= */
+
+/* Hidden on desktop — sidebar is always visible */
+.sidebar-tapbar {
+  display: none;
+}
+
+@media (width <= 1024px) {
+  .sidebar-tapbar {
+    /* 1. Reset first — wipes ALL inherited/global button styles */
+    all: unset;
+    box-sizing: border-box;
+
+    /* 2. Restore position AFTER reset (all:unset would have wiped it) */
+    position: relative;
+    z-index: 401;
+
+    /* Layout */
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 44px;
+    padding: 0 var(--sn-padding-x); /* same 16px rail as sidebar content */
+    gap: var(--sn-icon-gap);
+
+    /* Visual — no border-left accent (it shifted content by 3px) */
+    background: var(--sp-gray-75);
+    border-bottom: 1px solid var(--sn-border);
+
+    /* Typography */
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sn-item-text);
+    letter-spacing: 0.01em;
+    line-height: normal;
+
+    /* Interaction */
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--sn-item-bg-hover);
+    }
+
+    &:active {
+      background: var(--sn-item-bg-active);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--sn-focus-ring);
+      outline-offset: -2px;
+    }
+
+    /* Open state: background-only indicator (no border-left shift) */
+    &[aria-expanded="true"] {
+      background: var(--sn-item-bg-hover);
+    }
+  }
+
+  .sidebar-tapbar-icon {
+    flex-shrink: 0;
+    color: var(--sn-muted);
+    display: block;
+  }
+
+  .sidebar-tapbar-label {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sidebar-tapbar-chevron {
+    flex-shrink: 0;
+    color: var(--sn-muted);
+    transition: transform 0.2s ease;
+
+    &.is-open {
+      transform: rotate(180deg);
+      color: var(--sn-item-text);
     }
   }
 }

@@ -28,21 +28,18 @@ body.pp-scroll-lock {
   --status-pending-badge-text: #0d5dbf;
 }
 
-/* ── Prevent body scroll when sidebar is open on mobile ── */
-@media (width < 768px) {
-  body.sidebar-is-open {
-    overflow: hidden !important;
-    overscroll-behavior: none !important;
+/* Sidebar is in-flow on mobile — no scroll lock needed */
+
+/* ── Sidebar: scroll inside panel on desktop only.
+   On mobile/tablet (≤ 1024px), aside.sidebar owns its own height + scroll
+   (see sidebar.css). Applying height:100% here against a height:auto parent
+   would break scrolling — so this rule is scoped to desktop only. */
+@media (width > 1024px) {
+  .sidebar-wrapper aside.sidebar {
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    height: 100%;
   }
-}
-
-/* ── Sidebar: scroll inside panel, never the body ── */
-.sidebar-wrapper aside.sidebar {
-  overflow: hidden auto;
-  overscroll-behavior: contain;
-
-  /* height is inherited from the fixed sidebar-wrapper */
-  height: 100%;
 }
 
 /* =============================================
@@ -181,7 +178,7 @@ nav.spectrum-nav {
    MOBILE (< 900px)
    ============================================= */
 
-@media (width < 900px) {
+@media (width <= 1024px) {
   nav.spectrum-nav {
     grid-template-columns: auto auto 1fr;
     padding: 0 20px;
@@ -189,7 +186,7 @@ nav.spectrum-nav {
 
   .nav-hamburger {
     grid-column: 1;
-    display: block;
+    display: none; /* hidden at ≤1024px — sidebar tap bar is the mobile trigger */
     margin-right: 16px;
   }
 
