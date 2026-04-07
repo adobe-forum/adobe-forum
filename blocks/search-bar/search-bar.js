@@ -5,9 +5,10 @@ import htm from '../../vendor/htm.js';
 // Bind HTM to Preact's hyperscript function
 const html = htm.bind(h);
 
-// 1. Define the Preact Component
 function SearchBar({ initialPlaceholder }) {
-  const [query, setQuery] = useState('');
+  // Pull initial query from the browser URL parameter if a shared link was used
+  const initialQuery = new URLSearchParams(window.location.search).get('search') || '';
+  const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef(null);
 
   // useEffect handles our Debounce logic automatically!

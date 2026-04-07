@@ -173,26 +173,40 @@ router.get('/', async (req, res) => {
 
 /**
  * GET /api/posts/:id
- * Pass ?view=1 to increment the view counter.
  */
 router.get('/:id', async (req, res) => {
   try {
-    let post;
-    if (req.query.view === '1') {
-      post = await Post.findByIdAndUpdate(
-        req.params.id,
-        { $inc: { views: 1 } },
-        { new: true },
-      ).populate('createdBy', 'firstName lastName');
-    } else {
-      post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
-    }
-
+    const post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
     if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch post' });
+  }
+});
+
+/**
+ * POST /api/posts/:id/view
+ * Securely tracks unique views by User ID.
+ */
+router.post('/:id/view', requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    const userId = req.user._id;
+
+    if (!post.viewedBy.includes(userId)) {
+      post.viewedBy.push(userId);
+      post.views = (post.views || 0) + 1;
+      await post.save();
+    }
+
+    await post.populate('createdBy', 'firstName lastName');
+    return res.json({ success: true, post });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to update view status' });
   }
 });
 

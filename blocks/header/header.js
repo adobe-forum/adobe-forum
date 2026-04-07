@@ -963,6 +963,9 @@ function loadCSS(href) {
 // ============================================
 
 export default async function decorate(block) {
+  // Purge legacy view tracking tokens now that the engine is migrated to the backend
+  localStorage.removeItem('af_viewed_posts');
+
   block.textContent = '';
   block.style.display = 'block';
   block.style.minHeight = 'var(--header-height)';

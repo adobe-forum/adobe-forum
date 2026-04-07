@@ -354,15 +354,9 @@ const ForumPost = ({ blockEl }) => {
             // eslint-disable-next-line no-underscore-dangle
             const isAuthor = cu && cu._id && String(cu._id) === String(cb?._id || cb || '');
             if (!isAuthor) {
-              const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
-              if (!viewedPosts.includes(postId)) {
-                // Fire-and-forget — increment on the server
-                fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => {});
-                viewedPosts.push(postId);
-                localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
-                // Show the incremented count locally too
-                fetchedPost.views = (fetchedPost.views || 0) + 1;
-              }
+              // Fire-and-forget — securely increment on the server
+              // The backend handles duplicate-prevention natively via its viewedBy array
+              fetch(`${API_BASE}/posts/${postId}/view`, { method: 'POST', credentials: 'include' }).catch(() => {});
             }
             // ─────────────────────────────────────────────────────────────────
 
