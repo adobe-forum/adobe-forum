@@ -446,6 +446,14 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const [currentUser, setCurrentUser] = useState(null);
   // REQ 7: in-memory cache so re-opens are instant
   const treeCache = useRef(null);
+  const breadcrumbRef = useRef(null);
+
+  // Scroll breadcrumb to the right whenever stack changes (show current crumb)
+  useEffect(() => {
+    if (breadcrumbRef.current) {
+      breadcrumbRef.current.scrollLeft = breadcrumbRef.current.scrollWidth;
+    }
+  }, [stack, selected]);
 
   // Mirror sidebar's fetchCurrentUser pattern
   useEffect(() => {
@@ -690,7 +698,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
           <div class="fm-nav">
             ${!isRoot && !isSearching && html`
               <button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
-            <div class="fm-breadcrumb">
+            <div class="fm-breadcrumb" ref=${breadcrumbRef}>
               <button type="button"
                 class=${`fm-crumb${isRoot && !showSelectedCrumb && !isSearching ? ' fm-crumb--cur' : ''}`}
                 onClick=${goRoot}>Folders</button>

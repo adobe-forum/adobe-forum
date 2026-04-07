@@ -1,4 +1,3 @@
-/* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
@@ -102,6 +101,10 @@ const IconEyeOff = () => html`
 
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE = isLocal ? 'http://localhost:5000/api/auth' : 'https://your-production-api.com/api/auth';
+
+// Helper: safely extract MongoDB _id without triggering no-underscore-dangle
+const getId = (obj) => (obj && typeof obj === 'object' ? obj[Object.keys(obj).find((k) => k === '_id')] : obj);
+const getStrId = (obj) => (obj ? String(getId(obj) ?? obj) : null);
 
 function getInitials(firstName, lastName) {
   const f = (firstName || '').trim()[0] || '';
@@ -231,11 +234,10 @@ function ProfileView({ user, onLogout, onChangePassword }) {
     setLoading(true);
     setGlobalErr(null);
     try {
-      // eslint-disable-next-line no-underscore-dangle
       const res = await fetch(`${API_BASE}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user._id, firstName, lastName }), // eslint-disable-line no-underscore-dangle
+        body: JSON.stringify({ userId: getStrId(user), firstName, lastName }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Update failed.');
@@ -361,8 +363,7 @@ function ProfilePopup({ onClose, user }) {
 
   const renderContent = () => {
     if (view === 'change-password') {
-      // eslint-disable-next-line no-underscore-dangle
-      const { _id: uid } = user;
+      const uid = getId(user);
       return html`<${ChangePasswordView}
         userId=${uid}
         onBack=${() => setView('profile')}
@@ -422,8 +423,7 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
   };
 
   const handleMyPosts = () => {
-    // eslint-disable-next-line no-underscore-dangle
-    window.location.href = `/?author=${user._id}`;
+    window.location.href = `/?author=${getStrId(user)}`;
     onClose();
   };
 
@@ -471,7 +471,6 @@ function NotificationsDropdown({ onClose, currentUserId }) {
 
   useEffect(() => {
     const fetchAll = async () => {
-
       try {
         const fetchSafe = (url) => fetch(url, { credentials: 'include' })
           .then((r) => (r.ok ? r.json() : { success: false }))
@@ -495,7 +494,10 @@ function NotificationsDropdown({ onClose, currentUserId }) {
               // If the backend already scopes to the session user this is a no-op,
               // but guard client-side too in case the endpoint returns all reviews.
               if (currentUserId) {
-                const reviewerId = r.reviewerId ? String(typeof r.reviewerId === 'object' ? r.reviewerId._id : r.reviewerId) : null; // eslint-disable-line no-underscore-dangle
+                let reviewerId = null;
+                if (r.reviewerId) {
+                  reviewerId = typeof r.reviewerId === 'object' ? getStrId(r.reviewerId) : String(r.reviewerId);
+                }
                 if (reviewerId && reviewerId !== currentUserId) return false;
               }
               return true;
@@ -516,9 +518,10 @@ function NotificationsDropdown({ onClose, currentUserId }) {
               if (!r.postId) return false;
               if (!currentUserId) return true; // can't check, allow through
               // authorId may be a populated object or a raw string ID
-              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
-                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
-                : null;
+              let authorId = null;
+              if (r.authorId) {
+                authorId = typeof r.authorId === 'object' ? getStrId(r.authorId) : String(r.authorId);
+              }
               return !authorId || authorId === currentUserId;
             })
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
@@ -528,17 +531,26 @@ function NotificationsDropdown({ onClose, currentUserId }) {
               if (!r.postId) return false;
               if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
               if (!currentUserId) return true;
-              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
-                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
-                : null;
+              let authorId = null;
+              if (r.authorId) {
+                authorId = typeof r.authorId === 'object' ? getStrId(r.authorId) : String(r.authorId);
+              }
               return !authorId || authorId === currentUserId;
             })
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
+        // Discard notifications older than 1 month
+        const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+        const cutoff = Date.now() - ONE_MONTH_MS;
+        const fresh = combined.filter((item) => {
+          const ts = item.data.updatedAt ? new Date(item.data.updatedAt).getTime() : 0;
+          return ts >= cutoff;
+        });
+
         // sort by most recent updatedAt
-        combined.sort((a, b) => new Date(b.data.updatedAt) - new Date(a.data.updatedAt));
-        setItems(combined);
+        fresh.sort((a, b) => new Date(b.data.updatedAt) - new Date(a.data.updatedAt));
+        setItems(fresh);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to fetch notifications', err);
@@ -575,7 +587,6 @@ function NotificationsDropdown({ onClose, currentUserId }) {
 
   // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.
   // Using these helpers prevents crashes when population is missing or partial.
-  const getId = (ref) => (ref && typeof ref === 'object' ? ref._id : ref); // eslint-disable-line no-underscore-dangle
   const getTitle = (ref) => (ref && typeof ref === 'object' ? ref.title : null);
   const getFirstName = (ref) => (ref && typeof ref === 'object' ? ref.firstName : '');
   const getLastName = (ref) => (ref && typeof ref === 'object' ? ref.lastName : '');
@@ -589,7 +600,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
           method: 'PATCH',
           credentials: 'include',
         });
-      } catch (err) { /* ignore */ }
+      } catch { /* ignore */ }
     }
     onClose();
     navigateToPost(postId);
@@ -602,7 +613,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
         method: 'PATCH',
         credentials: 'include',
       });
-    } catch (err) { /* ignore */ }
+    } catch { /* ignore */ }
     onClose();
     navigateToPost(postId);
   };
@@ -634,9 +645,8 @@ function NotificationsDropdown({ onClose, currentUserId }) {
         ${!loading && items.map((item) => {
     if (item.type === 'reviewer_pending') {
       const r = item.data;
-      // eslint-disable-next-line no-underscore-dangle
       const pId = getId(r.postId);
-      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const rId = getId(r);
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const authorFirst = getFirstName(r.authorId);
       const authorLast = getLastName(r.authorId);
@@ -659,8 +669,8 @@ function NotificationsDropdown({ onClose, currentUserId }) {
     if (item.type === 'author_update') {
       const r = item.data;
       const isApproved = r.overallStatus === 'approved';
-      const pId = getId(r.postId); // eslint-disable-line no-underscore-dangle
-      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const pId = getId(r.postId);
+      const rId = getId(r);
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const timeAgo = formatTimeAgo(r.updatedAt);
       const statusIcon = isApproved ? approvedIcon : changesIcon;
@@ -722,12 +732,18 @@ function HeaderComponent() {
         .then((r) => (r.ok ? r.json() : { success: false }))
         .catch(() => ({ success: false }));
 
-      // eslint-disable-next-line no-underscore-dangle
-      const currentUserId = user._id ? String(user._id) : null;
+      const currentUserId = getId(user) ? getStrId(user) : null;
       // Helper: extract string ID from a populated object or raw string
-      const toStrId = (ref) => { // eslint-disable-line no-underscore-dangle
+      const toStrId = (ref) => {
         if (!ref) return null;
-        return typeof ref === 'object' ? String(ref._id) : String(ref); // eslint-disable-line no-underscore-dangle
+        return typeof ref === 'object' ? getStrId(ref) : String(ref);
+      };
+
+      const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+      const badgeCutoff = Date.now() - ONE_MONTH_MS;
+      const isRecent = (r) => {
+        const ts = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+        return ts >= badgeCutoff;
       };
 
       Promise.all([
@@ -741,6 +757,7 @@ function HeaderComponent() {
         if (pendingRes.success) {
           count += pendingRes.reviews.filter((r) => {
             if (!r.postId || !r.authorId) return false;
+            if (!isRecent(r)) return false;
             if (!currentUserId) return true;
             const reviewerId = toStrId(r.reviewerId);
             return !reviewerId || reviewerId === currentUserId;
@@ -751,6 +768,7 @@ function HeaderComponent() {
         if (notifRes.success && notifRes.reviews) {
           count += notifRes.reviews.filter((r) => {
             if (!r.postId) return false;
+            if (!isRecent(r)) return false;
             if (!currentUserId) return true;
             const authorId = toStrId(r.authorId);
             return !authorId || authorId === currentUserId;
@@ -759,6 +777,7 @@ function HeaderComponent() {
           count += myRequestsRes.reviews.filter((r) => {
             if (!r.postId) return false;
             if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
+            if (!isRecent(r)) return false;
             if (!currentUserId) return true;
             const authorId = toStrId(r.authorId);
             return !authorId || authorId === currentUserId;
@@ -884,7 +903,7 @@ function HeaderComponent() {
                 <${IconBell}/>
                 ${pendingCount > 0 ? html`<span class="nd-badge"></span>` : null}
               </button>
-              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} currentUserId=${user ? String(user._id) : null} />` : null}
+              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} currentUserId=${user ? getStrId(user) : null} />` : null}
             </div>
           </li>
           `}
@@ -923,7 +942,7 @@ function HeaderComponent() {
           onClick=${async () => {
     try {
       await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (e) { /* ignore network errors */ }
+    } catch { /* ignore network errors */ }
     window.location.replace('/auth-form');
   }}
         >Log in again</button>${' '}

@@ -225,14 +225,11 @@ function SubmitBtn({ loading, children }) {
 }
 
 /* ── 8. Login panel ─────────────────────────────────────────────────────── */
-function LoginPanel({ onForgot, active }) {
+function LoginPanel({ onForgot, active, justRegistered }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-
-  // Show a success notice when redirected here after registration
-  const justRegistered = new URLSearchParams(window.location.search).get('registered') === '1';
 
   const clearErr = (key) => setErrors((e) => ({ ...e, [key]: undefined }));
 
@@ -308,7 +305,7 @@ function LoginPanel({ onForgot, active }) {
 }
 
 /* ── 9. Sign-up panel ───────────────────────────────────────────────────── */
-function SignupPanel({ active }) {
+function SignupPanel({ active, onRegistered }) {
   const [f, setF] = useState({
     first: '', last: '', email: '', pass: '', confirm: '',
   });
@@ -366,8 +363,8 @@ function SignupPanel({ active }) {
     setLoading(true);
     try {
       await registerUser(f);
-      // Registration successful — redirect to login so the user signs in explicitly
-      window.location.href = '/auth-form?registered=1';
+      // Switch to login panel with success banner — no page redirect needed
+      onRegistered();
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
@@ -442,7 +439,6 @@ function ForgotPanel({ onBack, active }) {
     if (err) { setError(err); return; }
     setLoading(true);
     try {
-      // Actually calls POST /api/auth/forgot-password — not a fake timeout
       await forgotPassword({ email });
       setSent(true);
     } catch (fpErr) {
@@ -492,6 +488,12 @@ function ForgotPanel({ onBack, active }) {
 /* ── 11. Root AuthForm component ────────────────────────────────────────── */
 function AuthForm({ initPanel }) {
   const [panel, setPanel] = useState(initPanel);
+  const [justRegistered, setJustRegistered] = useState(false);
+
+  const handleRegistered = () => {
+    setJustRegistered(true);
+    setPanel('login');
+  };
 
   return html`
     <div class="auth-form-overlay">
@@ -523,7 +525,7 @@ function AuthForm({ initPanel }) {
               role="tab"
               aria-controls="auth-login"
               aria-selected=${String(panel === 'login')}
-              onClick=${() => setPanel('login')}
+              onClick=${() => { setPanel('login'); setJustRegistered(false); }}
             >Sign in</button>
             <button
               type="button"
@@ -532,7 +534,7 @@ function AuthForm({ initPanel }) {
               role="tab"
               aria-controls="auth-signup"
               aria-selected=${String(panel === 'signup')}
-              onClick=${() => setPanel('signup')}
+              onClick=${() => { setPanel('signup'); setJustRegistered(false); }}
             >Create account</button>
           </div>
         `}
@@ -548,9 +550,11 @@ function AuthForm({ initPanel }) {
         <${LoginPanel}
           active=${panel === 'login'}
           onForgot=${() => setPanel('forgot')}
+          justRegistered=${justRegistered}
         />
         <${SignupPanel}
           active=${panel === 'signup'}
+          onRegistered=${handleRegistered}
         />
         <${ForgotPanel}
           active=${panel === 'forgot'}
@@ -570,7 +574,7 @@ function AuthEntry({ initPanel }) {
     let cancelled = false;
 
     getMe()
-      .then((data) => {
+      .then(() => {
         if (cancelled) return;
         setIsAuthenticated(true);
       })

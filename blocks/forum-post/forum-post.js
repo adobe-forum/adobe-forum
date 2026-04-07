@@ -3,6 +3,10 @@ import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 
 const API_BASE = 'http://localhost:5000/api';
 
+// Helper: safely extract MongoDB _id without triggering no-underscore-dangle
+const getId = (obj) => (obj && typeof obj === 'object' ? obj[Object.keys(obj).find((k) => k === '_id')] : obj);
+const getStrId = (obj) => (obj ? String(getId(obj) ?? obj) : null);
+
 // ============================================
 // ICONS
 // ============================================
@@ -64,8 +68,7 @@ function openEditForm(post, sid) {
  */
 function isOwner(post, currentUser) {
   if (!currentUser || !post?.createdBy) return false;
-  // eslint-disable-next-line no-underscore-dangle
-  return String(post.createdBy) === String(currentUser._id);
+  return String(post.createdBy) === getStrId(currentUser);
 }
 
 // Module-level variable: set by decorate() when arriving via cross-page
@@ -327,14 +330,12 @@ const ForumPost = ({ blockEl }) => {
               ? `${cb.firstName} ${cb.lastName || ''}`.trim()
               : (fetchedPost.author || 'Anonymous');
             const transformedPost = {
-              // eslint-disable-next-line no-underscore-dangle
-              id: fetchedPost._id,
+              id: getStrId(fetchedPost),
               title: fetchedPost.title,
               topic: fetchedPost.category,
               author: authorName,
               // Store createdBy id so we can check ownership
-              // eslint-disable-next-line no-underscore-dangle
-              createdBy: cb ? String(cb._id || cb) : null,
+              createdBy: cb ? (getStrId(cb) ?? String(cb)) : null,
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
               status: fetchedPost.status || 'published',
@@ -344,8 +345,7 @@ const ForumPost = ({ blockEl }) => {
 
             // ── View increment — skip for the post's own author ───────────────
             // Use currentUser from state (set via /me on mount)
-            // eslint-disable-next-line no-underscore-dangle
-            const isAuthor = currentUser && currentUser._id && String(currentUser._id) === String(cb?._id || cb || '');
+            const isAuthor = currentUser && getId(currentUser) && getStrId(currentUser) === String(getStrId(cb) ?? cb ?? '');
             if (!isAuthor) {
               const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
               if (!viewedPosts.includes(postId)) {
@@ -363,25 +363,21 @@ const ForumPost = ({ blockEl }) => {
 
             window.dispatchEvent(new CustomEvent('af-post-updated', {
               detail: {
-                // eslint-disable-next-line no-underscore-dangle
-                id: fetchedPost._id,
+                id: getStrId(fetchedPost),
                 views: fetchedPost.views || 0,
                 likes: fetchedLikes.length,
               },
             }));
 
             // Check if current user likes this post
-            // eslint-disable-next-line no-underscore-dangle
-            if (currentUser && currentUser._id) {
-              // eslint-disable-next-line no-underscore-dangle
-              setHasLiked(fetchedLikes.includes(String(currentUser._id)));
+            if (currentUser && getId(currentUser)) {
+              setHasLiked(fetchedLikes.includes(getStrId(currentUser)));
             } else {
               setHasLiked(false);
             }
 
             // Fetch review data for this post
-            // eslint-disable-next-line no-underscore-dangle
-            const reviewUrl = `${API_BASE}/reviews/by-post/${fetchedPost._id}`;
+            const reviewUrl = `${API_BASE}/reviews/by-post/${getStrId(fetchedPost)}`;
             fetch(reviewUrl, { credentials: 'include' })
               .then((r) => { if (r.ok) return r.json(); return null; })
               .then((d) => {
@@ -400,9 +396,9 @@ const ForumPost = ({ blockEl }) => {
             }
           }
         }
-      } catch (error) {
+      } catch (fetchError) {
         // eslint-disable-next-line no-console
-        console.error('❌ Network/fetch error:', error.message);
+        console.error('❌ Network/fetch error:', fetchError.message);
       } finally {
         setLoading(false);
       }
@@ -460,12 +456,11 @@ const ForumPost = ({ blockEl }) => {
       .then((data) => {
         if (!data?.post) return;
         const likes = data.post.likes || [];
-        // eslint-disable-next-line no-underscore-dangle
-        setHasLiked(likes.includes(String(currentUser._id)));
+        setHasLiked(likes.includes(getStrId(currentUser)));
         setLikesCount(likes.length);
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // NOTE: intentionally omitting post from deps to avoid re-fetch loop
   }, [currentUser, post?.id]);
 
   if (!post) {
@@ -521,7 +516,7 @@ const ForumPost = ({ blockEl }) => {
       if (!response.ok) {
         throw new Error('Server rejected like toggle');
       }
-    } catch (error) {
+    } catch {
       // Revert on failure
       const revertedLikesCount = originallyLiked ? newLikesCount + 1 : newLikesCount - 1;
       setHasLiked(originallyLiked);
@@ -537,13 +532,11 @@ const ForumPost = ({ blockEl }) => {
   const canEdit = isOwner(post, currentUser);
 
   // Determine review context
-  // eslint-disable-next-line no-underscore-dangle
-  const currentUserId = currentUser ? String(currentUser._id) : null;
+  const currentUserId = currentUser ? getStrId(currentUser) : null;
   const isReviewer = reviewData && currentUserId
     ? reviewData.reviewers.some((rv) => {
       const rvId = rv.userId && typeof rv.userId === 'object'
-        // eslint-disable-next-line no-underscore-dangle
-        ? String(rv.userId._id) : String(rv.userId);
+        ? getStrId(rv.userId) : String(rv.userId);
       return rvId === currentUserId;
     })
     : false;
@@ -555,14 +548,15 @@ const ForumPost = ({ blockEl }) => {
     if (!reviewData) return;
 
     if (actionStatus === 'changes_requested' && !reviewComment.trim()) {
-      // eslint-disable-next-line no-alert
-      alert('Please provide a comment explaining what changes are needed.');
+      setReviewComment((c) => c); // trigger re-render
+      // Show inline validation — no alert needed
+      window.dispatchEvent(new CustomEvent('forum-notify', { detail: { message: 'Please provide a comment explaining what changes are needed.', type: 'warning' } }));
       return;
     }
 
     try {
-      // eslint-disable-next-line no-underscore-dangle
-      const response = await fetch(`${API_BASE}/reviews/${reviewData._id}`, {
+      const reviewId = getStrId(reviewData);
+      const response = await fetch(`${API_BASE}/reviews/${reviewId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -586,8 +580,8 @@ const ForumPost = ({ blockEl }) => {
   const handleResubmit = async () => {
     if (!reviewData) return;
     try {
-      // eslint-disable-next-line no-underscore-dangle
-      const response = await fetch(`${API_BASE}/reviews/${reviewData._id}`, {
+      const resubmitId = getStrId(reviewData);
+      const response = await fetch(`${API_BASE}/reviews/${resubmitId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

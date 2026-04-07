@@ -175,26 +175,34 @@
     margin-top: 0;
   }
 
-  /* ── Category field: chip full width, button wraps below ── */
+  /* ── Category field: stack vertically on mobile ── */
   .cp-category-field {
-    flex-direction: column;
+    flex-flow: column nowrap;
     align-items: stretch;
-    flex-wrap: wrap;
   }
 
+  /* ── Chip: full width, no overflow clipping so mobile span shows fully ── */
   .cp-category-selected {
     max-width: 100%;
-    justify-content: flex-start;
+    width: 100%;
+    overflow: visible;
+    flex-shrink: unset;
   }
 
+  .cp-category-value {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  /* ── Button: full width below ── */
   .cp-folder-btn {
     width: 100%;
     justify-content: center;
+    flex-shrink: unset;
   }
 
-  /* ── Mobile path: show First / SecondLast / Last ── */
-  .cp-cat-desktop { display: none; }
-  .cp-cat-mobile { display: inline; }
+  /* ── Show mobile truncated path, hide desktop full path ── */
 }
 
 /* ---- Tablet layout (768px–1024px) ---- */
@@ -1598,8 +1606,7 @@
 /* ---- Folder button (replaces category-selector) ---- */
 .cp-category-field {
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  flex-flow: row nowrap;
   gap: 8px;
   align-items: center;
   min-width: 0;
@@ -1640,9 +1647,7 @@
   min-width: 0;
 }
 
-/* Desktop: show full path, hide mobile version */
-.cp-cat-mobile { display: none; }
-.cp-cat-desktop { display: inline; }
+
 
 .cp-category-clear {
   all: unset;

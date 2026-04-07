@@ -297,8 +297,6 @@ nav.spectrum-nav {
   /* ── 5. Session warning toast: proper mobile positioning ── */
   .session-warning-banner {
     /* Override the left+transform centering with inset-based approach */
-    left: 16px;
-    right: 16px;
     transform: none;
 
     /* lift above FAB */
@@ -310,6 +308,10 @@ nav.spectrum-nav {
     font-size: 12px;
     padding: 10px 14px;
     gap: 6px;
+    width: calc(100% - 32px);
+    box-sizing: border-box;
+    left: 16px;
+    right: 16px;
   }
 
   /* ── 6. Nav padding: slightly tighter on small screens ── */
@@ -1431,12 +1433,17 @@ footer,
 .session-warning-close {
   all: unset;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 700;
   color: #7d5a00;
   margin-left: 4px;
   opacity: 0.7;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, opacity 0.15s;
 
   &:hover {
+    color: #c9000a;
     opacity: 1;
   }
 }

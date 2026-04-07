@@ -1848,6 +1848,14 @@ function CreatePost() {
   // Pre-warm the folder block on mount so first click opens instantly
   useEffect(() => { ensureFolder(); }, []);
 
+  // Track window width so path display updates on resize/orientation change
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
     if (!onConfirm) {
@@ -1896,24 +1904,18 @@ function CreatePost() {
   // Desktop: "Root / Sub1 / Sub2 / Sub3" — full path with / separators (CSS truncates if too long)
   // The chip has overflow:hidden + text-overflow:ellipsis so it clips naturally on desktop
   // Mobile: "Root / … / Last" when more than 2 parts
-  // Smart path truncation:
-  // - Short paths (≤ 30 chars or ≤ 3 parts): show full  e.g. "Test / test4 / test5"
-  // - Long paths: show "First / … / SecondLast / Last"
-  // - On mobile (narrow): CSS clips with ellipsis, but JS ensures at minimum First + Last visible
+  // Desktop: always show full path with / separators
   const truncatePath = (path) => {
     if (!path) return '';
-    const parts = path.split(' > ');
-    if (parts.length === 1) return parts[0];
-    const full = parts.join(' / ');
-    if (full.length <= 30 || parts.length <= 3) return full;
-    return `${parts[0]} / … / ${parts[parts.length - 2]} / ${parts[parts.length - 1]}`;
+    return path.split(' > ').join(' / ');
   };
 
+  // Mobile: First / … / SecondLast / Last (first + … + last 2)
   const truncatePathMobile = (path) => {
     if (!path) return '';
     const parts = path.split(' > ');
     if (parts.length <= 3) return parts.join(' / ');
-    return `${parts[0]} / ${parts[parts.length - 2]} / ${parts[parts.length - 1]}`;
+    return `${parts[0]} / … / ${parts[parts.length - 2]} / ${parts[parts.length - 1]}`;
   };
 
   // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
@@ -2096,10 +2098,9 @@ function CreatePost() {
                     <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0">
                       <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                     </svg>
-                      <span className="cp-category-value" title=${category}>
-                        <span className="cp-cat-desktop">${truncatePath(category)}</span>
-                        <span className="cp-cat-mobile">${truncatePathMobile(category)}</span>
-                      </span>
+                    <span className="cp-category-value" title=${category}>
+                      ${windowWidth < 768 ? truncatePathMobile(category) : truncatePath(category)}
+                    </span>
                     <button
                       type="button"
                       className="cp-category-clear"
