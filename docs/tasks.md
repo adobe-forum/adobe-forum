@@ -16,10 +16,13 @@
 - [x] Sidebar auto-close on navigation (mobile/tablet overlay mode)
 - [x] Global page spacing tokens + uniform spacing across create-post, edit-post, forum-post
 - [x] Standardize sidebar/hamburger breakpoints to 1024px cutoff
+- [x] Centralize all icons into `scripts/utils/icons.js` (removed duplication across 6 block files)
+- [x] Centralize API_BASE and shared config into `scripts/utils/constants.js`
+- [x] Add `styles/responsive.css` for canonical breakpoint documentation and global utility classes
 - [ ] Sidebar: make "Home" button navigate correctly when on non-root pages
 - [ ] Cards display: add pagination or infinite scroll
 - [ ] Forum post viewer: add reply/comment thread support
-- [ ] Mobile responsiveness audit across all blocks (toolbar done ✓, tablet layout done ✓, sidebar overlay done ✓)
+- [ ] Mobile responsiveness audit across all blocks (toolbar done ✓, tablet layout done ✓, sidebar overlay done ✓, mobile tap bar done ✓)
 
 ### Review Workflow
 - [ ] Edit-post flow: allow author to resubmit after "changes requested"
@@ -43,6 +46,21 @@
 ---
 
 ## ✅ Completed
+
+### 2026-04-01
+- [x] **Mobile tap bar navigation**: Replaced hamburger menu with full-width in-flow tap bar at ≤1024px. Single 1024px breakpoint, no fixed positioning.
+- [x] **Tap bar styling fix**: Added `all: unset` to `.sidebar-tapbar` to eliminate global button style bleed-through.
+- [x] **Sidebar mobile scroll fix**: Made `aside.sidebar` scroll container; scoped `height:100%` to desktop.
+- [x] **Mobile sidebar full-screen overlay**: Converted sidebar from partial in-flow panel to `position:fixed` full-viewport overlay at ≤1024px. Tap bar stays tappable via `z-index:401`. Body scroll lock re-added.
+- [x] **Sidebar overlay close button**: Added `.sidebar-overlay-header` inside `aside.sidebar` (mobile only) with title + ✕ close button.
+- [x] **Production mobile nav**: Tap bar in `sidebar.js` (below header in grid). Full-screen overlay reverted to in-flow push. `header.js`/`header.css` unchanged.
+- [x] **Mobile nav alignment**: Standardized 16px horizontal rail, fixed tap bar all:unset ordering, chevron reordered to right on mobile, overlay header 52px.
+- [x] **Category colour bug**: Restored `&.is-expanded { background: transparent }` and scoped `border-radius:0` to ≤1024px only.
+- [x] **Sidebar redirect bug (create-post/edit-post)**: `handleSubcategoryClick` now stores postId in `sessionStorage('af_open_post')` and navigates to `'/'` — same pattern as `handlePendingReviewClick`. `handlePendingReviewClick` hard-coded `localhost:3000` changed to relative `'/'`.
+- [x] **Partial-height mobile sidebar to in-flow accordion**: Reverted the buggy 50vh internal scrolling logic; `.sidebar-wrapper` now simply grows to `height: auto`, pushing the body content down and allowing the browser's native page scroll to handle lengths correctly.
+- [x] **Tap bar text clipping**: Replaced `line-height: 1` with `line-height: normal` on the `.sidebar-tapbar` text so descender letters ('p', 'g') don't get chopped off by `overflow: hidden`.
+- [x] **Search container padding**: Restored `.search-container` padding back to the standard `16px` rail on mobile. Since the right scrollbar was eliminated via the accordion fix, the 16px padding is now perfectly symmetrical and properly left-aligns with the structural UI.
+- [x] **Sidebar empty state alignment**: Fixed "No items yet" nested indentation by replacing the hardcoded `padding + 40px` with the exact flex structure used by real file items (`.tree-item-content` + `.tree-chevron` + hidden `FileIcon`). Applied identical structural fix to both subfolders (`TreeItem`) and top-level categories (`CategoryItem`), resolving the padding loss issue.
 
 ### 2026-03-31
 - [x] **Auth + cards state sync fix**: Rehydrated `af_user` from a valid server session, standardized cards fetches to include session credentials, removed duplicate `pageshow`/`visibilitychange` refetches, preserved "My Posts" during refresh events, and moved category filtering onto `/api/posts?category=...`
