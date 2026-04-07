@@ -1,3 +1,6 @@
+/* ── Global Responsive Utilities (must be first) ───────────────────────── */
+@import url('./responsive.css');
+
 :root {
   /* --- App Layout Dimensions --- */
   --nav-width: 256px; /* matched to sidebar-width in sidebar.css */
@@ -213,7 +216,8 @@ header {
   position: relative;
 }
 
-aside.sidebar-wrapper {
+/* .sidebar-mount is the direct <body> grid child that header.js appends */
+.sidebar-mount {
   grid-area: sidebar;
   background-color: var(--spectrum-gray-50);
   border-right: 1px solid var(--spectrum-gray-200);
@@ -221,9 +225,16 @@ aside.sidebar-wrapper {
   height: 100%;
   display: none;
 
-  @media (width >=768px) {
+  @media (width >= 768px) {
     display: block;
   }
+}
+
+/* Keep aside.sidebar-wrapper as a non-grid layout host (desktop fixed panel) */
+aside.sidebar-wrapper {
+  background-color: var(--spectrum-gray-50);
+  border-right: 1px solid var(--spectrum-gray-200);
+  z-index: 10;
 }
 
 main {
@@ -476,20 +487,30 @@ footer {
   }
 }
 
-/* ── Tablet (768px–1024px): sidebar is a fixed overlay, content fills full width ── */
-@media (768px <= width <= 1024px) {
+/* —— Mobile/tablet (≤ 1024px): single-column stacked layout
+   header → sidebar row (tap bar + panel) → content
+   The sidebar area expands/contracts with the tap bar in normal flow. */
+@media (width <= 1024px) {
   body {
     grid-template:
-      "header header" var(--header-height)
-      "sidebar content" 1fr
-      "footer footer" auto / 0 minmax(0, 1fr);
+      "header"  var(--header-height)
+      "sidebar" auto
+      "content" 1fr
+      "footer"  auto
+      / minmax(0, 1fr);
+  }
+
+  .sidebar-mount {
+    /* Must be block so the sidebar grid area is visible */
+    display: block;
+    height: auto;
   }
 
   main {
     max-width: 100%;
   }
 
-  main>.section>div {
+  main > .section > div {
     padding: 0 var(--page-gutter, 16px);
   }
 }

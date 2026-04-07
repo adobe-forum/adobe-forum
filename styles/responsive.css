@@ -1,0 +1,49 @@
+/* =============================================
+   GLOBAL RESPONSIVE UTILITIES
+   =============================================
+
+   Canonical breakpoints:
+   ┌─────────────────────────────────────────┐
+   │  xs  ≤ 480px  — small mobile            │
+   │  sm  ≤ 768px  — mobile / tablet edge    │
+   │  md  ≤ 1024px — tablet / desktop edge   │
+   └─────────────────────────────────────────┘
+
+   NOTE: CSS custom properties cannot be used inside @media query
+   expressions (spec limitation). These pixel values must be used
+   literally in block-level CSS @media rules. This file documents
+   the canonical values and provides global layout utilities.
+
+   If you change a breakpoint here, search-replace the corresponding
+   px value across all block CSS files as well.
+   ============================================= */
+
+/* ── Visibility Utilities ───────────────────────────────────── */
+
+/** Hide on tablet/mobile (≤ 1024px) */
+@media (width <= 1024px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/** Hide on desktop (> 1024px) */
+@media (width > 1024px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/** Hide on small mobile only (≤ 480px) */
+@media (width <= 480px) {
+  .hide-xs {
+    display: none !important;
+  }
+}
+
+/* ── Focus Ring Utility ─────────────────────────────────────── */
+
+.af-focus-ring:focus-visible {
+  outline: 2px solid var(--sn-focus-ring, #1473e6);
+  outline-offset: 2px;
+}

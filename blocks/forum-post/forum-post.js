@@ -1,46 +1,16 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
+import {
+  BackIcon, EditIcon, HeartIcon,
+} from '../../scripts/utils/icons.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
-const API_BASE = 'http://localhost:5000/api';
-
-// ============================================
-// ICONS
-// ============================================
-
+// ArrowIcon remains local — it is the Spectrum-specific RTL arrow (18x18 variant)
 const ArrowIcon = () => html`
   <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
     <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
   </svg>
 `;
-
-const BackIcon = () => html`
-  <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-    <line x1="19" y1="12" x2="5" y2="12"></line>
-    <polyline points="12 19 5 12 12 5"></polyline>
-  </svg>
-`;
-
-const EditIcon = () => html`
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-    style="display:block;flex-shrink:0;">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-`;
-
-const HeartIcon = ({ filled }) => html`
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
-    fill="${filled ? 'currentColor' : 'none'}" 
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-    class="${filled ? 'heart-filled' : 'heart-outline'}">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-  </svg>
-`;
-
-// ============================================
-// HELPERS
-// ============================================
 
 /**
  * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).

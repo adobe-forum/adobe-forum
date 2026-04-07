@@ -1,7 +1,10 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
-
-const API_BASE = 'http://localhost:5000/api';
+import {
+  TrashIcon, ChevronIcon, FolderIcon, FileIcon, CloseIcon,
+  HomeIcon, PendingReviewIcon, MyRequestsIcon,
+} from '../../scripts/utils/icons.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 // ============================================
 // NORMALIZE
@@ -91,43 +94,7 @@ function SpectrumAlertDialog({
   `;
 }
 
-// ============================================
-// ICONS
-// ============================================
-
-const TrashIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;">
-    <polyline points="3 6 5 6 21 6"/>
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-    <path d="M10 11v6M14 11v6"/>
-    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-  </svg>
-`;
-
-const ChevronIcon = ({ expanded }) => html`
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-    stroke-linecap="round" stroke-linejoin="round"
-    style="transition: transform 0.2s ease; transform: rotate(${expanded ? '90deg' : '0deg'}); flex-shrink: 0;">
-    <polyline points="9 18 15 12 9 6"/>
-  </svg>
-`;
-
-const FolderIcon = ({ expanded }) => (expanded
-  ? html`
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-      <path d="M20 6h-8l-2-2H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/>
-    </svg>`
-  : html`
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    </svg>`);
-
-const FileIcon = () => html`
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-  </svg>
-`;
+// Icons imported from scripts/utils/icons.js
 
 // ============================================
 // HIGHLIGHT HELPER
@@ -151,9 +118,9 @@ function HighlightedText({ text, highlight }) {
 /**
  * Returns true if the current user owns this item.
  * Rules:
- *   - Not logged in → never owns anything
- *   - createdBy is null (legacy/shared item) → treat as unowned, no buttons shown
- *   - createdBy matches currentUser._id → owns it
+ *   - Not logged in -> never owns anything
+ *   - createdBy is null (legacy/shared item) -> treat as unowned, no buttons shown
+ *   - createdBy matches currentUser._id -> owns it
  */
 function isOwner(item, currentUser) {
   if (!currentUser) return false;
@@ -182,7 +149,7 @@ function TreeItem({
 
   const hasChildren = item.children && item.children.length > 0;
   // IMPORTANT: trust the server's isFolder flag exclusively.
-  // Never upgrade a post-link to a folder just because it has children —
+  // Never upgrade a post-link to a folder just because it has children Ã¢â‚¬â€
   // that causes post-links to render as folders and duplicate items on create.
   const { isFolder } = item;
   const itemId = item.id;
@@ -264,8 +231,10 @@ function TreeItem({
         </ul>
       `}
       ${isFolder && isExpanded && !hasChildren && html`
-        <div class="no-items no-items-subfolder" style="padding-left: ${paddingLeft + 40}px">
-          No items yet
+        <div class="tree-item-content no-items-placeholder" style="padding-left: ${paddingLeft}px; cursor: default;">
+          <span class="tree-chevron"><span class="tree-chevron-spacer"/></span>
+          <span class="tree-icon tree-icon-file" style="visibility: hidden"><${FileIcon} /></span>
+          <span class="tree-label" style="font-style: italic; color: var(--sn-muted); font-size: 13px;">No items yet</span>
         </div>
       `}
     </li>
@@ -294,8 +263,8 @@ function CategoryItem({
   const isCollapsed = !isExpanded;
 
   const hasItems = category.items && category.items.length > 0;
-
-  // eslint-disable-next-line no-underscore-dangle
+  // eslint-disable-next-line max-len
+  const paddingLeft = Math.min(12 + 1 * 20, 100); // Categories always contain level 1 items\n\n  // eslint-disable-next-line no-underscore-dangle
   const canDeleteCategory = isOwner({ createdBy: category.createdBy }, currentUser);
 
   const handleDeleteCategory = (e) => {
@@ -340,7 +309,14 @@ function CategoryItem({
                 expandedFolders=${expandedFolders}
                 level=${1} searchTerm=${searchTerm} />
             `)
-    : html`<div class="no-items">No items yet</div>`
+    : html`
+              <div class="tree-item-content no-items-placeholder" style="padding-left: ${paddingLeft}px; cursor: default;">
+                <span class="tree-chevron"><span class="tree-chevron-spacer"/></span>
+                <span class="tree-icon tree-icon-file" style="visibility: hidden"><${FileIcon} /></span>
+                <span class="tree-label" style="font-style: italic; color: var(--sn-muted); font-size: 13px;">No items yet</span>
+              </div>
+            `
+
 }
       </ul>
     </li>
@@ -367,19 +343,21 @@ function Sidebar() {
   const [expandedCategories, setExpandedCategories] = useState({});
   const [expandedFolders, setExpandedFolders] = useState({});
 
-  // ── Auth state ──────────────────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Auth state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   // null  = not yet checked
   // false = checked, not logged in
   // {...} = checked, logged in user object
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Ref that always holds the current isOpen value — used inside resize handler
+  // Ref that always holds the current isOpen value Ã¢â‚¬â€ used inside resize handler
   // to avoid the stale-closure problem (resize useEffect has empty dep array).
   const isOpenRef = useRef(isOpen);
 
-  // ── Fetch current user on mount ─────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch current user on mount Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   // Calls GET /api/auth/me (session cookie sent automatically).
-  // If 401, the user is not logged in — set to false so we stop loading.
+  // If 401, the user is not logged in Ã¢â‚¬â€ set to false so we stop loading.
   // Re-runs whenever the forum-auth-changed event fires (login/logout).
   const fetchCurrentUser = async () => {
     try {
@@ -404,7 +382,8 @@ function Sidebar() {
     return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
   }, []);
 
-  // ── Sidebar open/close ──────────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar open/close Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   const applyBodyOffset = (open) => {
     if (open) {
       document.body.classList.add('sidebar-is-open');
@@ -416,7 +395,7 @@ function Sidebar() {
     window.dispatchEvent(new CustomEvent('sidebar-state-changed', { detail: { isOpen: open } }));
   };
 
-  // Closes the sidebar when in overlay mode (mobile / tablet ≤ 1024px)
+  // Closes the sidebar when in overlay mode (mobile / tablet Ã¢â€°Â¤ 1024px)
   const closeIfOverlay = () => {
     if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
       setIsOpen(false);
@@ -440,7 +419,7 @@ function Sidebar() {
   useEffect(() => {
     applyBodyOffset(isOpen);
     const onResize = () => {
-      // Use ref instead of isOpen to avoid stale closure — the effect has [] deps
+      // Use ref instead of isOpen to avoid stale closure Ã¢â‚¬â€ the effect has [] deps
       // so isOpen would always be the mount-time value (true), meaning the sidebar
       // would never re-open when resizing from mobile back to desktop.
       if (window.innerWidth > 1024 && !isOpenRef.current) {
@@ -452,7 +431,8 @@ function Sidebar() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ── Fetch sidebar data ──────────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch sidebar data Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -499,7 +479,8 @@ function Sidebar() {
     };
   }, []);
 
-  // ── Fetch pending reviews (reviewer side) ──────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch pending reviews (reviewer side) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   const fetchPendingReviews = async () => {
     if (!currentUser) return;
     try {
@@ -513,7 +494,8 @@ function Sidebar() {
     }
   };
 
-  // ── Fetch my review requests (author side) ──────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch my review requests (author side) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   const fetchMyRequests = async () => {
     if (!currentUser) return;
     try {
@@ -546,7 +528,8 @@ function Sidebar() {
     return () => window.removeEventListener('refresh-sidebar', refreshAll);
   }, [currentUser]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Handlers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   const handleSubcategoryClick = (subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
@@ -558,8 +541,10 @@ function Sidebar() {
       return;
     }
     if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+      // Not on the home page Ã¢â‚¬â€ store the post ID so cards-display auto-opens it on arrival
+      sessionStorage.setItem('af_open_post', postId);
       closeIfOverlay();
-      window.location.href = `/?category=${encodeURIComponent(subcategoryId)}&post=${postId}`;
+      window.location.href = '/';
       return;
     }
     const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
@@ -637,7 +622,8 @@ function Sidebar() {
     }
   };
 
-  // ── Navigation handlers ─────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Navigation handlers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   const handlePendingReviewClick = (review) => {
     if (!review.postId) return;
     // eslint-disable-next-line no-underscore-dangle
@@ -649,7 +635,7 @@ function Sidebar() {
     if (!postViewer && !cardsViewer) {
       sessionStorage.setItem('af_open_post', postId);
       closeIfOverlay();
-      window.location.href = 'http://localhost:3000/';
+      window.location.href = '/';
       return;
     }
 
@@ -661,7 +647,8 @@ function Sidebar() {
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
   };
 
-  // ── Search filter ───────────────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Search filter Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   const filterItems = (items, term) => items.reduce((acc, item) => {
     const matches = item.title.toLowerCase().includes(term);
@@ -683,7 +670,8 @@ function Sidebar() {
     }).filter(Boolean)
     : categories;
 
-  // ── Render ──────────────────────────────────────────────────────────────
+  // eslint-disable-next-line max-len
+  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   const toggleSidebar = () => {
     const next = !isOpen;
@@ -693,15 +681,33 @@ function Sidebar() {
 
   return html`
     <div class="sidebar-root">
-      <button class="sidebar-hamburger" onClick=${toggleSidebar} aria-label=${isOpen ? 'Close sidebar' : 'Open sidebar'}>
-        ${isOpen
-    ? html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-    : html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`
-}
+      <button class="sidebar-tapbar" onClick=${toggleSidebar}
+        aria-expanded=${String(isOpen)} aria-controls="sidebar-panel"
+        aria-label=${isOpen ? 'Close navigation' : 'Browse topics & navigation'}>
+        <svg class="sidebar-tapbar-icon" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+        <span class="sidebar-tapbar-label">Browse topics ${'&'} navigation</span>
+        <svg class="sidebar-tapbar-chevron ${isOpen ? 'is-open' : ''}"
+          width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
       </button>
 
-      <div class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
+      <div id="sidebar-panel" class="sidebar-wrapper ${isOpen ? 'is-open' : 'is-closed'}">
       <aside class="sidebar">
+        <div class="sidebar-overlay-header">
+          <span class="sidebar-overlay-title">Topics ${'&'} Navigation</span>
+          <button class="sidebar-close-btn" onClick=${toggleSidebar} aria-label="Close navigation">
+            <${CloseIcon} size=${18} />
+          </button>
+        </div>
         <div class="search-container">
           <input type="text" placeholder="Search topics..." value=${searchTerm}
             onInput=${(e) => setSearchTerm(e.target.value.toLowerCase())} class="sidebar-search-input" />
@@ -710,17 +716,17 @@ function Sidebar() {
         ${currentUser && html`
           <div class="sidebar-item"
             onClick=${() => { closeIfOverlay(); window.location.href = 'http://localhost:3000'; }}>
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <${HomeIcon} />
             Home
           </div>
 
           <div class="sidebar-section">Reviews</div>
 
           <div class="sidebar-item" onClick=${() => setPendingOpen((o) => !o)}>
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+            <${PendingReviewIcon} />
             Pending Reviews
             ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:#854F0B;color:#FAEEDA;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
-            <svg style="margin-left:${pendingReviews.length > 0 ? '4px' : 'auto'};transition:transform .2s;transform:rotate(${pendingOpen ? '90deg' : '0deg'});flex-shrink:0;opacity:.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            <${ChevronIcon} expanded=${pendingOpen} style="margin-left:${pendingReviews.length > 0 ? '4px' : 'auto'};opacity:.5" />
           </div>
           ${pendingOpen && html`
           <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
@@ -741,10 +747,10 @@ function Sidebar() {
           `}
 
           <div class="sidebar-item" onClick=${() => setRequestsOpen((o) => !o)}>
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <${MyRequestsIcon} />
             My Requests
             ${myRequests.length > 0 ? html`<span style="margin-left:auto;background:#0C447C;color:#E6F1FB;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${myRequests.length}</span>` : ''}
-            <svg style="margin-left:${myRequests.length > 0 ? '4px' : 'auto'};transition:transform .2s;transform:rotate(${requestsOpen ? '90deg' : '0deg'});flex-shrink:0;opacity:.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            <${ChevronIcon} expanded=${requestsOpen} style="margin-left:${myRequests.length > 0 ? '4px' : 'auto'};opacity:.5" />
           </div>
           ${requestsOpen && html`
           <ul style="list-style:none;padding:0;margin:0 0 4px 0;max-height:150px;overflow-y:auto;">
@@ -770,7 +776,7 @@ function Sidebar() {
 
         <div class="sidebar-section">Topics</div>
 
-        ${loading && html`<div class="loading">Loading…</div>`}
+        ${loading && html`<div class="loading">LoadingÃ¢â‚¬Â¦</div>`}
         ${error && html`
           <div class="error-state">
             <p>Failed to load: ${error}</p>
