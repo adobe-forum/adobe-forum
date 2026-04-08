@@ -744,11 +744,4 @@
   stroke-width: 2.5px;
 }
 
-@media (width <= 768px) {
-  .back-to-top-btn {
-    bottom: 96px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-  }
-}
+/* .back-to-top-btn mobile override lives in styles/responsive.css (sm ≤ 768px) */

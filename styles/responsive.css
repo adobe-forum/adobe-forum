@@ -449,6 +449,10 @@
   .search-bar {
     padding: 8px 0 4px;
   }
+
+  .search-submit {
+    padding: 0 var(--spectrum-spacing-200);
+  }
 }
 
 /* ── Footer — md+ (≥ 1024px) ────────────────────────────────── */
@@ -456,6 +460,17 @@
 @media (width >= 1024px) {
   footer .footer > div {
     padding: 40px 32px 24px;
+  }
+}
+
+/* ── Cards Display — sm (≤ 768px) — Back to Top Button ─────── */
+
+@media (width <= 768px) {
+  .back-to-top-btn {
+    bottom: 96px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
   }
 }
 
@@ -577,7 +592,7 @@
   }
 }
 
-@media (width < 768px) {
+@media (width <= 768px) {
   .cp-page-header {
     flex-direction: column;
     gap: 12px;
@@ -779,7 +794,7 @@
   }
 }
 
-@media (width < 768px) {
+@media (width <= 768px) {
   .edit-post .ce-editor-wrapper {
     border-radius: 12px;
   }
