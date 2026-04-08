@@ -121,9 +121,4 @@
     color: var(--spectrum-gray-800);
   }
   
-  /* Mobile */
-  @media (width <= 768px) {
-    .search-bar { 
-      padding: 8px 0 4px; /* 4px bottom — stacks with cards 8px top = 12px total gap */
-    } 
-  }
+  /* Mobile overrides live in styles/responsive.css (sm ≤ 768px) */

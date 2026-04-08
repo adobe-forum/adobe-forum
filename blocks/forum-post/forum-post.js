@@ -1,16 +1,11 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 import {
-  BackIcon, EditIcon, HeartIcon,
+  BackIcon, EditIcon, HeartIcon, ArrowIcon, WarningIcon,
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
+import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
 
-// ArrowIcon remains local — it is the Spectrum-specific RTL arrow (18x18 variant)
-const ArrowIcon = () => html`
-  <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
-    <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
-  </svg>
-`;
 
 /**
  * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
@@ -615,25 +610,21 @@ const ForumPost = ({ blockEl }) => {
       </div>
 
       ${showChangesRequestedBanner && html`
-        <div class="review-changes-banner" style="background-color: #fff9e6; border: 1px solid #fec700; border-radius: 4px; padding: 16px; margin-bottom: 24px;">
+        <div class="review-changes-banner" style=${`background-color:${COLOR_TOKENS.warningSurfaceSoft};border:1px solid ${COLOR_TOKENS.warningBorder};border-radius:4px;padding:16px;margin-bottom:24px;`}>
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b26e00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              <span style="color: #b26e00; font-weight: 500;">Changes were requested \u2014 edit your post and re-submit for review.</span>
+              <${WarningIcon} />
+              <span style=${`color:${COLOR_TOKENS.warningStrong};font-weight:500;`}>Changes were requested \u2014 edit your post and re-submit for review.</span>
             </div>
-            <button class="review-resubmit-btn" onClick=${handleResubmit} style="background-color: #d17f00; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: 600; cursor: pointer;">
+            <button class="review-resubmit-btn" onClick=${handleResubmit} style=${`background-color:${COLOR_TOKENS.warningAlt};color:${COLOR_TOKENS.white};border:none;padding:6px 16px;border-radius:4px;font-weight:600;cursor:pointer;`}>
               Re-submit for Review
             </button>
           </div>
           
           ${reviewData && reviewData.reviewers && reviewData.reviewers.some((rv) => rv.status === 'changes_requested' && rv.comment) ? html`
-            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(218, 31, 38, 0.2);">
-              <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #da1f26; text-transform: uppercase;">Reviewer Feedback:</h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b4b4b;">
+            <div style=${`margin-top:16px;padding-top:16px;border-top:1px solid ${COLOR_TOKENS.dangerBorderSoft};`}>
+              <h4 style=${`margin:0 0 8px 0;font-size:13px;color:${COLOR_TOKENS.accent};text-transform:uppercase;`}>Reviewer Feedback:</h4>
+              <ul style=${`margin:0;padding-left:20px;font-size:14px;color:${COLOR_TOKENS.textSecondary};`}>
                 ${reviewData.reviewers.filter((rv) => rv.status === 'changes_requested' && rv.comment).map((rv) => html`
                   <li style="margin-bottom: 6px;">
                     <strong>${rv.userId?.firstName || 'Reviewer'}:</strong>
