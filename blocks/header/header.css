@@ -178,7 +178,7 @@ nav.spectrum-nav {
    MOBILE (< 900px)
    ============================================= */
 
-@media (width <= 1024px) {
+@media (width <=1024px) {
   nav.spectrum-nav {
     grid-template-columns: auto auto 1fr;
     padding: 0 20px;
@@ -186,7 +186,9 @@ nav.spectrum-nav {
 
   .nav-hamburger {
     grid-column: 1;
-    display: none; /* hidden at ≤1024px — sidebar tap bar is the mobile trigger */
+    display: none;
+
+    /* hidden at ≤1024px — sidebar tap bar is the mobile trigger */
     margin-right: 16px;
   }
 
@@ -290,12 +292,10 @@ nav.spectrum-nav {
   /* ── 5. Session warning toast: proper mobile positioning ── */
   .session-warning-banner {
     /* Override the left+transform centering with inset-based approach */
-    left: 16px;
-    right: 16px;
+    inset: 76px 16px auto;
     transform: none;
 
-    /* lift above FAB */
-    bottom: 90px;
+    /* Place gracefully below mobile header */
     white-space: normal;
     flex-wrap: wrap;
     justify-content: center;

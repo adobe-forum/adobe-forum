@@ -270,13 +270,14 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get('search') || '');
   const [category, setCategory] = useState('');
   const [sortOption, setSortOption] = useState('latest');
   const [refreshTick, setRefreshTick] = useState(0);
   const [isMine, setIsMine] = useState(false);
   const [authorId, setAuthorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
   const hasLoadedOnceRef = useRef(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   const hasTitleToken = initialTitle.includes('{n}');
 
@@ -380,6 +381,20 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
     };
   }, [currentPage, searchQuery, category, refreshTick, authorId, sortOption, isMine]);
 
+  // Sync search state to the browser URL dynamically
+  useEffect(() => {
+    const url = new URL(window.location);
+    if (searchQuery) {
+      url.searchParams.set('search', searchQuery);
+    } else {
+      url.searchParams.delete('search');
+    }
+    // Only push if it actually changed to avoid identical state overwrite loops
+    if (window.location.search !== url.search) {
+      window.history.replaceState({}, '', url);
+    }
+  }, [searchQuery]);
+
   useEffect(() => {
     const handleSearch = (e) => {
       setSearchQuery(e.detail.query.toLowerCase().trim());
@@ -447,6 +462,22 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const handleCardClick = (postId) => {
     toggleViews(false);
     window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -539,6 +570,18 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       </div>
       <${Pagination} currentPage=${currentPage} totalPages=${totalPages} onPageChange=${handlePageChange} />
     `}
+    
+    <button
+      class="back-to-top-btn ${showBackToTop ? 'is-visible' : ''}"
+      aria-label="Back to top"
+      onClick=${scrollToTop}
+      aria-hidden=${!showBackToTop}
+      tabindex=${showBackToTop ? '0' : '-1'}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
   `;
 }
 
