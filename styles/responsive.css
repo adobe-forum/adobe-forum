@@ -370,6 +370,7 @@
       height: 160px;
     }
 
+    /* stylelint-disable-next-line selector-class-pattern */
     & .card-img--placeholder {
       padding: 28px;
     }
@@ -389,11 +390,13 @@
       line-height: 18px;
       gap: var(--spectrum-spacing-100);
 
+      /* stylelint-disable-next-line selector-class-pattern */
       & .spectrum-Avatar {
         width: 26px;
         height: 26px;
       }
 
+      /* stylelint-disable-next-line selector-class-pattern */
       & .spectrum-Avatar-initials {
         font-size: 10px;
       }

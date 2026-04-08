@@ -854,6 +854,7 @@
    RESPONSIVE
    S2 large scale (mobile/touch): component-height-100 = 40px
    ════════════════════════════════════════════════════════════════════════════ */
+
 /* ════════════════════════════════════════════════════════════════════════════
    RESPONSIVE — overrides live in styles/responsive.css
    xs (≤ 480px): 2-col form → 1-col; sm (≤ 768px): card padding + iOS font fix

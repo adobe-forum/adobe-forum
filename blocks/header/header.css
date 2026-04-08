@@ -34,6 +34,7 @@ body.pp-scroll-lock {
    On mobile/tablet (≤ 1024px), aside.sidebar owns its own height + scroll
    (see sidebar.css). Applying height:100% here against a height:auto parent
    would break scrolling — so this rule is scoped to desktop only. */
+
 /* .sidebar-wrapper aside.sidebar desktop scroll — live in styles/responsive.css (md+ > 1024px) */
 
 /* =============================================

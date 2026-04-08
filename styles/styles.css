@@ -24,7 +24,6 @@
   --color-text-success-strong: #1e7a5c;
   --color-text-link: #1473e6;
   --color-text-link-hover: #0d66d0;
-
   --color-surface-base: #fff;
   --color-surface-alt: #fafafa;
   --color-surface-muted: #f5f5f5;
@@ -36,7 +35,6 @@
   --color-surface-overlay: rgb(255 255 255 / 80%);
   --color-surface-scrim: rgb(0 0 0 / 45%);
   --color-surface-scrim-strong: rgb(0 0 0 / 50%);
-
   --color-border-soft: #eaeaea;
   --color-border-default: #d3d3d3;
   --color-border-medium: #dde1e7;
@@ -45,7 +43,6 @@
   --color-border-strong: #c0c0c0;
   --color-border-faint: rgb(0 0 0 / 5%);
   --color-border-faint-strong: rgb(0 0 0 / 6%);
-
   --color-accent: #da1f26;
   --color-accent-hover: #b81219;
   --color-accent-pressed: #960f13;
@@ -60,7 +57,6 @@
   --color-accent-shadow-fab: rgb(218 31 38 / 35%);
   --color-accent-shadow-fab-hover: rgb(218 31 38 / 45%);
   --color-accent-gradient-end: #ff6b6b;
-
   --color-danger: #d7373f;
   --color-danger-hover: #c9252d;
   --color-danger-strong: #b02a30;
@@ -70,7 +66,6 @@
   --color-danger-surface-faint: rgb(215 55 63 / 6%);
   --color-danger-border-soft: rgb(215 55 63 / 30%);
   --color-danger-ring: rgb(215 55 63 / 22%);
-
   --color-success: #268e6c;
   --color-success-strong: #1e7a5c;
   --color-success-alt: #2e7d32;
@@ -80,7 +75,6 @@
   --color-success-border-soft: rgb(38 142 108 / 30%);
   --color-success-surface-soft: rgb(38 142 108 / 10%);
   --color-success-surface-faint: rgb(38 142 108 / 12%);
-
   --color-warning: #e68619;
   --color-warning-strong: #b26e00;
   --color-warning-alt: #d17f00;
@@ -95,7 +89,6 @@
   --color-warning-list-border: #ba7517;
   --color-warning-good: #b07800;
   --color-warning-fair: #da7b11;
-
   --color-info: #1473e6;
   --color-info-hover: #0d66d0;
   --color-info-strong: #0c447c;
@@ -106,7 +99,6 @@
   --color-info-border-soft: #e6f1fb;
   --color-info-list-border: #185fa5;
   --color-info-ring: rgb(37 99 235 / 15%);
-
   --color-code-bg: #1e1e1e;
   --color-code-text: #d4d4d4;
   --color-code-line-numbers: rgb(212 212 212 / 30%);
@@ -117,7 +109,6 @@
   --color-code-text-muted: rgb(212 212 212 / 60%);
   --color-code-text-faint: rgb(212 212 212 / 28%);
   --color-code-divider: rgb(212 212 212 / 12%);
-
   --color-lang-html: #e44d26;
   --color-lang-html-soft: #e44d2622;
   --color-lang-css: #2965f1;
@@ -159,7 +150,6 @@
   --color-lang-neutral-soft: #8882;
   --color-lang-neutral-text: #b0b0b0;
   --color-lang-css-text: #7aa3f7;
-
   --color-focus-info-soft: rgb(20 115 230 / 20%);
   --color-review-info-bg: #fff8e1;
   --color-review-info-border: #ffcc02;
@@ -167,7 +157,6 @@
   --color-review-info-icon: #f59e0b;
   --color-review-info-icon-hover: #d97706;
   --color-review-success-hover: #1b5e20;
-
   --color-shadow-base: rgb(0 0 0 / 6%);
   --color-shadow-soft: rgb(0 0 0 / 8%);
   --color-shadow-medium: rgb(0 0 0 / 10%);
@@ -177,7 +166,6 @@
   --color-shadow-dialog: rgb(0 0 0 / 20%);
   --color-shadow-modal: rgb(0 0 0 / 25%);
   --color-shadow-deep: rgb(0 0 0 / 45%);
-
   --shadow-fab: 0 4px 16px var(--color-accent-shadow-fab), 0 2px 6px var(--color-shadow-overlay);
   --shadow-fab-hover: 0 6px 20px var(--color-accent-shadow-fab-hover), 0 3px 8px var(--color-shadow-overlay-strong);
 

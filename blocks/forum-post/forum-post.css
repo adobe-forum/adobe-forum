@@ -91,17 +91,6 @@
     min-width: 0;
     padding: 0;
     margin-bottom: 24px;
-
-    & .spectrum-action-button-icon {
-      width: 18px;
-      height: 18px;
-    }
-
-    & .spectrum-action-button-label {
-      display: inline-flex;
-      align-items: center;
-      line-height: 1.2;
-    }
   }
 
   /* ── Tags ────────────────────────────────── */

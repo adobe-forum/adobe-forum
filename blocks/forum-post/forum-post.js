@@ -5,8 +5,6 @@ import {
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
-
-
 /**
  * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
  * Returns null if not logged in.

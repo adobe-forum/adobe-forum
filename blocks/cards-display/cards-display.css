@@ -109,6 +109,7 @@
     gap: 64px var(--spectrum-spacing-600); /* row-gap column-gap */
     width: 100%;
     box-sizing: border-box;
+
     /* grid breakpoints live in styles/responsive.css (md ≤ 1024px, sm ≤ 768px) */
   }
 
