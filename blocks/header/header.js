@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
+import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
   PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
   UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
@@ -484,16 +485,15 @@ function NotificationsDropdown({ onClose }) {
   const navigateToPost = (postId) => {
     if (!postId) return;
     // If not on the home page, navigate there and carry the postId
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index') {
-      window.location.href = `/?openPost=${postId}`;
+    if (
+      window.location.pathname !== '/'
+      && window.location.pathname !== '/index'
+    ) {
+      window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
     // Already on home page â€” same DOM + event pattern as sidebar
-    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
-    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
-    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
-    postWrappers.forEach((el) => { el.style.display = 'block'; });
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+    navigateToPostRoute(postId, { source: 'header-notification' });
   };
 
   // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.

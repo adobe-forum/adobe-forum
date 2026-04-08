@@ -632,6 +632,13 @@ footer {
   z-index: 20;
 }
 
+@media (width > 1024px) {
+  footer {
+    margin-left: var(--nav-width);
+    width: calc(100% - var(--nav-width));
+  }
+}
+
 @media (width >=1024px) {
   :root {
     --body-font-size-m: 18px;

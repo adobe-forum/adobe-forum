@@ -5,6 +5,7 @@ import {
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
+import { getCurrentRoute, navigateHome } from '../../scripts/router.js';
 /**
  * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
  * Returns null if not logged in.
@@ -39,10 +40,6 @@ function isOwner(post, currentUser) {
   return String(post.createdBy) === String(currentUser._id);
 }
 
-// Module-level variable: set by decorate() when arriving via cross-page
-// navigation. The ForumPost useEffect reads and clears it on mount.
-let pendingCrossPagePostId = null;
-
 // ============================================
 // FORUM POST
 // ============================================
@@ -62,6 +59,12 @@ const ForumPost = ({ blockEl }) => {
   const [viewsCount, setViewsCount] = useState(0);
 
   const commentsListRef = useRef(null);
+  const sidebarItemIdRef = useRef(null);
+  const activePostIdRef = useRef(null);
+
+  useEffect(() => {
+    sidebarItemIdRef.current = sidebarItemId;
+  }, [sidebarItemId]);
 
   // Scroll to bottom when comments change
   useEffect(() => {
@@ -266,9 +269,11 @@ const ForumPost = ({ blockEl }) => {
   }, [post, blockEl]);
 
   useEffect(() => {
-    const handleLoadPost = async (event) => {
-      const { postId, sidebarItemId: sid } = event.detail;
+    const loadPost = async ({ postId, sidebarItemId: sid } = {}) => {
       if (!postId) return;
+      if (activePostIdRef.current === postId && (!sid || sid === sidebarItemIdRef.current)) return;
+
+      activePostIdRef.current = postId;
       setSidebarItemId(sid || null);
 
       setLoading(true);
@@ -377,9 +382,11 @@ const ForumPost = ({ blockEl }) => {
       }
     };
 
-    // Listen for back-to-cards event
-    const handleShowCards = () => {
+    const showCards = () => {
+      activePostIdRef.current = null;
       setPost(null);
+      setSidebarItemId(null);
+      setReviewData(null);
       if (blockEl) blockEl.style.display = 'none';
       const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
       cardsWrappers.forEach((el) => { el.style.display = ''; });
@@ -388,38 +395,37 @@ const ForumPost = ({ blockEl }) => {
       if (tag) tag.remove();
     };
 
+    const handleRouteChange = (event) => {
+      const route = event.detail || getCurrentRoute();
+      if (route.view === 'post' && route.postId) {
+        loadPost(route);
+        return;
+      }
+
+      showCards();
+    };
+
     // Navigate away if the currently viewed post is deleted from the sidebar
     const handleItemDeleted = (e) => {
       const { itemId } = e.detail || {};
-      if (itemId && sidebarItemId && itemId === sidebarItemId) {
-        window.location.href = '/';
+      if (itemId && sidebarItemIdRef.current && itemId === sidebarItemIdRef.current) {
+        navigateHome({ source: 'sidebar-item-deleted' });
       }
     };
 
-    window.addEventListener('load-forum-post', handleLoadPost);
-    window.addEventListener('show-cards', handleShowCards);
+    window.addEventListener('af-route-change', handleRouteChange);
     window.addEventListener('sidebar-item-deleted', handleItemDeleted);
 
     // Cross-page navigation: decorate() already read sessionStorage and
     // set pendingCrossPagePostId + injected a <style> to hide cards.
     // Call the handler directly — the listener is already attached above.
-    if (pendingCrossPagePostId) {
-      const pid = pendingCrossPagePostId;
-      pendingCrossPagePostId = null;
-      handleLoadPost({ detail: { postId: pid } }).then(() => {
-        // We purposefully leave the `af-hide-cards-initial` style tag in the DOM.
-        // It provides a guaranteed CSS-level block on the cards wrapper.
-        // It will be cleaned up only when the user explicitly clicks "Home" or "Back"
-        // (inside handleShowCards).
-      });
-    }
+    handleRouteChange({ detail: getCurrentRoute() });
 
     return () => {
-      window.removeEventListener('load-forum-post', handleLoadPost);
-      window.removeEventListener('show-cards', handleShowCards);
+      window.removeEventListener('af-route-change', handleRouteChange);
       window.removeEventListener('sidebar-item-deleted', handleItemDeleted);
     };
-  }, [blockEl, sidebarItemId]);
+  }, [blockEl]);
 
   if (!post) {
     return html`
@@ -442,7 +448,7 @@ const ForumPost = ({ blockEl }) => {
   };
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('show-cards'));
+    navigateHome({ source: 'forum-post-back' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -527,7 +533,7 @@ const ForumPost = ({ blockEl }) => {
         window.dispatchEvent(new CustomEvent('refresh-cards'));
 
         // After any review action, go back to cards view / home
-        window.dispatchEvent(new CustomEvent('show-cards'));
+        navigateHome({ source: 'forum-review-action' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
@@ -715,11 +721,16 @@ const ForumPost = ({ blockEl }) => {
 
 export default function decorate(block) {
   block.innerHTML = '';
+  const searchParams = new URLSearchParams(window.location.search);
 
-  const storedPostId = sessionStorage.getItem('af_open_post');
-  if (storedPostId) {
-    sessionStorage.removeItem('af_open_post');
-    pendingCrossPagePostId = storedPostId;
+  const shouldBootInPostView = searchParams.has('post')
+    || ((window.location.pathname === '/post' || window.location.pathname === '/post.html')
+      && searchParams.has('id'))
+    || searchParams.has('openPost')
+    || !!sessionStorage.getItem('af_open_post')
+    || getCurrentRoute().view === 'post';
+
+  if (shouldBootInPostView) {
 
     // ── Force the block AND every ancestor visible immediately ──
     // AEM's loadSections() sets sections to display:none and only reveals

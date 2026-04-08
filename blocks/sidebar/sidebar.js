@@ -6,6 +6,7 @@ import {
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
 import { CSS_COLOR_VARS } from '../../scripts/utils/colors.js';
+import { navigateToPost } from '../../scripts/router.js';
 
 // ============================================
 // NORMALIZE
@@ -541,19 +542,18 @@ function Sidebar() {
       console.warn('Sidebar click failed: No postId available.');
       return;
     }
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+    if (
+      window.location.pathname !== '/'
+      && window.location.pathname !== '/index.html'
+      && window.location.pathname !== '/index'
+    ) {
       // Not on the home page Ã¢â‚¬â€ store the post ID so cards-display auto-opens it on arrival
-      sessionStorage.setItem('af_open_post', postId);
       closeIfOverlay();
-      window.location.href = '/';
+      window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
-    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
-    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
-    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
-    postWrappers.forEach((el) => { el.style.display = 'block'; });
     closeIfOverlay();
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId, sidebarItemId: subcategoryId } }));
+    navigateToPost(postId, { sidebarItemId: subcategoryId, source: 'sidebar-subcategory' });
   };
 
   const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
@@ -634,18 +634,13 @@ function Sidebar() {
     const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
     const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
     if (!postViewer && !cardsViewer) {
-      sessionStorage.setItem('af_open_post', postId);
       closeIfOverlay();
-      window.location.href = '/';
+      window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
 
-    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
-    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
-    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
-    postWrappers.forEach((el) => { el.style.display = 'block'; });
     closeIfOverlay();
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+    navigateToPost(postId, { source: 'sidebar-review-item' });
   };
 
   // eslint-disable-next-line max-len

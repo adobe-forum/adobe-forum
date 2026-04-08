@@ -2,6 +2,24 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-08] SPA Router and Shareable Post URLs
+
+### Context
+Post navigation was already SPA-like inside the homepage, but it depended on custom events and temporary session storage instead of stable URLs. That meant refresh and share-link behavior for an individual forum post was inconsistent, and different entry points (`cards-display`, `sidebar`, `header`) were using different navigation patterns.
+
+### Decisions Made
+
+**1. Client routing is centralized in `scripts/router.js`**
+A lightweight router now owns URL parsing, `history.pushState` / `replaceState`, `popstate`, and route broadcasting. Blocks should react to a single route source instead of duplicating pathname logic.
+
+**2. Post detail URLs use `/?post=<id>`**
+The canonical post route is now `/?post=<postId>`, where `postId` is the backend Mongo `_id` already returned by `/api/posts` and accepted by `/api/posts/:id`. Using the guaranteed homepage entry avoids EDS page-resolution issues on fresh tabs while keeping the URL shareable everywhere.
+
+**3. Legacy navigation inputs are kept as compatibility shims**
+Existing `sessionStorage('af_open_post')`, `?openPost=...`, and `load-forum-post` / `show-cards` event flows are translated into the new router so current sidebar and header navigation keep working while the URL model becomes canonical.
+
+---
+
 ## [2026-04-08] Shared Color Token System
 
 ### Context

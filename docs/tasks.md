@@ -48,6 +48,8 @@
 ## ✅ Completed
 
 ### 2026-04-08
+- [x] **SPA post routing**: Added a centralized client router with shareable `/?post=<id>` URLs, browser history support, and route-driven home/post rendering without page reloads.
+- [x] **EDS-safe post deep linking**: Standardized post entry on the homepage query route so pasted post links open correctly in a fresh tab without relying on rewrites or 404-page fallback behavior.
 - [x] **Responsive loading fix**: Centralized responsive rules live in `styles/responsive.css`, and the EDS loader now re-appends that stylesheet after block CSS so global mobile/tablet overrides apply reliably.
 - [x] **Responsive CSS strategy corrected**: Block CSS is base-only again, while `styles/responsive.css` holds the shared responsive layer for the application.
 - [x] **Normalized non-canonical breakpoints**: `440px → 480px`, `600px → 768px`, `900px → 1024px`.
