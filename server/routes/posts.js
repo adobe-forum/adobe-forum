@@ -2,7 +2,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import Post from '../models/Post.js';
 import Review from '../models/Review.js';
-import User from '../models/user.js';
+import User from '../models/User.js';
 import requireAuth from '../middleware/auth.js';
 import escapeRegex from '../helpers/escapeRegex.js';
 import PUBLISHED_FILTER from '../helpers/publishedFilter.js';
