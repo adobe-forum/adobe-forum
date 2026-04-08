@@ -5,6 +5,8 @@ import {
   HomeIcon, PendingReviewIcon, MyRequestsIcon,
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
+import { CSS_COLOR_VARS } from '../../scripts/utils/colors.js';
+import { navigateToPost } from '../../scripts/router.js';
 
 // ============================================
 // NORMALIZE
@@ -540,19 +542,18 @@ function Sidebar() {
       console.warn('Sidebar click failed: No postId available.');
       return;
     }
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+    if (
+      window.location.pathname !== '/'
+      && window.location.pathname !== '/index.html'
+      && window.location.pathname !== '/index'
+    ) {
       // Not on the home page Ã¢â‚¬â€ store the post ID so cards-display auto-opens it on arrival
-      sessionStorage.setItem('af_open_post', postId);
       closeIfOverlay();
-      window.location.href = '/';
+      window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
-    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
-    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
-    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
-    postWrappers.forEach((el) => { el.style.display = 'block'; });
     closeIfOverlay();
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId, sidebarItemId: subcategoryId } }));
+    navigateToPost(postId, { sidebarItemId: subcategoryId, source: 'sidebar-subcategory' });
   };
 
   const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
@@ -633,18 +634,13 @@ function Sidebar() {
     const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
     const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
     if (!postViewer && !cardsViewer) {
-      sessionStorage.setItem('af_open_post', postId);
       closeIfOverlay();
-      window.location.href = '/';
+      window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
 
-    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
-    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
-    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
-    postWrappers.forEach((el) => { el.style.display = 'block'; });
     closeIfOverlay();
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+    navigateToPost(postId, { source: 'sidebar-review-item' });
   };
 
   // eslint-disable-next-line max-len
@@ -725,7 +721,7 @@ function Sidebar() {
           <div class="sidebar-item" onClick=${() => setPendingOpen((o) => !o)}>
             <${PendingReviewIcon} />
             Pending Reviews
-            ${pendingReviews.length > 0 ? html`<span style="margin-left:auto;background:#854F0B;color:#FAEEDA;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${pendingReviews.length}</span>` : ''}
+            ${pendingReviews.length > 0 ? html`<span style=${`margin-left:auto;background:${CSS_COLOR_VARS.warning};color:${CSS_COLOR_VARS.white};border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;`}>${pendingReviews.length}</span>` : ''}
             <${ChevronIcon} expanded=${pendingOpen} style="margin-left:${pendingReviews.length > 0 ? '4px' : 'auto'};opacity:.5" />
           </div>
           ${pendingOpen && html`
@@ -737,7 +733,7 @@ function Sidebar() {
       ? (`${r.authorId.firstName || ''} ${r.authorId.lastName || ''}`).trim() || 'Unknown'
       : 'Unknown';
     return html`
-              <li key=${reviewId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #BA7517;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
+              <li key=${reviewId} style=${`font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid ${CSS_COLOR_VARS.warning};margin-left:0;`} onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
                 <div style="color:var(--text3);font-size:10px;">by ${authorName}</div>
               </li>
@@ -749,7 +745,7 @@ function Sidebar() {
           <div class="sidebar-item" onClick=${() => setRequestsOpen((o) => !o)}>
             <${MyRequestsIcon} />
             My Requests
-            ${myRequests.length > 0 ? html`<span style="margin-left:auto;background:#0C447C;color:#E6F1FB;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;">${myRequests.length}</span>` : ''}
+            ${myRequests.length > 0 ? html`<span style=${`margin-left:auto;background:${CSS_COLOR_VARS.infoStrong};color:${CSS_COLOR_VARS.infoSurface};border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;`}>${myRequests.length}</span>` : ''}
             <${ChevronIcon} expanded=${requestsOpen} style="margin-left:${myRequests.length > 0 ? '4px' : 'auto'};opacity:.5" />
           </div>
           ${requestsOpen && html`
@@ -764,7 +760,7 @@ function Sidebar() {
     else if (r.overallStatus === 'changes_requested') statusLabel = 'Changes requested';
     else statusLabel = `${reviewedCount}/${totalCount} reviewed`;
     return html`
-              <li key=${reqId} style="font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid #185FA5;margin-left:0;" onClick=${() => handlePendingReviewClick(r)}>
+              <li key=${reqId} style=${`font-size:12px;color:var(--text2);padding:5px 12px 5px 28px;cursor:pointer;border-left:3px solid ${CSS_COLOR_VARS.info};margin-left:0;`} onClick=${() => handlePendingReviewClick(r)}>
                 <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.postId?.title || 'Untitled Post'}</div>
                 <div style="color:var(--text3);font-size:10px;">${statusLabel}</div>
               </li>

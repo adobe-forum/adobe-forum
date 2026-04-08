@@ -153,15 +153,4 @@
   background-color: #b1161d;
 }
 
-/* Mobile */
-@media (width <=768px) {
-  .search-submit {
-    padding: 0 var(--spectrum-spacing-200);
-  }
-
-  .search-bar {
-    padding: 8px 0 4px;
-
-    /* 4px bottom — stacks with cards 8px top = 12px total gap */
-  }
-}
+/* Mobile overrides live in styles/responsive.css (sm ≤ 768px) */

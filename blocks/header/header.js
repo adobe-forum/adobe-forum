@@ -1,7 +1,10 @@
 /* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
+import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
+import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
+import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
   PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
   UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
@@ -489,16 +492,15 @@ function NotificationsDropdown({ onClose }) {
   const navigateToPost = (postId) => {
     if (!postId) return;
     // If not on the home page, navigate there and carry the postId
-    if (window.location.pathname !== '/' && window.location.pathname !== '/index') {
-      window.location.href = `/?openPost=${postId}`;
+    if (
+      window.location.pathname !== '/'
+      && window.location.pathname !== '/index'
+    ) {
+      window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
     // Already on home page â€” same DOM + event pattern as sidebar
-    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
-    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
-    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
-    postWrappers.forEach((el) => { el.style.display = 'block'; });
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+    navigateToPostRoute(postId, { source: 'header-notification' });
   };
 
   // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.
@@ -550,15 +552,15 @@ function NotificationsDropdown({ onClose }) {
 
   const approvedIcon = html`
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <circle cx="8" cy="8" r="8" fill="#268e6c"/>
-      <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.success}"/>
+      <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
 
   const changesIcon = html`
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <circle cx="8" cy="8" r="8" fill="#e68619"/>
-      <path d="M8 4.5V8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-      <circle cx="8" cy="11" r="0.9" fill="#fff"/>
+      <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.warning}"/>
+      <path d="M8 4.5V8.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="8" cy="11" r="0.9" fill="${COLOR_TOKENS.white}"/>
     </svg>`;
 
   const likeIcon = html`
@@ -592,8 +594,8 @@ function NotificationsDropdown({ onClose }) {
                 <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId, rId)}>
                   <span class="nd-pill-row">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-                      <circle cx="8" cy="8" r="7.25" stroke="#1473e6" stroke-width="1.5" fill="#f4f8ff"/>
-                      <path d="M8 4.5V8l2.5 2" stroke="#1473e6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="8" cy="8" r="7.25" stroke="${COLOR_TOKENS.info}" stroke-width="1.5" fill="${COLOR_TOKENS.infoSurface}"/>
+                      <path d="M8 4.5V8l2.5 2" stroke="${COLOR_TOKENS.info}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
@@ -920,11 +922,25 @@ function HeaderComponent() {
 // ============================================
 
 function loadCSS(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.append(link);
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`link[href="${href}"]`);
+    if (existing) {
+      if (existing.sheet) {
+        resolve();
+        return;
+      }
+      existing.addEventListener('load', resolve, { once: true });
+      existing.addEventListener('error', reject, { once: true });
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = resolve;
+    link.onerror = reject;
+    document.head.append(link);
+  });
 }
 
 // ============================================
@@ -950,7 +966,8 @@ export default async function decorate(block) {
   }
 
   try {
-    loadCSS('/blocks/sidebar/sidebar.css');
+    await loadCSS('/blocks/sidebar/sidebar.css');
+    await ensureResponsiveCSSLast();
     const sidebarMount = document.createElement('div');
     sidebarMount.className = 'sidebar-mount';
     document.body.append(sidebarMount);

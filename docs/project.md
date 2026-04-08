@@ -15,8 +15,8 @@ An internal Adobe community forum built on **Adobe Edge Delivery Services (EDS)*
 | UI framework | Preact + htm (via `vendor/`) |
 | Hooks | `preact-hooks.js` (via `vendor/`) |
 | Templating | Tagged template literals (`htm.bind(h)`) |
-| Styling | Vanilla CSS (component-scoped per block) |
-| Design system | Adobe Spectrum 1 tokens |
+| Styling | Vanilla CSS with a centralized responsive layer in `styles/responsive.css` |
+| Design system | Adobe Spectrum 1 tokens plus shared app color tokens in `styles/styles.css` |
 
 ### Backend
 | Layer | Technology |

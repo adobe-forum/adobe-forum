@@ -5,10 +5,48 @@
 
 .forum-post-wrapper {
   /* Code block tokens (post-specific, stay local) */
-  --post-code-bg: #1e1e1e;
-  --post-code-text: #d4d4d4;
-  --post-line-nums: rgb(212 212 212 / 30%);
-  --post-line-nums-border: rgb(212 212 212 / 15%);
+  --post-code-bg: var(--color-code-bg);
+  --post-code-text: var(--color-code-text);
+  --post-line-nums: var(--color-code-line-numbers);
+  --post-line-nums-border: var(--color-code-line-numbers-border);
+  --post-code-tab-html-bg: var(--color-lang-html-soft);
+  --post-code-tab-html-text: var(--color-lang-html);
+  --post-code-tab-css-bg: var(--color-lang-css-soft);
+  --post-code-tab-css-text: var(--color-lang-css-text);
+  --post-code-tab-js-bg: var(--color-lang-js-soft);
+  --post-code-tab-js-text: var(--color-lang-js);
+  --post-code-tab-ts-bg: var(--color-lang-ts-soft);
+  --post-code-tab-ts-text: var(--color-lang-ts-text);
+  --post-code-tab-python-bg: var(--color-lang-python-soft);
+  --post-code-tab-python-text: var(--color-lang-python-text);
+  --post-code-tab-php-bg: var(--color-lang-php-soft);
+  --post-code-tab-php-text: var(--color-lang-php-text);
+  --post-code-tab-neutral-bg: var(--color-lang-neutral-soft);
+  --post-code-tab-neutral-text: var(--color-lang-neutral-text);
+  --post-code-tab-swift-bg: var(--color-lang-swift-soft);
+  --post-code-tab-swift-text: var(--color-lang-swift);
+  --post-code-tab-dart-bg: var(--color-lang-dart-soft);
+  --post-code-tab-dart-text: var(--color-lang-dart-text);
+  --post-code-tab-go-bg: var(--color-lang-go-soft);
+  --post-code-tab-go-text: var(--color-lang-go-text);
+  --post-code-tab-bash-bg: var(--color-lang-bash-soft);
+  --post-code-tab-bash-text: var(--color-lang-bash-text);
+  --post-code-tab-ruby-bg: var(--color-lang-ruby-soft);
+  --post-code-tab-ruby-text: var(--color-lang-ruby);
+  --post-code-tab-csharp-bg: var(--color-lang-csharp-soft);
+  --post-code-tab-csharp-text: var(--color-lang-csharp-text);
+  --post-code-tab-java-bg: var(--color-lang-java-soft);
+  --post-code-tab-java-text: var(--color-lang-java-text);
+  --post-code-tab-kotlin-bg: var(--color-lang-kotlin-soft);
+  --post-code-tab-kotlin-text: var(--color-lang-kotlin-text);
+  --post-code-focus-ring: var(--color-focus-info-soft);
+  --post-review-info-bg: var(--color-review-info-bg);
+  --post-review-info-border: var(--color-review-info-border);
+  --post-review-info-text: var(--color-review-info-text);
+  --post-review-info-icon: var(--color-review-info-icon);
+  --post-review-info-icon-hover: var(--color-review-info-icon-hover);
+  --post-review-success-bg: var(--color-success-alt);
+  --post-review-success-hover: var(--color-review-success-hover);
 
   max-width: var(--page-max-width, 900px);
   margin: 0 auto;
@@ -32,7 +70,7 @@
   & .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgb(255 255 255 / 80%);
+    background: var(--color-surface-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -44,6 +82,14 @@
   /* ── Back button ─────────────────────────── */
 
   & .forum-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    align-self: flex-start;
+    gap: 8px;
+    width: fit-content;
+    min-width: 0;
+    padding: 0;
     margin-bottom: 24px;
   }
 
@@ -411,10 +457,10 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #9a9a9a;
+    color: var(--color-text-subtle);
     margin: 36px 0 10px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #eceef1;
+    border-bottom: 1px solid var(--color-border-light);
   }
 
   /* ── Tabbed code viewer ───────────────────── */
@@ -422,17 +468,17 @@
   .code-tabs-wrapper {
     margin: 28px 0;
     border-radius: 10px;
-    border: 1px solid #dde1e7;
+    border: 1px solid var(--color-border-medium);
     overflow: hidden;
-    box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+    box-shadow: 0 4px 16px var(--color-shadow-soft);
   }
 
   /* Tab bar */
   .code-tabbar {
     display: flex;
     align-items: center;
-    background: #f0f1f3;
-    border-bottom: 1px solid #dde1e7;
+    background: var(--color-surface-hover);
+    border-bottom: 1px solid var(--color-border-medium);
     padding: 0 12px;
     gap: 0;
     min-height: 42px;
@@ -454,21 +500,21 @@
     height: 42px;
     font-size: 13px;
     font-weight: 600;
-    color: #6b6b6b;
+    color: var(--color-text-secondary);
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
     white-space: nowrap;
 
     &:hover {
-      color: #1a1a1a;
-      background: #e4e6ea;
+      color: var(--color-text-strong);
+      background: var(--color-surface-hover-strong);
     }
 
     &.active {
-      color: #da1f26;
-      border-bottom-color: #da1f26;
-      background: #fff;
+      color: var(--color-accent);
+      border-bottom-color: var(--color-accent);
+      background: var(--color-white);
     }
   }
 
@@ -483,24 +529,24 @@
     height: 30px;
     border-radius: 6px;
     cursor: pointer;
-    color: #6b6b6b;
+    color: var(--color-text-secondary);
     transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
 
     &:hover {
-      background: #dde1e7;
-      color: #1a1a1a;
+      background: var(--color-border-medium);
+      color: var(--color-text-strong);
     }
 
     &.copied {
-      color: #1a7b3c;
-      background: #e6f4ec;
+      color: var(--color-success-alt);
+      background: var(--color-success-surface-alt);
     }
   }
 
   /* Code panels */
   .code-panels {
-    background: #1e1e1e;
+    background: var(--post-code-bg);
   }
 
   .code-panel {
@@ -524,8 +570,8 @@
     letter-spacing: 0.6px;
     padding: 2px 8px;
     border-radius: 99px;
-    background: rgb(255 255 255 / 10%);
-    color: rgb(212 212 212 / 60%);
+    background: var(--color-code-overlay);
+    color: var(--color-code-text-muted);
     pointer-events: none;
     user-select: none;
     z-index: 2;
@@ -533,78 +579,78 @@
 
   /* Per-language badge colours */
   .code-badge-html {
-    background: #e44d2622;
-    color: #e44d26;
+    background: var(--post-code-tab-html-bg);
+    color: var(--post-code-tab-html-text);
   }
 
   .code-badge-css {
-    background: #2965f122;
-    color: #7aa3f7;
+    background: var(--post-code-tab-css-bg);
+    color: var(--post-code-tab-css-text);
   }
 
   .code-badge-javascript {
-    background: #f0db4f22;
-    color: #f0db4f;
+    background: var(--post-code-tab-js-bg);
+    color: var(--post-code-tab-js-text);
   }
 
   .code-badge-typescript {
-    background: #007acc22;
-    color: #6ab0f5;
+    background: var(--post-code-tab-ts-bg);
+    color: var(--post-code-tab-ts-text);
   }
 
   .code-badge-python {
-    background: #3572a522;
-    color: #87c1e8;
+    background: var(--post-code-tab-python-bg);
+    color: var(--post-code-tab-python-text);
   }
 
   .code-badge-bash {
-    background: #4eaa2522;
-    color: #82d45d;
+    background: var(--post-code-tab-php-bg);
+    color: var(--post-code-tab-php-text);
   }
 
   .code-badge-json {
-    background: #8882;
-    color: #b0b0b0;
+    background: var(--post-code-tab-neutral-bg);
+    color: var(--post-code-tab-neutral-text);
   }
 
   .code-badge-sql {
-    background: #e38c0022;
-    color: #e38c00;
+    background: var(--post-code-tab-swift-bg);
+    color: var(--post-code-tab-swift-text);
   }
 
   .code-badge-dart {
-    background: #0175c222;
-    color: #4db9f5;
+    background: var(--post-code-tab-dart-bg);
+    color: var(--post-code-tab-dart-text);
   }
 
   .code-badge-go {
-    background: #00acd722;
-    color: #29d0f7;
+    background: var(--post-code-tab-go-bg);
+    color: var(--post-code-tab-go-text);
   }
 
   .code-badge-c {
-    background: #5552;
-    color: #aaa;
+    background: var(--post-code-tab-bash-bg);
+    color: var(--post-code-tab-bash-text);
   }
 
   .code-badge-cpp {
-    background: #f34b7d22;
-    color: #f34b7d;
+    background: var(--post-code-tab-ruby-bg);
+    color: var(--post-code-tab-ruby-text);
   }
 
   .code-badge-csharp {
-    background: #7b2fbe22;
-    color: #c07ef7;
+    background: var(--post-code-tab-csharp-bg);
+    color: var(--post-code-tab-csharp-text);
   }
 
   .code-badge-java {
-    background: #b0721922;
-    color: #d4a24a;
+    background: var(--post-code-tab-java-bg);
+    color: var(--post-code-tab-java-text);
   }
 
   .code-badge-graphql {
-    background: #e1009822;
-    color: #f07ac8;
+    background: var(--post-code-tab-kotlin-bg);
+    color: var(--post-code-tab-kotlin-text);
   }
 
   /* Code body = gutter + content */
@@ -618,7 +664,7 @@
     padding-top: 14px;
     padding-bottom: 14px;
     scrollbar-width: thin;
-    scrollbar-color: rgb(212 212 212 / 20%) transparent;
+    scrollbar-color: var(--color-code-scrollbar) transparent;
     box-sizing: border-box;
 
     &::-webkit-scrollbar {
@@ -627,7 +673,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgb(212 212 212 / 22%);
+      background: var(--color-code-scrollbar-thumb);
       border-radius: 3px;
     }
 
@@ -637,8 +683,8 @@
       flex-direction: column;
       padding: 0 10px 0 16px;
       text-align: right;
-      color: rgb(212 212 212 / 28%);
-      border-right: 1px solid rgb(212 212 212 / 12%);
+      color: var(--color-code-text-faint);
+      border-right: 1px solid var(--color-code-divider);
       user-select: none;
       min-width: 2.8em;
       line-height: 1.6;
@@ -652,7 +698,7 @@
     & .tabs-content {
       flex: 1;
       padding: 0 16px 0 14px;
-      color: #d4d4d4;
+      color: var(--post-code-text);
       white-space: pre;
       overflow-x: visible;
       min-width: 0;
@@ -770,7 +816,7 @@
 
       &:focus-within {
         border-color: var(--sp-blue-600);
-        box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+        box-shadow: 0 0 0 2px var(--post-code-focus-ring);
       }
 
       & .comment-input {
@@ -872,7 +918,7 @@
 
         &:focus {
           border-color: var(--sp-blue-600);
-          box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+          box-shadow: 0 0 0 2px var(--post-code-focus-ring);
         }
       }
 
@@ -897,13 +943,13 @@
 
         &:focus {
           border-color: var(--sp-blue-600);
-          box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+          box-shadow: 0 0 0 2px var(--post-code-focus-ring);
         }
       }
     }
 
     & .edit-error {
-      background: #fff0f0;
+      background: var(--color-accent-soft-alt);
       border: 1px solid var(--sp-red-400);
       border-left: 3px solid var(--sp-red-600);
       color: var(--sp-red-700);
@@ -970,84 +1016,11 @@
       }
 
       &:active:not(:disabled) {
-        background: #0b5cb8;
+        background: var(--color-info-hover);
       }
     }
   }
 
-  /* ── Mobile responsive ───────────────────── */
-
-  @media (width <=768px) {
-    padding: 12px 0 48px;
-
-    /* Smaller post title */
-    & .post-title {
-      font-size: 1.5rem;
-      line-height: 1.25;
-    }
-
-    /* Title row: stack title and edit button vertically */
-    & .post-title-row {
-      flex-direction: column;
-      gap: 10px;
-
-      & .post-edit-btn {
-        align-self: flex-start;
-        margin-top: 0;
-      }
-    }
-
-    /* Meta row: stays inline — like and views on same line like desktop */
-    & .post-meta {
-      flex-wrap: wrap;
-      row-gap: 8px;
-      align-items: center;
-    }
-
-    /* Code tab bar: allow horizontal scroll instead of overflow */
-    .code-tabbar {
-      overflow-x: auto;
-      scrollbar-width: none; /* hide scrollbar on mobile */
-      -ms-overflow-style: none;
-      padding: 0 8px;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
-    }
-
-    /* Tab list: don't shrink tabs */
-    .code-tab-list {
-      flex-shrink: 0;
-    }
-
-    .code-tab {
-      padding: 0 14px;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    /* Code body: taller height and smaller font for readability */
-    .code-body {
-      height: 260px;
-      font-size: 12px;
-
-      & .tabs-content {
-        overflow-x: auto;
-      }
-    }
-
-    /* Code lang badge: hidden on mobile — active tab already shows the language */
-    .code-lang-badge {
-      display: none;
-    }
-
-    /* Code tabs wrapper: no horizontal overflow leak */
-    .code-tabs-wrapper {
-      overflow: hidden;
-      margin: 16px 0;
-    }
-  }
 }
 
 /* ── Spectrum Action Button (back / edit triggers) ── */
@@ -1064,7 +1037,7 @@
   font-family: var(--body-font-family);
   font-size: 14px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
@@ -1115,6 +1088,24 @@
   }
 }
 
+.forum-post-wrapper .forum-back-btn.spectrum-action-button.spectrum-action-button-size-m {
+  justify-content: flex-start;
+  gap: 8px;
+  padding-inline: 0;
+  margin: 0 0 24px;
+}
+
+.forum-post-wrapper .forum-back-btn.spectrum-action-button .spectrum-action-button-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.forum-post-wrapper .forum-back-btn.spectrum-action-button .spectrum-action-button-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
 /* =============================================
    REVIEW PANEL & CHANGES BANNER
    ============================================= */
@@ -1124,17 +1115,17 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #fff8e1;
-  border: 1px solid #ffcc02;
+  background: var(--post-review-info-bg);
+  border: 1px solid var(--post-review-info-border);
   border-radius: var(--sp-radius-md);
   margin-bottom: 20px;
   font-size: 14px;
-  color: #795800;
+  color: var(--post-review-info-text);
   flex-wrap: wrap;
 }
 
 .review-changes-banner svg {
-  color: #f59e0b;
+  color: var(--post-review-info-icon);
   flex-shrink: 0;
 }
 
@@ -1153,16 +1144,16 @@
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  border: 1px solid #f59e0b;
-  background: #f59e0b;
-  color: #fff;
+  border: 1px solid var(--post-review-info-icon);
+  background: var(--post-review-info-icon);
+  color: var(--color-white);
   transition: background 0.13s;
   white-space: nowrap;
 }
 
 .review-resubmit-btn:hover {
-  background: #d97706;
-  border-color: #d97706;
+  background: var(--post-review-info-icon-hover);
+  border-color: var(--post-review-info-icon-hover);
 }
 
 .review-panel {
@@ -1205,7 +1196,7 @@
 
 .review-textarea:focus {
   border-color: var(--sp-blue-600);
-  box-shadow: 0 0 0 2px rgb(20 115 230 / 20%);
+  box-shadow: 0 0 0 2px var(--post-code-focus-ring);
 }
 
 .review-panel-actions {
@@ -1231,12 +1222,12 @@
 }
 
 .review-btn-approve {
-  background: #2e7d32;
-  color: #fff;
+  background: var(--post-review-success-bg);
+  color: var(--color-white);
 }
 
 .review-btn-approve:hover {
-  background: #1b5e20;
+  background: var(--post-review-success-hover);
 }
 
 .review-btn-changes {
@@ -1249,3 +1240,4 @@
   background: var(--sp-gray-100);
   border-color: var(--sp-gray-400);
 }
+

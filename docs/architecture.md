@@ -144,7 +144,13 @@ Sidebar (sidebar.js)
 ## Styling Approach
 
 - Each block has its own `block-name.css` scoped under `.block-name`
-- Design tokens from `:root` in `styles/styles.css` (prefixed `--sp-*`)
+- Design tokens from `:root` in `styles/styles.css` (Spectrum `--sp-*` plus shared app `--color-*` tokens)
 - Sidebar uses sidebar-local tokens (`--sn-*`) from its own `:root` override
 - Adobe Spectrum 1 naming conventions, medium scale, 32px item height
 - CSS nesting (`&`) used throughout (native, no preprocessor)
+- Global responsive media queries live in `styles/responsive.css`, and the EDS loader re-injects that stylesheet last after block CSS so centralized mobile/tablet overrides still win the cascade
+- Canonical breakpoints: `xs ≤ 480px` · `sm ≤ 768px` · `md ≤ 1024px` · `md+ ≥ 1024px` (documented in `scripts/utils/constants.js` as `BREAKPOINTS`)
+- CSS custom properties cannot be used inside `@media` expressions — pixel values are literal in CSS, with `constants.js` as the JS source of truth
+
+
+- Inline JS/icon colors are centralized through scripts/utils/colors.js when markup needs token-aligned values outside CSS

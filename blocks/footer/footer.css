@@ -13,8 +13,4 @@ footer .footer p {
   margin: 0;
 }
 
-@media (width >= 900px) {
-  footer .footer > div {
-    padding: 40px 32px 24px;
-  }
-}
+/* Desktop overrides live in styles/responsive.css (md+ ≥ 1024px) */
