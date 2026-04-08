@@ -26,6 +26,10 @@ const postSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   }],
+  viewedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
   // Peer-review workflow status.
   // Defaults to 'published' so all pre-existing posts remain visible.
   status: {

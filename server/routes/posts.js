@@ -178,27 +178,64 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * GET /api/posts/notifications
+ * Returns unread post notifications for the logged-in user.
+ */
+router.get('/notifications', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate('notifications.actor', 'firstName lastName')
+      .populate('notifications.post', 'title');
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const notifications = (user.notifications || [])
+      .filter((notification) => !notification.read)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.json({ success: true, notifications });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch post notifications' });
+  }
+});
+
+/**
  * GET /api/posts/:id
- * Pass ?view=1 to increment the view counter.
  */
 router.get('/:id', async (req, res) => {
   try {
-    let post;
-    if (req.query.view === '1') {
-      post = await Post.findByIdAndUpdate(
-        req.params.id,
-        { $inc: { views: 1 } },
-        { new: true },
-      ).populate('createdBy', 'firstName lastName');
-    } else {
-      post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
-    }
-
+    const post = await Post.findById(req.params.id).populate('createdBy', 'firstName lastName');
     if (!post) return res.status(404).json({ error: 'Post not found' });
     return res.json({ success: true, post });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch post' });
+  }
+});
+
+/**
+ * POST /api/posts/:id/view
+ * Securely tracks unique views by User ID.
+ */
+router.post('/:id/view', requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    const userId = req.user._id;
+
+    if (!post.viewedBy.includes(userId)) {
+      post.viewedBy.push(userId);
+      post.views = (post.views || 0) + 1;
+      await post.save();
+    }
+
+    await post.populate('createdBy', 'firstName lastName');
+    return res.json({ success: true, post });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to update view status' });
   }
 });
 
@@ -220,10 +257,57 @@ router.post('/:id/like', requireAuth, async (req, res) => {
       { new: true },
     ).populate('createdBy', 'firstName lastName');
 
+    if (!hasLiked && post.createdBy && String(post.createdBy) !== String(userId)) {
+      await User.findByIdAndUpdate(post.createdBy, {
+        $pull: {
+          notifications: {
+            type: 'post_like',
+            actor: userId,
+            post: post._id,
+          },
+        },
+      });
+
+      await User.findByIdAndUpdate(post.createdBy, {
+        $push: {
+          notifications: {
+            type: 'post_like',
+            actor: userId,
+            post: post._id,
+            message: 'liked your post',
+            read: false,
+            createdAt: new Date(),
+          },
+        },
+      });
+    }
+
     return res.json({ success: true, post: updatedPost });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update like status' });
+  }
+});
+
+/**
+ * PATCH /api/posts/notifications/:notificationId/read
+ * Marks a post notification as read for the logged-in user.
+ */
+router.patch('/notifications/:notificationId/read', requireAuth, async (req, res) => {
+  try {
+    const result = await User.updateOne(
+      { _id: req.user._id, 'notifications._id': req.params.notificationId },
+      { $set: { 'notifications.$.read': true } },
+    );
+
+    if (!result.matchedCount) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to update notification' });
   }
 });
 

@@ -977,7 +977,7 @@
 
   /* ── Mobile responsive ───────────────────── */
 
-  @media (width <= 768px) {
+  @media (width <=768px) {
     padding: 12px 0 48px;
 
     /* Smaller post title */

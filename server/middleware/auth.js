@@ -18,7 +18,7 @@ export default async function requireAuth(req, res, next) {
 
     if (!user) {
       // User was deleted after session was created
-      req.session.destroy(() => {});
+      req.session.destroy(() => { });
       return res.status(401).json({ error: 'Not authenticated.' });
     }
 
