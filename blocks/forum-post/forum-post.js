@@ -731,7 +731,6 @@ export default function decorate(block) {
     || getCurrentRoute().view === 'post';
 
   if (shouldBootInPostView) {
-
     // ── Force the block AND every ancestor visible immediately ──
     // AEM's loadSections() sets sections to display:none and only reveals
     // them as they scroll into view. We must counteract this for the
