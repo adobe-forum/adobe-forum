@@ -1,44 +1,11 @@
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
-
-const API_BASE = 'http://localhost:5000/api';
-
-// ArrowIcon remains local — it is the Spectrum-specific RTL arrow (18x18 variant)
-const ArrowIcon = () => html`
-  <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
-    <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
-  </svg>
-`;
-
-const BackIcon = () => html`
-  <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-    <line x1="19" y1="12" x2="5" y2="12"></line>
-    <polyline points="12 19 5 12 12 5"></polyline>
-  </svg>
-`;
-
-const EditIcon = () => html`
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-    style="display:block;flex-shrink:0;">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-`;
-
-const HeartIcon = ({ filled }) => html`
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
-    fill="${filled ? 'currentColor' : 'none'}" 
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-    class="${filled ? 'heart-filled' : 'heart-outline'}">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-  </svg>
-`;
-
-// ============================================
-// HELPERS
-// ============================================
-
+import {
+  BackIcon, EditIcon, HeartIcon, ArrowIcon, WarningIcon,
+} from '../../scripts/utils/icons.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
+import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
+import { getCurrentRoute, navigateHome } from '../../scripts/router.js';
 /**
  * Reads the currently logged-in user from localStorage (set by auth-form on login/signup).
  * Returns null if not logged in.
@@ -72,10 +39,6 @@ function isOwner(post, currentUser) {
   return String(post.createdBy) === getStrId(currentUser);
 }
 
-// Module-level variable: set by decorate() when arriving via cross-page
-// navigation. The ForumPost useEffect reads and clears it on mount.
-let pendingCrossPagePostId = null;
-
 // ============================================
 // FORUM POST
 // ============================================
@@ -95,6 +58,12 @@ const ForumPost = ({ blockEl }) => {
   const [viewsCount, setViewsCount] = useState(0);
 
   const commentsListRef = useRef(null);
+  const sidebarItemIdRef = useRef(null);
+  const activePostIdRef = useRef(null);
+
+  useEffect(() => {
+    sidebarItemIdRef.current = sidebarItemId;
+  }, [sidebarItemId]);
 
   // Scroll to bottom when comments change
   useEffect(() => {
@@ -304,9 +273,11 @@ const ForumPost = ({ blockEl }) => {
   }, [post, blockEl]);
 
   useEffect(() => {
-    const handleLoadPost = async (event) => {
-      const { postId, sidebarItemId: sid } = event.detail;
+    const loadPost = async ({ postId, sidebarItemId: sid } = {}) => {
       if (!postId) return;
+      if (activePostIdRef.current === postId && (!sid || sid === sidebarItemIdRef.current)) return;
+
+      activePostIdRef.current = postId;
       setSidebarItemId(sid || null);
 
       setLoading(true);
@@ -405,9 +376,11 @@ const ForumPost = ({ blockEl }) => {
       }
     };
 
-    // Listen for back-to-cards event
-    const handleShowCards = () => {
+    const showCards = () => {
+      activePostIdRef.current = null;
       setPost(null);
+      setSidebarItemId(null);
+      setReviewData(null);
       if (blockEl) blockEl.style.display = 'none';
       const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
       cardsWrappers.forEach((el) => { el.style.display = ''; });
@@ -416,53 +389,37 @@ const ForumPost = ({ blockEl }) => {
       if (tag) tag.remove();
     };
 
+    const handleRouteChange = (event) => {
+      const route = event.detail || getCurrentRoute();
+      if (route.view === 'post' && route.postId) {
+        loadPost(route);
+        return;
+      }
+
+      showCards();
+    };
+
     // Navigate away if the currently viewed post is deleted from the sidebar
     const handleItemDeleted = (e) => {
       const { itemId } = e.detail || {};
-      if (itemId && sidebarItemId && itemId === sidebarItemId) {
-        window.location.href = '/';
+      if (itemId && sidebarItemIdRef.current && itemId === sidebarItemIdRef.current) {
+        navigateHome({ source: 'sidebar-item-deleted' });
       }
     };
 
-    window.addEventListener('load-forum-post', handleLoadPost);
-    window.addEventListener('show-cards', handleShowCards);
+    window.addEventListener('af-route-change', handleRouteChange);
     window.addEventListener('sidebar-item-deleted', handleItemDeleted);
 
     // Cross-page navigation: decorate() already read sessionStorage and
     // set pendingCrossPagePostId + injected a <style> to hide cards.
     // Call the handler directly — the listener is already attached above.
-    if (pendingCrossPagePostId) {
-      const pid = pendingCrossPagePostId;
-      pendingCrossPagePostId = null;
-      handleLoadPost({ detail: { postId: pid } }).then(() => {
-        // We purposefully leave the `af-hide-cards-initial` style tag in the DOM.
-        // It provides a guaranteed CSS-level block on the cards wrapper.
-        // It will be cleaned up only when the user explicitly clicks "Home" or "Back"
-        // (inside handleShowCards).
-      });
-    }
+    handleRouteChange({ detail: getCurrentRoute() });
 
     return () => {
-      window.removeEventListener('load-forum-post', handleLoadPost);
-      window.removeEventListener('show-cards', handleShowCards);
+      window.removeEventListener('af-route-change', handleRouteChange);
       window.removeEventListener('sidebar-item-deleted', handleItemDeleted);
     };
-  }, [blockEl, sidebarItemId]);
-
-  // Re-evaluate likes/hasLiked when currentUser arrives asynchronously after post loads
-  useEffect(() => {
-    if (!post || !currentUser) return;
-    fetch(`${API_BASE}/posts/${post.id}`, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.post) return;
-        const likes = data.post.likes || [];
-        setHasLiked(likes.includes(getStrId(currentUser)));
-        setLikesCount(likes.length);
-      })
-      .catch(() => {});
-  // NOTE: intentionally omitting post from deps to avoid re-fetch loop
-  }, [currentUser, post?.id]);
+  }, [blockEl]);
 
   if (!post) {
     return html`
@@ -485,7 +442,7 @@ const ForumPost = ({ blockEl }) => {
   };
 
   const handleBack = () => {
-    window.dispatchEvent(new CustomEvent('show-cards'));
+    navigateHome({ source: 'forum-post-back' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -569,7 +526,7 @@ const ForumPost = ({ blockEl }) => {
         window.dispatchEvent(new CustomEvent('refresh-cards'));
 
         // After any review action, go back to cards view / home
-        window.dispatchEvent(new CustomEvent('show-cards'));
+        navigateHome({ source: 'forum-review-action' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
@@ -650,25 +607,21 @@ const ForumPost = ({ blockEl }) => {
       </div>
 
       ${showChangesRequestedBanner && html`
-        <div class="review-changes-banner" style="background-color: #fff9e6; border: 1px solid #fec700; border-radius: 4px; padding: 16px; margin-bottom: 24px;">
+        <div class="review-changes-banner" style=${`background-color:${COLOR_TOKENS.warningSurfaceSoft};border:1px solid ${COLOR_TOKENS.warningBorder};border-radius:4px;padding:16px;margin-bottom:24px;`}>
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b26e00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              <span style="color: #b26e00; font-weight: 500;">Changes were requested \u2014 edit your post and re-submit for review.</span>
+              <${WarningIcon} />
+              <span style=${`color:${COLOR_TOKENS.warningStrong};font-weight:500;`}>Changes were requested \u2014 edit your post and re-submit for review.</span>
             </div>
-            <button class="review-resubmit-btn" onClick=${handleResubmit} style="background-color: #d17f00; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: 600; cursor: pointer;">
+            <button class="review-resubmit-btn" onClick=${handleResubmit} style=${`background-color:${COLOR_TOKENS.warningAlt};color:${COLOR_TOKENS.white};border:none;padding:6px 16px;border-radius:4px;font-weight:600;cursor:pointer;`}>
               Re-submit for Review
             </button>
           </div>
           
           ${reviewData && reviewData.reviewers && reviewData.reviewers.some((rv) => rv.status === 'changes_requested' && rv.comment) ? html`
-            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(218, 31, 38, 0.2);">
-              <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #da1f26; text-transform: uppercase;">Reviewer Feedback:</h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b4b4b;">
+            <div style=${`margin-top:16px;padding-top:16px;border-top:1px solid ${COLOR_TOKENS.dangerBorderSoft};`}>
+              <h4 style=${`margin:0 0 8px 0;font-size:13px;color:${COLOR_TOKENS.accent};text-transform:uppercase;`}>Reviewer Feedback:</h4>
+              <ul style=${`margin:0;padding-left:20px;font-size:14px;color:${COLOR_TOKENS.textSecondary};`}>
                 ${reviewData.reviewers.filter((rv) => rv.status === 'changes_requested' && rv.comment).map((rv) => html`
                   <li style="margin-bottom: 6px;">
                     <strong>${rv.userId?.firstName || 'Reviewer'}:</strong>
@@ -761,12 +714,16 @@ const ForumPost = ({ blockEl }) => {
 
 export default function decorate(block) {
   block.innerHTML = '';
+  const searchParams = new URLSearchParams(window.location.search);
 
-  const storedPostId = sessionStorage.getItem('af_open_post');
-  if (storedPostId) {
-    sessionStorage.removeItem('af_open_post');
-    pendingCrossPagePostId = storedPostId;
+  const shouldBootInPostView = searchParams.has('post')
+    || ((window.location.pathname === '/post' || window.location.pathname === '/post.html')
+      && searchParams.has('id'))
+    || searchParams.has('openPost')
+    || !!sessionStorage.getItem('af_open_post')
+    || getCurrentRoute().view === 'post';
 
+  if (shouldBootInPostView) {
     // ── Force the block AND every ancestor visible immediately ──
     // AEM's loadSections() sets sections to display:none and only reveals
     // them as they scroll into view. We must counteract this for the

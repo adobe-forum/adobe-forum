@@ -266,6 +266,34 @@ async function loadCSS(href) {
 }
 
 /**
+ * Ensures the centralized responsive stylesheet stays last in <head>
+ * so global media-query overrides win after EDS block CSS loads.
+ * @returns {Promise<void>}
+ */
+async function ensureResponsiveCSSLast() {
+  const href = `${window.hlx.codeBasePath}/styles/responsive.css`;
+  let link = document.querySelector('head > link[data-hlx-responsive="true"]');
+
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.dataset.hlxResponsive = 'true';
+
+    await new Promise((resolve, reject) => {
+      link.onload = () => resolve();
+      link.onerror = reject;
+      document.head.append(link);
+    });
+    return;
+  }
+
+  if (link.parentElement === document.head && link !== document.head.lastElementChild) {
+    document.head.append(link);
+  }
+}
+
+/**
  * Retrieves the content of metadata tags.
  * @param {string} name The metadata name (or property)
  * @param {Document} doc Document object to query for metadata. Defaults to the window's document
@@ -507,6 +535,7 @@ async function loadBlock(block) {
         })();
       });
       await Promise.all([cssLoaded, decorationComplete]);
+      await ensureResponsiveCSSLast();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(`failed to load block ${blockName}`, error);
@@ -638,6 +667,7 @@ export {
   loadSections,
   readBlockConfig,
   sampleRUM,
+  ensureResponsiveCSSLast,
   setup,
   toCamelCase,
   toClassName,

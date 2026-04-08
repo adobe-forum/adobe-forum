@@ -11,6 +11,7 @@
  */
 
 import { html } from '../../vendor/htm-preact.js';
+import { COLOR_TOKENS } from './colors.js';
 
 // ── Navigation & Actions ──────────────────────────────────────────────────────
 
@@ -38,6 +39,12 @@ export const BackIcon = ({ size = 16 } = {}) => html`
 export const ArrowRightIcon = ({ size = 20 } = {}) => html`
   <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
     <polyline points="9 18 15 12 9 6"/>
+  </svg>`;
+
+/** Spectrum 18×18 send arrow — used in comment send button */
+export const ArrowIcon = () => html`
+  <svg class="spectrum-action-button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+    <path d="M11.5 8.5H2v1h9.5l-3.5 3.5 .7.7 4.7-4.7-4.7-4.7-.7.7 3.5 3.5z" fill="currentColor"/>
   </svg>`;
 
 export const LogoutIcon = ({ size = 15 } = {}) => html`
@@ -145,13 +152,13 @@ export const CheckIcon = ({ size = 14 } = {}) => html`
 
 export const AlertIcon = ({ size = 13 } = {}) => html`
   <svg width="${size}" height="${size}" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;margin-top:1px">
-    <circle cx="6" cy="6" r="5.25" stroke="#d7373f" stroke-width="1.2"/>
-    <path d="M6 3.5V6.5" stroke="#d7373f" stroke-width="1.2" stroke-linecap="round"/>
-    <circle cx="6" cy="8.5" r="0.65" fill="#d7373f"/>
+    <circle cx="6" cy="6" r="5.25" stroke="${COLOR_TOKENS.danger}" stroke-width="1.2"/>
+    <path d="M6 3.5V6.5" stroke="${COLOR_TOKENS.danger}" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="6" cy="8.5" r="0.65" fill="${COLOR_TOKENS.danger}"/>
   </svg>`;
 
 export const WarningIcon = ({ size = 18 } = {}) => html`
-  <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="#b26e00"
+  <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${COLOR_TOKENS.warningStrong}"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
     <line x1="12" y1="9" x2="12" y2="13"/>

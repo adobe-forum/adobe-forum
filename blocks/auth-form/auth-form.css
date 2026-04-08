@@ -100,29 +100,29 @@
   --af-sp-800: 32px;
 
   /* Gray palette — light theme */
-  --af-gray-50:  #fff;
-  --af-gray-100: #f5f5f5;
+  --af-gray-50:  var(--color-white);
+  --af-gray-100: var(--color-surface-muted);
   --af-gray-300: #d5d5d5;
   --af-gray-400: #b3b3b3;
   --af-gray-500: #8e8e8e;
-  --af-gray-600: #6e6e6e;
+  --af-gray-600: var(--color-text-secondary);
   --af-gray-700: #4b4b4b;
   --af-gray-800: #2c2c2c;
-  --af-gray-900: #1a1a1a;
+  --af-gray-900: var(--color-text-strong);
 
   /* Accent — Adobe red (overrides Spectrum default blue on this surface) */
   --af-blue-800:  #c9181e; /* maps to accent focus border  → red-900 equivalent */
-  --af-blue-900:  #da1f26; /* maps to accent primary color → spectrum-accent-color-900 */
-  --af-blue-1000: #b71418; /* maps to accent hover         → spectrum-accent-color-1000 */
-  --af-blue-1100: #960f13; /* maps to accent pressed       → spectrum-accent-color-1100 */
+  --af-blue-900:  var(--color-accent); /* maps to accent primary color → spectrum-accent-color-900 */
+  --af-blue-1000: var(--color-accent-hover); /* maps to accent hover         → spectrum-accent-color-1000 */
+  --af-blue-1100: var(--color-accent-pressed); /* maps to accent pressed       → spectrum-accent-color-1100 */
 
   /* Semantic */
-  --af-red-800:   #d7373f;
-  --af-green-800: #268e6c;
+  --af-red-800:   var(--color-danger);
+  --af-green-800: var(--color-success);
 
   /* Focus rings */
-  --af-focus-ring-blue: rgb(218 31 38 / 22%); /* red accent ring, same opacity pattern */
-  --af-focus-ring-red:  rgb(215 55 63 / 22%);
+  --af-focus-ring-blue: var(--color-accent-ring-stronger); /* red accent ring, same opacity pattern */
+  --af-focus-ring-red:  var(--color-danger-ring);
 
   /* Animation */
   --af-duration: 130ms;
@@ -854,25 +854,8 @@
    RESPONSIVE
    S2 large scale (mobile/touch): component-height-100 = 40px
    ════════════════════════════════════════════════════════════════════════════ */
-@media (width <= 440px) {
-  .auth-form-2col {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-}
 
-@media (width <= 600px) {
-  .auth-form-card {
-    max-width: 100% !important;
-    padding: 40px 24px 48px !important;
-  }
-
-  .auth-form-brand {
-    margin-bottom: 32px;
-  }
-
-  /* Prevent iOS zoom on input focus — must stay 16px */
-  .auth-form-input {
-    font-size: 16px !important;
-  }
-}
+/* ════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — overrides live in styles/responsive.css
+   xs (≤ 480px): 2-col form → 1-col; sm (≤ 768px): card padding + iOS font fix
+   ════════════════════════════════════════════════════════════════════════════ */

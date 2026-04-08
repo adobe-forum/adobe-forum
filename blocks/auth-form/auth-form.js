@@ -8,6 +8,7 @@ import {
   getMe,
 } from './auth-api.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
+import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
 
 const html = htm.bind(h);
 
@@ -74,23 +75,23 @@ const IconArrowLeft = () => html`
 const IconAlertCircle = () => html`
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
        aria-hidden="true" style="flex-shrink:0;margin-top:1px">
-    <circle cx="6" cy="6" r="5.25" stroke="#d7373f" stroke-width="1.2"/>
-    <path d="M6 3.5V6.5" stroke="#d7373f" stroke-width="1.2" stroke-linecap="round"/>
-    <circle cx="6" cy="8.5" r="0.65" fill="#d7373f"/>
+    <circle cx="6" cy="6" r="5.25" stroke="${COLOR_TOKENS.danger}" stroke-width="1.2"/>
+    <path d="M6 3.5V6.5" stroke="${COLOR_TOKENS.danger}" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="6" cy="8.5" r="0.65" fill="${COLOR_TOKENS.danger}"/>
   </svg>`;
 
 const IconInfoCircle = () => html`
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
        aria-hidden="true" style="flex-shrink:0;margin-top:1px">
-    <circle cx="6" cy="6" r="5.25" stroke="#6e6e6e" stroke-width="1.2"/>
-    <path d="M6 5.5V8.5" stroke="#6e6e6e" stroke-width="1.2" stroke-linecap="round"/>
-    <circle cx="6" cy="3.5" r="0.65" fill="#6e6e6e"/>
+    <circle cx="6" cy="6" r="5.25" stroke="${COLOR_TOKENS.textMuted}" stroke-width="1.2"/>
+    <path d="M6 5.5V8.5" stroke="${COLOR_TOKENS.textMuted}" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="6" cy="3.5" r="0.65" fill="${COLOR_TOKENS.textMuted}"/>
   </svg>`;
 
 const IconCheckCircle = () => html`
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" stroke="#268e6c" stroke-width="1.5"/>
-    <path d="M7.5 12l3 3 6-6" stroke="#268e6c" stroke-width="1.5"
+    <circle cx="12" cy="12" r="10" stroke="${COLOR_TOKENS.success}" stroke-width="1.5"/>
+    <path d="M7.5 12l3 3 6-6" stroke="${COLOR_TOKENS.success}" stroke-width="1.5"
           stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
@@ -103,10 +104,10 @@ function getStrength(value) {
   if (/[^A-Za-z0-9]/.test(value)) s += 1;
   return [
     { w: '0', bg: 'transparent', label: '' },
-    { w: '25%', bg: '#d7373f', label: 'Weak' },
-    { w: '50%', bg: '#da7b11', label: 'Fair' },
-    { w: '75%', bg: '#b07800', label: 'Good' },
-    { w: '100%', bg: '#268e6c', label: 'Strong' },
+    { w: '25%', bg: COLOR_TOKENS.strengthWeak, label: 'Weak' },
+    { w: '50%', bg: COLOR_TOKENS.strengthFair, label: 'Fair' },
+    { w: '75%', bg: COLOR_TOKENS.strengthGood, label: 'Good' },
+    { w: '100%', bg: COLOR_TOKENS.strengthStrong, label: 'Strong' },
   ][s];
 }
 
