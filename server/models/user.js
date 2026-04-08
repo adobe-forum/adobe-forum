@@ -49,6 +49,36 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  notifications: [{
+    type: {
+      type: String,
+      enum: ['post_like'],
+      required: true,
+    },
+    actor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    post: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Post',
+      required: true,
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    read: {
+      type: Boolean,
+      default: false,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
 });
 
 // Hash password before saving (only if modified)

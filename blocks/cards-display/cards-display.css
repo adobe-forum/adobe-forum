@@ -699,3 +699,56 @@
   color: var(--spectrum-accent-color-900);
   font-weight: 600;
 }
+
+/* ============================================
+   BACK TO TOP BUTTON
+   ============================================ */
+
+.back-to-top-btn {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--spectrum-accent-color-900);
+  color: var(--spectrum-gray-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  cursor: pointer;
+  z-index: 1000;
+  border: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.back-to-top-btn:hover {
+  background-color: var(--spectrum-accent-color-1000, #b3161c);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 20%);
+}
+
+.back-to-top-btn.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* stylelint-disable-next-line no-descending-specificity */
+.back-to-top-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5px;
+}
+
+@media (width <= 768px) {
+  .back-to-top-btn {
+    bottom: 96px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+  }
+}

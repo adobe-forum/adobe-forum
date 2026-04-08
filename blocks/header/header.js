@@ -10,7 +10,7 @@ import {
   UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
   BellIcon,
 } from '../../scripts/utils/icons.js';
-import { AUTH_API_BASE as API_BASE } from '../../scripts/utils/constants.js';
+import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
 function getStoredUser() {
   try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
@@ -80,7 +80,7 @@ function ChangePasswordView({ userId, onBack, onSuccess }) {
     setLoading(true);
     setGlobalErr(null);
     try {
-      const res = await fetch(`${API_BASE}/change-password`, {
+      const res = await fetch(`${AUTH_API_BASE}/change-password`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, currentPassword: current, newPassword: newPw }),
@@ -145,7 +145,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
     setGlobalErr(null);
     try {
       // eslint-disable-next-line no-underscore-dangle
-      const res = await fetch(`${API_BASE}/profile`, {
+      const res = await fetch(`${AUTH_API_BASE}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user._id, firstName, lastName }), // eslint-disable-line no-underscore-dangle
@@ -401,10 +401,11 @@ function NotificationsDropdown({ onClose }) {
           .then((r) => (r.ok ? r.json() : { success: false }))
           .catch(() => ({ success: false }));
 
-        const [pendingRes, myRequestsRes, notifRes] = await Promise.all([
-          fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
-          fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
-          fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
+        const [pendingRes, myRequestsRes, notifRes, postNotifRes] = await Promise.all([
+          fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/pending')),
+          fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/my-requests')),
+          fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/author-notifications')),
+          fetchSafe(`${API_BASE}/posts/notifications`),
         ]);
 
         const combined = [];
@@ -460,8 +461,14 @@ function NotificationsDropdown({ onClose }) {
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
 
-        // sort by most recent updatedAt
-        combined.sort((a, b) => new Date(b.data.updatedAt) - new Date(a.data.updatedAt));
+        if (postNotifRes.success && postNotifRes.notifications) {
+          postNotifRes.notifications
+            .forEach((notification) => combined.push({ type: 'post_like', data: notification }));
+        }
+
+        // sort by most recent updatedAt/createdAt
+        combined.sort((a, b) => new Date(b.data.updatedAt || b.data.createdAt)
+          - new Date(a.data.updatedAt || a.data.createdAt));
         setItems(combined);
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -502,13 +509,14 @@ function NotificationsDropdown({ onClose }) {
   const getTitle = (ref) => (ref && typeof ref === 'object' ? ref.title : null);
   const getFirstName = (ref) => (ref && typeof ref === 'object' ? ref.firstName : '');
   const getLastName = (ref) => (ref && typeof ref === 'object' ? ref.lastName : '');
+  const getFullName = (ref) => `${getFirstName(ref)} ${getLastName(ref)}`.trim();
 
   const handlePendingClick = async (e, postId, reviewId) => {
     e.preventDefault();
     // Dismiss the reviewer-side notification so the badge clears after clicking
     if (reviewId) {
       try {
-        await fetch(API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+        await fetch(AUTH_API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
           method: 'PATCH',
           credentials: 'include',
         });
@@ -521,7 +529,19 @@ function NotificationsDropdown({ onClose }) {
   const handleDismiss = async (e, postId, reviewId) => {
     e.preventDefault();
     try {
-      await fetch(API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+      await fetch(AUTH_API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+    } catch (err) { /* ignore */ }
+    onClose();
+    navigateToPost(postId);
+  };
+
+  const handlePostNotificationClick = async (e, postId, notificationId) => {
+    e.preventDefault();
+    try {
+      await fetch(`${API_BASE}/posts/notifications/${notificationId}/read`, {
         method: 'PATCH',
         credentials: 'include',
       });
@@ -541,6 +561,11 @@ function NotificationsDropdown({ onClose }) {
       <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.warning}"/>
       <path d="M8 4.5V8.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round"/>
       <circle cx="8" cy="11" r="0.9" fill="${COLOR_TOKENS.white}"/>
+    </svg>`;
+
+  const likeIcon = html`
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
+      <path d="M8 13.2 3.7 9.3a2.7 2.7 0 0 1 0-3.9 2.7 2.7 0 0 1 3.8 0L8 5.9l0.5-0.5a2.7 2.7 0 0 1 3.8 0 2.7 2.7 0 0 1 0 3.9L8 13.2Z" fill="#da1f26"/>
     </svg>`;
 
   return html`
@@ -601,6 +626,24 @@ function NotificationsDropdown({ onClose }) {
                 </a>
               </li>`;
     }
+    if (item.type === 'post_like') {
+      const n = item.data;
+      const pId = getId(n.post); // eslint-disable-line no-underscore-dangle
+      const nId = getId(n); // eslint-disable-line no-underscore-dangle
+      const postTitle = getTitle(n.post) || 'Untitled Post';
+      const actorName = getFullName(n.actor) || 'Someone';
+      const timeAgo = formatTimeAgo(n.createdAt);
+      return html`
+              <li role="none" class="nd-tl-row">
+                <a href="#" class="nd-tl-card" role="menuitem" onClick=${(e) => handlePostNotificationClick(e, pId, nId)}>
+                  <span class="nd-pill-row">
+                    ${likeIcon}
+                  </span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
+                  <span class="nd-tl-meta">${actorName} liked your post</span>
+                </a>
+              </li>`;
+    }
     return null;
   })}
       </ul>
@@ -637,10 +680,11 @@ function HeaderComponent() {
       };
 
       Promise.all([
-        fetchSafe(API_BASE.replace('/auth', '/reviews/pending')),
-        fetchSafe(API_BASE.replace('/auth', '/reviews/my-requests')),
-        fetchSafe(API_BASE.replace('/auth', '/reviews/author-notifications')),
-      ]).then(([pendingRes, myRequestsRes, notifRes]) => {
+        fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/pending')),
+        fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/my-requests')),
+        fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/author-notifications')),
+        fetchSafe(`${API_BASE}/posts/notifications`),
+      ]).then(([pendingRes, myRequestsRes, notifRes, postNotifRes]) => {
         let count = 0;
 
         // Reviewer badge: only count pending reviews assigned to THIS user
@@ -669,6 +713,10 @@ function HeaderComponent() {
             const authorId = toStrId(r.authorId);
             return !authorId || authorId === currentUserId;
           }).length;
+        }
+
+        if (postNotifRes.success && postNotifRes.notifications) {
+          count += postNotifRes.notifications.length;
         }
         setPendingCount(count);
       }).catch((err) => {
@@ -791,6 +839,14 @@ function HeaderComponent() {
     window.dispatchEvent(new CustomEvent('toggle-sidebar', { detail: { isOpen: next } }));
   };
 
+  const handleSessionRelogin = async () => {
+    try {
+      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) { /* ignore network errors */ }
+    localStorage.removeItem('af_user');
+    window.location.replace('/auth-form');
+  };
+
   return html`
     <nav class="spectrum-nav">
       <div class="nav-hamburger ${sidebarOpen ? 'is-open' : ''}">
@@ -854,13 +910,7 @@ function HeaderComponent() {
         <button
           type="button"
           class="session-warning-login-btn"
-          onClick=${async () => {
-    try {
-      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (e) { /* ignore network errors */ }
-    localStorage.removeItem('af_user');
-    window.location.replace('/auth-form');
-  }}
+          onClick=${handleSessionRelogin}
         >Log in again</button>${' '}
         to stay signed in.
         <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>âœ•</button>
@@ -898,6 +948,9 @@ function loadCSS(href) {
 // ============================================
 
 export default async function decorate(block) {
+  // Purge legacy view tracking tokens now that the engine is migrated to the backend
+  localStorage.removeItem('af_viewed_posts');
+
   block.textContent = '';
   block.style.display = 'block';
   block.style.minHeight = 'var(--header-height)';

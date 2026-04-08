@@ -3,122 +3,165 @@
    Variables from styles.css
    ============================================ */
 
-   .section.search-bar-container {
-    background: var(--background-color) !important;
-    border-bottom: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
-  }
-  
-  /* Block — minimal padding to reduce gap from nav */
-  .search-bar {
-    background: transparent;
-    padding: var(--spectrum-spacing-400) 0;  /* 16px — uniform gap matching cards-display */
-    margin: 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  
-  /* Reset AEM child div styles */
-  .search-bar > div {
-    all: unset;
-    display: block;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  
-  /* Form */
-  .search-form {
-    display: block;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  /*
+.section.search-bar-container {
+  background: var(--background-color) !important;
+  border-bottom: var(--spectrum-border-width-100) solid var(--spectrum-gray-200);
+}
+
+/* Block — minimal padding to reduce gap from nav */
+.search-bar {
+  background: transparent;
+  padding: var(--spectrum-spacing-400) 0;
+
+  /* 16px — uniform gap matching cards-display */
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Reset AEM child div styles */
+.search-bar>div {
+  all: unset;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Form */
+.search-form {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/*
        Input row — width matches forum-post block
        styles.css: main > .section > div { max-width: 1200px; padding: 0 24px / 0 32px }
        Both sections use the same container so width auto-matches
   */
-  .search-form-inner {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 40px;
-    padding: 0 var(--spectrum-spacing-100) 0 var(--spectrum-spacing-400);
-    background: var(--spectrum-gray-50);
-    border: var(--spectrum-border-width-100) solid var(--spectrum-gray-300);
-    border-radius: var(--spectrum-border-radius-200);
-    box-sizing: border-box;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+.search-form-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--spectrum-spacing-100) 0 var(--spectrum-spacing-400);
+  background: var(--spectrum-gray-50);
+  border: var(--spectrum-border-width-100) solid var(--spectrum-gray-300);
+  border-radius: var(--spectrum-border-radius-200);
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-form-inner:focus-within {
+  border-color: var(--spectrum-accent-color-900);
+  box-shadow: 0 0 0 2px rgb(218 31 38 / 10%);
+}
+
+/* Search icon */
+.search-icon {
+  width: 16px;
+  height: 16px;
+  fill: var(--spectrum-gray-500);
+  flex-shrink: 0;
+  margin-right: var(--spectrum-spacing-300);
+  transition: fill 0.15s ease;
+}
+
+.search-form-inner:focus-within .search-icon {
+  fill: var(--spectrum-accent-color-900);
+}
+
+/* Input */
+.search-input {
+  flex: 1;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--body-font-size-xs);
+  font-family: var(--body-font-family);
+  color: var(--spectrum-gray-900);
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--spectrum-gray-400);
+}
+
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+  appearance: none;
+}
+
+/* Clear button */
+.search-clear {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--spectrum-spacing-200);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--spectrum-gray-500);
+  border-radius: var(--spectrum-border-radius-100);
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.search-clear svg {
+  width: 14px;
+  height: 14px;
+  fill: currentcolor;
+  display: block;
+}
+
+.search-clear.is-visible {
+  display: flex;
+}
+
+.search-clear:hover {
+  background: var(--spectrum-gray-100);
+  color: var(--spectrum-gray-800);
+}
+
+/* Submit button */
+.search-submit {
+  border: none;
+  background-color: var(--spectrum-red-900, #DA1F26);
+  color: white;
+  padding: 0 var(--spectrum-spacing-300);
+  height: 32px;
+  font-family: var(--body-font-family);
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: var(--spectrum-border-radius-100, 4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+  position: relative;
+  z-index: 10;
+}
+
+.search-submit:hover {
+  background-color: #b1161d;
+}
+
+/* Mobile */
+@media (width <=768px) {
+  .search-submit {
+    padding: 0 var(--spectrum-spacing-200);
   }
-  
-  .search-form-inner:focus-within {
-    border-color: var(--spectrum-accent-color-900);
-    box-shadow: 0 0 0 2px rgb(218 31 38 / 10%);
+
+  .search-bar {
+    padding: 8px 0 4px;
+
+    /* 4px bottom — stacks with cards 8px top = 12px total gap */
   }
-  
-  /* Search icon */
-  .search-icon {
-    width: 16px;
-    height: 16px;
-    fill: var(--spectrum-gray-500);
-    flex-shrink: 0;
-    margin-right: var(--spectrum-spacing-300);
-    transition: fill 0.15s ease;
-  }
-  
-  .search-form-inner:focus-within .search-icon {
-    fill: var(--spectrum-accent-color-900);
-  }
-  
-  /* Input */
-  .search-input {
-    flex: 1;
-    height: 100%;
-    border: none;
-    outline: none;
-    background: transparent;
-    font-size: var(--body-font-size-xs);
-    font-family: var(--body-font-family);
-    color: var(--spectrum-gray-900);
-    min-width: 0;
-  }
-  
-  .search-input::placeholder { color: var(--spectrum-gray-400); }
-  
-  .search-input::-webkit-search-cancel-button,
-  .search-input::-webkit-search-decoration { 
-    appearance: none; 
-  }
-  
-  /* Clear button */
-  .search-clear {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: var(--spectrum-spacing-200);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    color: var(--spectrum-gray-500);
-    border-radius: var(--spectrum-border-radius-100);
-    flex-shrink: 0;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-  
-  .search-clear svg {
-    width: 14px;
-    height: 14px;
-    fill: currentcolor;
-    display: block;
-  }
-  
-  .search-clear.is-visible { display: flex; }
-  
-  .search-clear:hover {
-    background: var(--spectrum-gray-100);
-    color: var(--spectrum-gray-800);
-  }
-  
-  /* Mobile overrides live in styles/responsive.css (sm ≤ 768px) */
+}

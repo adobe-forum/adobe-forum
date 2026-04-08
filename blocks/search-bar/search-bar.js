@@ -1,25 +1,19 @@
 import { h, render } from '../../vendor/preact.js';
-import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
+import { useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 
 // Bind HTM to Preact's hyperscript function
 const html = htm.bind(h);
 
-// 1. Define the Preact Component
 function SearchBar({ initialPlaceholder }) {
-  const [query, setQuery] = useState('');
+  // Pull initial query from the browser URL parameter if a shared link was used
+  const initialQuery = new URLSearchParams(window.location.search).get('search') || '';
+  const [query, setQuery] = useState(initialQuery);
   const inputRef = useRef(null);
 
-  // useEffect handles our Debounce logic automatically!
-  useEffect(() => {
-    // Set a timer to dispatch the event after 300ms
-    const debounceTimer = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('search-posts', { detail: { query } }));
-    }, 300);
-
-    // Cleanup function: If 'query' changes BEFORE 300ms, this clears the old timer
-    return () => clearTimeout(debounceTimer);
-  }, [query]);
+  const executeSearch = (q) => {
+    window.dispatchEvent(new CustomEvent('search-posts', { detail: { query: q !== undefined ? q : query } }));
+  };
 
   const handleInput = (e) => {
     setQuery(e.target.value);
@@ -27,6 +21,7 @@ function SearchBar({ initialPlaceholder }) {
 
   const handleClear = () => {
     setQuery('');
+    executeSearch('');
     // Refocus the input box so the user can immediately type again
     if (inputRef.current) {
       inputRef.current.focus();
@@ -35,6 +30,7 @@ function SearchBar({ initialPlaceholder }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    executeSearch();
   };
 
   // 2. Return the UI using HTM
@@ -65,6 +61,9 @@ function SearchBar({ initialPlaceholder }) {
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" focusable="false" aria-hidden="true">
             <path d="M13 6.06L11.94 5 9 7.94 6.06 5 5 6.06 7.94 9 5 11.94 6.06 13 9 10.06 11.94 13 13 11.94 10.06 9z"/>
           </svg>
+        </button>
+        <button type="submit" class="search-submit" aria-label="Search">
+           Search
         </button>
       </div>
     </form>
