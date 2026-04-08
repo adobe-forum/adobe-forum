@@ -1007,8 +1007,7 @@
     /* Code tab bar: allow horizontal scroll instead of overflow */
     .code-tabbar {
       overflow-x: auto;
-      scrollbar-width: none;
-      /* hide scrollbar on mobile */
+      scrollbar-width: none; /* hide scrollbar on mobile */
       -ms-overflow-style: none;
       padding: 0 8px;
 

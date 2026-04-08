@@ -270,13 +270,14 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get('search') || '');
   const [category, setCategory] = useState('');
   const [sortOption, setSortOption] = useState('latest');
   const [refreshTick, setRefreshTick] = useState(0);
   const [isMine, setIsMine] = useState(false);
   const [authorId, setAuthorId] = useState(() => new URLSearchParams(window.location.search).get('author') || '');
   const hasLoadedOnceRef = useRef(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   const hasTitleToken = initialTitle.includes('{n}');
 

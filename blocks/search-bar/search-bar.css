@@ -12,6 +12,7 @@
 .search-bar {
   background: transparent;
   padding: var(--spectrum-spacing-400) 0;
+
   /* 16px — uniform gap matching cards-display */
   margin: 0;
   width: 100%;
@@ -126,10 +127,41 @@
   color: var(--spectrum-gray-800);
 }
 
+/* Submit button */
+.search-submit {
+  border: none;
+  background-color: var(--spectrum-red-900, #DA1F26);
+  color: white;
+  padding: 0 var(--spectrum-spacing-300);
+  height: 32px;
+  font-family: var(--body-font-family);
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: var(--spectrum-border-radius-100, 4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+  position: relative;
+  z-index: 10;
+}
+
+.search-submit:hover {
+  background-color: #b1161d;
+}
+
 /* Mobile */
 @media (width <=768px) {
+  .search-submit {
+    padding: 0 var(--spectrum-spacing-200);
+  }
+
   .search-bar {
     padding: 8px 0 4px;
+
     /* 4px bottom — stacks with cards 8px top = 12px total gap */
   }
 }

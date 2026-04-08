@@ -178,7 +178,7 @@ nav.spectrum-nav {
    MOBILE (< 900px)
    ============================================= */
 
-@media (width <= 1024px) {
+@media (width <=1024px) {
   nav.spectrum-nav {
     grid-template-columns: auto auto 1fr;
     padding: 0 20px;
@@ -186,7 +186,9 @@ nav.spectrum-nav {
 
   .nav-hamburger {
     grid-column: 1;
-    display: none; /* hidden at ≤1024px — sidebar tap bar is the mobile trigger */
+    display: none;
+
+    /* hidden at ≤1024px — sidebar tap bar is the mobile trigger */
     margin-right: 16px;
   }
 
