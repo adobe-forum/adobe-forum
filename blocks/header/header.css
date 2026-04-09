@@ -1280,14 +1280,8 @@ footer,
   color: var(--color-text-warning-strong);
   margin-left: 4px;
   opacity: 0.7;
-  line-height: 1;
-  flex-shrink: 0;
-  transition: color 0.15s, opacity 0.15s;
 
   &:hover {
-    color: #c9000a;
     opacity: 1;
   }
 }
-
-

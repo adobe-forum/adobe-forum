@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
@@ -147,10 +148,11 @@ function ProfileView({ user, onLogout, onChangePassword }) {
       const res = await fetch(`${AUTH_API_BASE}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: getStrId(user), firstName, lastName }),
+        body: JSON.stringify({ userId: user._id, firstName, lastName }), // eslint-disable-line no-underscore-dangle
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Update failed.');
+      localStorage.setItem('af_user', JSON.stringify(data.user));
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -239,8 +241,9 @@ function ProfileView({ user, onLogout, onChangePassword }) {
 // PROFILE POPUP
 // ============================================
 
-function ProfilePopup({ onClose, user }) {
+function ProfilePopup({ onClose }) {
   const [view, setView] = useState('profile');
+  const user = getStoredUser();
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -265,6 +268,7 @@ function ProfilePopup({ onClose, user }) {
     // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
       .finally(() => {
+        localStorage.removeItem('af_user');
         window.location.replace('/auth-form');
       });
   };
@@ -273,7 +277,8 @@ function ProfilePopup({ onClose, user }) {
 
   const renderContent = () => {
     if (view === 'change-password') {
-      const uid = getId(user);
+      // eslint-disable-next-line no-underscore-dangle
+      const { _id: uid } = user;
       return html`<${ChangePasswordView}
         userId=${uid}
         onBack=${() => setView('profile')}
@@ -331,12 +336,14 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
     // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
       .finally(() => {
+        localStorage.removeItem('af_user');
         window.location.replace('/auth-form');
       });
   };
 
   const handleMyPosts = () => {
-    window.location.href = `/?author=${getStrId(user)}`;
+    // eslint-disable-next-line no-underscore-dangle
+    window.location.href = `/?author=${user._id}`;
     onClose();
   };
 
@@ -378,12 +385,17 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
 // ============================================
 // NOTIFICATIONS DROPDOWN
 // ============================================
-function NotificationsDropdown({ onClose, currentUserId }) {
+function NotificationsDropdown({ onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
+      // Get the current logged-in user's ID for ownership checks below
+      const currentUser = getStoredUser();
+      // eslint-disable-next-line no-underscore-dangle
+      const currentUserId = currentUser?._id ? String(currentUser._id) : null;
+
       try {
         const fetchSafe = (url) => fetch(url, { credentials: 'include' })
           .then((r) => (r.ok ? r.json() : { success: false }))
@@ -408,10 +420,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
               // If the backend already scopes to the session user this is a no-op,
               // but guard client-side too in case the endpoint returns all reviews.
               if (currentUserId) {
-                let reviewerId = null;
-                if (r.reviewerId) {
-                  reviewerId = typeof r.reviewerId === 'object' ? getStrId(r.reviewerId) : String(r.reviewerId);
-                }
+                const reviewerId = r.reviewerId ? String(typeof r.reviewerId === 'object' ? r.reviewerId._id : r.reviewerId) : null; // eslint-disable-line no-underscore-dangle
                 if (reviewerId && reviewerId !== currentUserId) return false;
               }
               return true;
@@ -432,10 +441,9 @@ function NotificationsDropdown({ onClose, currentUserId }) {
               if (!r.postId) return false;
               if (!currentUserId) return true; // can't check, allow through
               // authorId may be a populated object or a raw string ID
-              let authorId = null;
-              if (r.authorId) {
-                authorId = typeof r.authorId === 'object' ? getStrId(r.authorId) : String(r.authorId);
-              }
+              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
+                : null;
               return !authorId || authorId === currentUserId;
             })
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
@@ -445,22 +453,13 @@ function NotificationsDropdown({ onClose, currentUserId }) {
               if (!r.postId) return false;
               if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
               if (!currentUserId) return true;
-              let authorId = null;
-              if (r.authorId) {
-                authorId = typeof r.authorId === 'object' ? getStrId(r.authorId) : String(r.authorId);
-              }
+              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+                ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
+                : null;
               return !authorId || authorId === currentUserId;
             })
             .forEach((r) => combined.push({ type: 'author_update', data: r }));
         }
-
-        // Discard notifications older than 1 month
-        const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-        const cutoff = Date.now() - ONE_MONTH_MS;
-        const fresh = combined.filter((item) => {
-          const ts = item.data.updatedAt ? new Date(item.data.updatedAt).getTime() : 0;
-          return ts >= cutoff;
-        });
 
         if (postNotifRes.success && postNotifRes.notifications) {
           postNotifRes.notifications
@@ -506,6 +505,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
 
   // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.
   // Using these helpers prevents crashes when population is missing or partial.
+  const getId = (ref) => (ref && typeof ref === 'object' ? ref._id : ref); // eslint-disable-line no-underscore-dangle
   const getTitle = (ref) => (ref && typeof ref === 'object' ? ref.title : null);
   const getFirstName = (ref) => (ref && typeof ref === 'object' ? ref.firstName : '');
   const getLastName = (ref) => (ref && typeof ref === 'object' ? ref.lastName : '');
@@ -520,7 +520,7 @@ function NotificationsDropdown({ onClose, currentUserId }) {
           method: 'PATCH',
           credentials: 'include',
         });
-      } catch { /* ignore */ }
+      } catch (err) { /* ignore */ }
     }
     onClose();
     navigateToPost(postId);
@@ -546,18 +546,6 @@ function NotificationsDropdown({ onClose, currentUserId }) {
         credentials: 'include',
       });
     } catch (err) { /* ignore */ }
-    onClose();
-    navigateToPost(postId);
-  };
-
-  const handlePostNotificationClick = async (e, postId, notificationId) => {
-    e.preventDefault();
-    try {
-      await fetch(`${API_BASE}/posts/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-        credentials: 'include',
-      });
-    } catch { /* ignore */ }
     onClose();
     navigateToPost(postId);
   };
@@ -594,8 +582,9 @@ function NotificationsDropdown({ onClose, currentUserId }) {
         ${!loading && items.map((item) => {
     if (item.type === 'reviewer_pending') {
       const r = item.data;
+      // eslint-disable-next-line no-underscore-dangle
       const pId = getId(r.postId);
-      const rId = getId(r);
+      const rId = getId(r); // eslint-disable-line no-underscore-dangle
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const authorFirst = getFirstName(r.authorId);
       const authorLast = getLastName(r.authorId);
@@ -618,8 +607,8 @@ function NotificationsDropdown({ onClose, currentUserId }) {
     if (item.type === 'author_update') {
       const r = item.data;
       const isApproved = r.overallStatus === 'approved';
-      const pId = getId(r.postId);
-      const rId = getId(r);
+      const pId = getId(r.postId); // eslint-disable-line no-underscore-dangle
+      const rId = getId(r); // eslint-disable-line no-underscore-dangle
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const timeAgo = formatTimeAgo(r.updatedAt);
       const statusIcon = isApproved ? approvedIcon : changesIcon;
@@ -672,26 +661,9 @@ function HeaderComponent() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [sessionWarning, setSessionWarning] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loginAt, setLoginAt] = useState(null);
   const authRedirectedRef = useRef(false);
+  const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
-
-  // Fetch user from session on mount
-  useEffect(() => {
-    fetch(`${API_BASE}/me`, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data) => {
-        setUser(data.user);
-        setLoginAt(data.loginAt || null);
-      })
-      .catch(() => {
-        clearClientAuthState();
-        if (!window.location.pathname.startsWith('/auth-form')) {
-          window.location.replace('/auth-form');
-        }
-      });
-  }, []);
 
   useEffect(() => {
     if (user) {
@@ -699,18 +671,12 @@ function HeaderComponent() {
         .then((r) => (r.ok ? r.json() : { success: false }))
         .catch(() => ({ success: false }));
 
-      const currentUserId = getId(user) ? getStrId(user) : null;
+      // eslint-disable-next-line no-underscore-dangle
+      const currentUserId = user._id ? String(user._id) : null;
       // Helper: extract string ID from a populated object or raw string
-      const toStrId = (ref) => {
+      const toStrId = (ref) => { // eslint-disable-line no-underscore-dangle
         if (!ref) return null;
-        return typeof ref === 'object' ? getStrId(ref) : String(ref);
-      };
-
-      const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-      const badgeCutoff = Date.now() - ONE_MONTH_MS;
-      const isRecent = (r) => {
-        const ts = r.updatedAt ? new Date(r.updatedAt).getTime() : 0;
-        return ts >= badgeCutoff;
+        return typeof ref === 'object' ? String(ref._id) : String(ref); // eslint-disable-line no-underscore-dangle
       };
 
       Promise.all([
@@ -725,7 +691,6 @@ function HeaderComponent() {
         if (pendingRes.success) {
           count += pendingRes.reviews.filter((r) => {
             if (!r.postId || !r.authorId) return false;
-            if (!isRecent(r)) return false;
             if (!currentUserId) return true;
             const reviewerId = toStrId(r.reviewerId);
             return !reviewerId || reviewerId === currentUserId;
@@ -736,7 +701,6 @@ function HeaderComponent() {
         if (notifRes.success && notifRes.reviews) {
           count += notifRes.reviews.filter((r) => {
             if (!r.postId) return false;
-            if (!isRecent(r)) return false;
             if (!currentUserId) return true;
             const authorId = toStrId(r.authorId);
             return !authorId || authorId === currentUserId;
@@ -745,7 +709,6 @@ function HeaderComponent() {
           count += myRequestsRes.reviews.filter((r) => {
             if (!r.postId) return false;
             if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
-            if (!isRecent(r)) return false;
             if (!currentUserId) return true;
             const authorId = toStrId(r.authorId);
             return !authorId || authorId === currentUserId;
@@ -775,8 +738,8 @@ function HeaderComponent() {
   // The effect re-runs whenever the stored user changes so timers are
   // always anchored to the current loginAt â€” not a stale captured value.
   useEffect(() => {
-    const SESSION_MS = 30 * 60 * 1000;
-    const WARNING_MS = 5 * 60 * 1000;
+    const SESSION_MS = 30 * 60 * 1000; // 30 min
+    const WARNING_MS = 5 * 60 * 1000; //  5 min before logout = 25 min mark
     let warnTimer;
     let logoutTimer;
 
@@ -792,6 +755,7 @@ function HeaderComponent() {
       if (window.location.pathname.startsWith('/auth-form')) return;
       fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
         .finally(() => {
+          localStorage.removeItem('af_user');
           window.location.replace('/auth-form');
         });
     };
@@ -808,11 +772,11 @@ function HeaderComponent() {
       }
     };
 
-    const scheduleTimers = (at) => {
+    const scheduleTimers = (loginAt) => {
       clearTimeout(warnTimer);
       clearTimeout(logoutTimer);
       const now = Date.now();
-      const elapsed = now - at;
+      const elapsed = now - loginAt;
       const remaining = SESSION_MS - elapsed;
 
       // loginAt is in the future or wildly wrong â€” treat as fresh login
@@ -867,7 +831,7 @@ function HeaderComponent() {
       });
 
     return () => { clearTimeout(warnTimer); clearTimeout(logoutTimer); };
-  }, [loginAt]);
+  }, []);
 
   const toggleSidebar = () => {
     const next = !sidebarOpen;
@@ -910,7 +874,7 @@ function HeaderComponent() {
                 <${BellIcon}/>
                 ${pendingCount > 0 ? html`<span class="nd-badge"></span>` : null}
               </button>
-              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} currentUserId=${user ? getStrId(user) : null} />` : null}
+              ${notifOpen ? html`<${NotificationsDropdown} onClose=${() => setNotifOpen(false)} />` : null}
             </div>
           </li>
           `}
@@ -934,7 +898,7 @@ function HeaderComponent() {
       </div>
     </nav>
 
-    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)} user=${user}/>`}
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}
 
     ${sessionWarning && html`
       <div class="session-warning-banner">
