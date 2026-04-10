@@ -47,6 +47,17 @@
 
 ## ✅ Completed
 
+### 2026-04-10
+- [x] **Centralized SPA navigation handler with smart block detection**: Added `navigateTo(postId, options)` in `scripts/router.js` for standardized post navigation. Updated `sidebar.js` to check if forum-post/cards-display blocks exist in DOM. If blocks exist (on homepage): use SPA navigation via `navigateTo()`. If blocks don't exist (create-post/edit-post): full page reload to `/?post=<id>` to bring user to homepage where blocks render.
+- [x] **Update sidebar handlers for hybrid navigation**: Modified `handleSubcategoryClick` and `handlePendingReviewClick` in `blocks/sidebar/sidebar.js` to intelligently choose between SPA and full-page navigation based on block existence. On-home navigation is seamless SPA; off-home navigation reloads to homepage with post ID in URL.
+- [x] **Route-driven block rendering on homepage**: Verified that `forum-post.js` listens to `af-route-change` events and renders posts. When user is redirected to homepage with `/?post=<id>`, router parses URL and broadcasts route event, triggering block render.
+
+### 2026-04-09
+- [x] **Sidebar post ID normalization**: Fixed postId field handling in `normalizeItems()` so MongoDB populated post objects are converted to strings before sidebar navigation. Posts can now be clicked from create-post/edit-post pages.
+- [x] **Icon consolidation in auth-form**: Removed duplicate icon definitions (IconEye, IconEyeOff, IconAlertCircle, IconCheckCircle, IconArrowLeft) and replaced with centralized imports (EyeIcon, EyeOffIcon, AlertIcon, CheckIcon, BackIcon) from `scripts/utils/icons.js`.
+- [x] **Mobile button layout - create-post & edit-post**: Added responsive CSS overrides (≤768px) for full-width stacked buttons, optimized tags input spacing, and responsive toast dialogs in `styles/responsive.css`.
+- [x] **Edit-post desktop button layout**: Fixed edit-post.css to use `flex-direction: row` (side-by-side buttons) for desktop, matching create-post. Mobile stacking handled by responsive.css override.
+
 ### 2026-04-08
 - [x] **SPA post routing**: Added a centralized client router with shareable `/?post=<id>` URLs, browser history support, and route-driven home/post rendering without page reloads.
 - [x] **EDS-safe post deep linking**: Standardized post entry on the homepage query route so pasted post links open correctly in a fresh tab without relying on rewrites or 404-page fallback behavior.

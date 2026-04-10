@@ -124,6 +124,21 @@ export function navigateHome(options = {}) {
   applyRoute({ view: 'home' }, options);
 }
 
+/**
+ * Centralized navigation function used across the app.
+ * Smartly handles both on-home and off-home navigation:
+ * - Always uses SPA navigation (pushState + route event) to maintain app state
+ * - If on create-post/edit-post/other pages, still triggers route event so forum-post loads
+ * - Forum-post block listens to route changes and renders appropriately
+ *
+ * @param {string} postId - The post ID to navigate to
+ * @param {object} options - Optional metadata (sidebarItemId, source, etc.)
+ */
+export function navigateTo(postId, options = {}) {
+  if (!postId) return;
+  navigateToPost(postId, options);
+}
+
 export function initRouter() {
   const routerState = ensureRouterState();
   if (routerState.initialized) {

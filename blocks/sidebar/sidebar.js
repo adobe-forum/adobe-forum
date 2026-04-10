@@ -6,7 +6,7 @@ import {
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
 import { CSS_COLOR_VARS } from '../../scripts/utils/colors.js';
-import { navigateToPost } from '../../scripts/router.js';
+import { navigateTo, navigateToPost } from '../../scripts/router.js';
 
 // ============================================
 // NORMALIZE
@@ -15,6 +15,13 @@ import { navigateToPost } from '../../scripts/router.js';
 function normalizeItems(items) {
   return (items || []).map((item) => {
     const children = normalizeItems(item.children || []);
+    // eslint-disable-next-line no-underscore-dangle
+    const postId = item.postId
+      ? typeof item.postId === 'string'
+        ? item.postId
+        // eslint-disable-next-line no-underscore-dangle
+        : String(item.postId._id || item.postId.id || '')
+      : null;
     return {
       ...item,
       // eslint-disable-next-line no-underscore-dangle
@@ -23,6 +30,7 @@ function normalizeItems(items) {
       // Normalize createdBy to a plain string so we can compare it
       // against currentUser._id (also a string) with ===
       createdBy: item.createdBy ? String(item.createdBy) : null,
+      postId,
       children,
     };
   });
@@ -167,14 +175,8 @@ function TreeItem({
       onToggleFolder(itemId);
       return;
     }
-    let targetPostId = null;
-    if (item.postId) {
-      targetPostId = typeof item.postId === 'string'
-        ? item.postId
-        // eslint-disable-next-line no-underscore-dangle
-        : String(item.postId._id || item.postId.id || '');
-    }
-    if (!targetPostId) targetPostId = itemId;
+    // Use postId if available (for posts), otherwise fall back to itemId
+    const targetPostId = item.postId || itemId;
     if (targetPostId && !isFolder) onItemClick(itemId, targetPostId);
   };
 
@@ -542,18 +544,21 @@ function Sidebar() {
       console.warn('Sidebar click failed: No postId available.');
       return;
     }
-    if (
-      window.location.pathname !== '/'
-      && window.location.pathname !== '/index.html'
-      && window.location.pathname !== '/index'
-    ) {
-      // Not on the home page Ã¢â‚¬â€ store the post ID so cards-display auto-opens it on arrival
+    // Check if forum-post block exists on this page
+    // If not (e.g., on create-post/edit-post), reload to get back to homepage
+    // where the blocks are rendered and can listen to route changes
+    const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
+    const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
+    if (!postViewer && !cardsViewer) {
+      // Blocks don't exist on this page — do a full page load to the homepage
+      // The router will parse the URL and load the post
       closeIfOverlay();
       window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
+    // Blocks exist on this page — use SPA navigation
     closeIfOverlay();
-    navigateToPost(postId, { sidebarItemId: subcategoryId, source: 'sidebar-subcategory' });
+    navigateTo(postId, { sidebarItemId: subcategoryId, source: 'sidebar-subcategory' });
   };
 
   const handleDelete = (categoryId, itemId, itemTitle, isItemDelete = false) => {
@@ -630,7 +635,8 @@ function Sidebar() {
     // eslint-disable-next-line no-underscore-dangle
     const postId = typeof review.postId === 'object' ? String(review.postId._id) : String(review.postId);
 
-    // Check whether the main forum post viewer exists on this page.
+    // Check if forum-post block exists on this page
+    // If not, reload to get back to homepage where the blocks are rendered and can listen
     const postViewer = document.querySelector('.forum-post-wrapper, .forum-post-container, .forum-post');
     const cardsViewer = document.querySelector('.cards-wrapper, .cards-container, .cards-display, .cards');
     if (!postViewer && !cardsViewer) {
@@ -639,8 +645,9 @@ function Sidebar() {
       return;
     }
 
+    // Blocks exist on this page — use SPA navigation
     closeIfOverlay();
-    navigateToPost(postId, { source: 'sidebar-review-item' });
+    navigateTo(postId, { source: 'sidebar-review-item' });
   };
 
   // eslint-disable-next-line max-len

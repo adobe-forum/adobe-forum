@@ -9,6 +9,9 @@ import {
 } from './auth-api.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
+import {
+  EyeIcon, EyeOffIcon, AlertIcon, CheckIcon, BackIcon,
+} from '../../scripts/utils/icons.js';
 
 const html = htm.bind(h);
 
@@ -60,54 +63,7 @@ function storeClientAuthState(user, loginAt) {
   localStorage.setItem('af_user', JSON.stringify(storedUser));
 }
 
-/* ── 3. SVG icon components ─────────────────────────────────────────────── */
-const IconEye = () => html`
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <path d="M1 9s2.8-5 8-5 8 5 8 5-2.8 5-8 5-8-5-8-5Z"
-          stroke="currentColor" stroke-width="1.35" fill="none"/>
-    <circle cx="9" cy="9" r="2.2" stroke="currentColor" stroke-width="1.35" fill="none"/>
-  </svg>`;
-
-const IconEyeOff = () => html`
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <line x1="2" y1="2" x2="16" y2="16"
-          stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
-    <path d="M5.3 5.4C3.2 6.5 1 9 1 9s2.8 5 8 5c1.7 0 3.2-.6 4.4-1.4"
-          stroke="currentColor" stroke-width="1.35" stroke-linecap="round" fill="none"/>
-    <path d="M8.3 3.1C8.5 3 8.8 3 9 3c5.2 0 8 6 8 6s-.9 1.8-2.6 3.2"
-          stroke="currentColor" stroke-width="1.35" stroke-linecap="round" fill="none"/>
-  </svg>`;
-
-const IconArrowLeft = () => html`
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5"
-          stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-
-const IconAlertCircle = () => html`
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-       aria-hidden="true" style="flex-shrink:0;margin-top:1px">
-    <circle cx="6" cy="6" r="5.25" stroke="${COLOR_TOKENS.danger}" stroke-width="1.2"/>
-    <path d="M6 3.5V6.5" stroke="${COLOR_TOKENS.danger}" stroke-width="1.2" stroke-linecap="round"/>
-    <circle cx="6" cy="8.5" r="0.65" fill="${COLOR_TOKENS.danger}"/>
-  </svg>`;
-
-const IconInfoCircle = () => html`
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
-       aria-hidden="true" style="flex-shrink:0;margin-top:1px">
-    <circle cx="6" cy="6" r="5.25" stroke="${COLOR_TOKENS.textMuted}" stroke-width="1.2"/>
-    <path d="M6 5.5V8.5" stroke="${COLOR_TOKENS.textMuted}" stroke-width="1.2" stroke-linecap="round"/>
-    <circle cx="6" cy="3.5" r="0.65" fill="${COLOR_TOKENS.textMuted}"/>
-  </svg>`;
-
-const IconCheckCircle = () => html`
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" stroke="${COLOR_TOKENS.success}" stroke-width="1.5"/>
-    <path d="M7.5 12l3 3 6-6" stroke="${COLOR_TOKENS.success}" stroke-width="1.5"
-          stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-
-/* ── 4. Password strength helper ────────────────────────────────────────── */
+/* ── 3. Password strength helper ────────────────────────────────────────── */
 function getStrength(value) {
   let s = 0;
   if (value.length >= 8) s += 1;
@@ -190,18 +146,22 @@ function Field({
             aria-label=${showPw ? 'Hide password' : 'Show password'}
             onClick=${() => setShowPw((s) => !s)}
           >
-            ${showPw ? html`<${IconEyeOff}/>` : html`<${IconEye}/>`}
+            ${showPw ? html`<${EyeOffIcon} size=${18}/>` : html`<${EyeIcon} size=${18}/>`}
           </button>
         `}
       </div>
 
       <div id=${`${id}-help`} class="auth-form-help" role="alert" aria-live="polite">
-        ${isInvalid && html`<${IconAlertCircle}/><span>${error}</span>`}
+        ${isInvalid && html`<${AlertIcon} size=${12}/><span>${error}</span>`}
       </div>
 
       ${withHint && !isInvalid && html`
         <div class="auth-form-hint">
-          <${IconInfoCircle}/>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;margin-top:1px">
+            <circle cx="6" cy="6" r="5.25" stroke="${COLOR_TOKENS.textMuted}" stroke-width="1.2"/>
+            <path d="M6 5.5V8.5" stroke="${COLOR_TOKENS.textMuted}" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="6" cy="3.5" r="0.65" fill="${COLOR_TOKENS.textMuted}"/>
+          </svg>
           <span>Use your Adobe corporate email (@adobe.com)</span>
         </div>
       `}
@@ -290,7 +250,7 @@ function LoginPanel({ onForgot, active }) {
 
       ${justRegistered && html`
         <div class="auth-form-success is-visible" aria-live="polite" style="margin-bottom:16px">
-          <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
+          <div class="auth-form-success-icon"><${CheckIcon} size=${24}/></div>
           <p class="auth-form-success-title">Account created!</p>
           <p class="auth-form-success-desc">
             Your account is ready. Sign in below to continue.
@@ -479,7 +439,7 @@ function ForgotPanel({ onBack, active }) {
         ${sent
     ? html`
             <div class="auth-form-success is-visible" aria-live="polite">
-              <div class="auth-form-success-icon"><${IconCheckCircle}/></div>
+              <div class="auth-form-success-icon"><${CheckIcon} size=${24}/></div>
               <p class="auth-form-success-title">Check your inbox</p>
               <p class="auth-form-success-desc">
                 We've sent a password-reset link to your email.
@@ -488,7 +448,7 @@ function ForgotPanel({ onBack, active }) {
             </div>`
     : html`
             <button type="button" class="auth-form-back" onClick=${onBack}>
-              <${IconArrowLeft}/>${' '}Back to sign in
+              <${BackIcon} size=${16}/>${' '}Back to sign in
             </button>
 
             <form novalidate onSubmit=${(e) => { e.preventDefault(); handleSubmit(); }}>

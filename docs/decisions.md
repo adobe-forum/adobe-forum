@@ -2,6 +2,76 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-10] Centralized SPA Navigation Handler with Smart Page Detection
+
+### Context
+Navigation from the sidebar to a post had inconsistent behavior:
+- When on the homepage: SPA navigation via `navigateToPost()` — URL updates, route event broadcasts, blocks respond
+- When on create-post/edit-post pages: Needed full page reload, since those pages don't have forum-post/cards-display blocks to listen to route events
+
+### Root Cause
+The forum-post and cards-display blocks only exist on the homepage. When navigating from create-post/edit-post pages, broadcasting a route event does nothing because there's no listener. Full page reload was the only reliable way to get to a state where blocks exist and can render.
+
+### Decision: Hybrid Navigation Approach
+
+**1. Smart block detection in navigation handlers**
+- Check if forum-post or cards-display blocks exist in the DOM using `document.querySelector()`
+- If blocks exist on the current page: Use SPA navigation via `navigateTo()` (pushState + route event)
+- If blocks don't exist: Use full page reload to `/?post=<id>` to get to the homepage where blocks render
+
+**2. Centralized `navigateTo()` function still handles SPA navigation**
+- Added centralized `navigateTo(postId, options)` export in `scripts/router.js`
+- This function always calls `navigateToPost()`, which does:
+  - `history.pushState()` to update URL to `/?post=<id>`
+  - `broadcastRoute()` to dispatch `af-route-change` event
+  - No full page reload, preserves app state (when blocks exist)
+
+**3. Route events are the single source of truth for on-home navigation**
+- `forum-post.js` already listens to `af-route-change` events and loads/renders posts
+- `cards-display.js` listens and hides when a post is viewed
+- Blocks react to route changes; routing logic checks block existence first
+
+**4. Update sidebar navigation handlers**
+- `handleSubcategoryClick` and `handlePendingReviewClick`: Check for blocks, decide navigation method
+- If off-home (no blocks): Full page reload brings you to the homepage with the post ID in the URL
+- If on-home (blocks exist): SPA navigation via `navigateTo()`
+
+**Result:** Seamless navigation in both scenarios:
+- **On homepage**: SPA experience, URL updates, UI renders instantly, state preserved
+- **Off-home (create-post/edit-post)**: Full page reload to homepage with post ID in URL, then blocks render as if navigating normally
+
+---
+
+## [2026-04-09] Form Button Layout Consistency & Icon Consolidation
+
+### Context
+Two design consistency issues emerged:
+1. **Form button inconsistency**: `create-post.css` had side-by-side buttons on desktop (row layout) while `edit-post.css` had stacked buttons (column layout). The forms served identical purposes but had different UX.
+2. **Icon duplication in auth**: `auth-form.js` defined 6 icons locally (IconEye, IconEyeOff, IconAlertCircle, IconCheckCircle, IconArrowLeft, IconInfoCircle) despite a centralized `scripts/utils/icons.js` library already existing.
+
+### Architecture Issues
+The inconsistency violated two core project principles:
+- **Form parity**: Create and edit operations for the same entity should have identical UI patterns for predictability.
+- **Icon consolidation**: All icons should live in `scripts/utils/icons.js`; duplicates create maintenance burden and versioning drift.
+
+### Decisions Made
+
+**1. Form button layouts are unified**
+- Both `create-post.css` and `edit-post.css` now use `flex-direction: row` with `gap: 12px` for desktop (side-by-side buttons).
+- Mobile responsive state (≤768px) applies `flex-direction: column` and `width: 100%` for each button via `styles/responsive.css`.
+- Result: Consistent UX across both forms, desktop and mobile.
+
+**2. `auth-form.js` icons import from the central library**
+- Removed local definitions: `IconEye`, `IconEyeOff`, `IconAlertCircle`, `IconCheckCircle`, `IconArrowLeft`.
+- Added imports: `EyeIcon`, `EyeOffIcon`, `AlertIcon`, `CheckIcon`, `BackIcon` from `scripts/utils/icons.js`.
+- `IconInfoCircle` (inline info tooltip) remains local since no equivalent exists in the global library yet.
+- Result: Single source of truth for auth icons; easier UI updates and icon version management.
+
+**3. Responsive CSS overrides for forms remain in `styles/responsive.css`**
+Mobile button/tag/toast behavior for create-post and edit-post leverages centralized responsive rules, keeping desktop/mobile separation clear and maintainable.
+
+---
+
 ## [2026-04-08] SPA Router and Shareable Post URLs
 
 ### Context

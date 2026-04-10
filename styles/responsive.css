@@ -706,6 +706,68 @@
     min-width: 16px;
     margin: 0 6px 30px;
   }
+
+  .cp-toast {
+    max-width: calc(100vw - 32px);
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cp-toast-msg {
+    width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .cp-toast-actions {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .cp-toast-confirm,
+  .cp-toast-dismiss {
+    flex: 1;
+    padding: 8px 12px;
+    min-height: 32px;
+  }
+
+  .tags-input-container {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+
+  .tag-chip {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+
+  .tags-input {
+    min-width: 60px;
+    font-size: 13px;
+    flex: 1 1 auto;
+  }
+
+  .submit-section {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-cancel,
+  .submit-btn-wrapper {
+    width: 100%;
+  }
+
+  .btn-cancel {
+    border-color: var(--cp-border);
+  }
+
+  .submit-btn-wrapper .btn-submit {
+    width: 100%;
+  }
 }
 
 @media (768px <= width <= 1024px) {
@@ -867,6 +929,68 @@
   .edit-post .table-toolbar-btn {
     min-height: 32px;
     padding: 5px 10px;
+  }
+
+  .edit-post .submit-section {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .edit-post .btn-cancel,
+  .edit-post .submit-btn-wrapper {
+    width: 100%;
+  }
+
+  .edit-post .btn-cancel {
+    border-color: var(--cp-border);
+  }
+
+  .edit-post .submit-btn-wrapper .btn-submit {
+    width: 100%;
+  }
+
+  .edit-post .tags-input-container {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+
+  .edit-post .tag-chip {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+
+  .edit-post .tags-input {
+    min-width: 60px;
+    font-size: 13px;
+    flex: 1 1 auto;
+  }
+
+  .edit-post .cp-toast {
+    max-width: calc(100vw - 32px);
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .edit-post .cp-toast-msg {
+    width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .edit-post .cp-toast-actions {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .edit-post .cp-toast-confirm,
+  .edit-post .cp-toast-dismiss {
+    flex: 1;
+    padding: 8px 12px;
+    min-height: 32px;
   }
 }
 

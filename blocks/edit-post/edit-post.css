@@ -957,8 +957,9 @@
 /* ---- Submit section ---- */
 .submit-section {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   margin-top: 32px;
 
   /* responsive overrides live in styles/responsive.css */
@@ -972,7 +973,7 @@
   cursor: pointer;
   border: none;
   margin: 0;
-  width: 100%;
+  width: auto;
   transition: background 0.15s, box-shadow 0.15s;
 
   /* responsive overrides live in styles/responsive.css */
