@@ -8,10 +8,7 @@ import { getCurrentRoute, navigateHome, navigateToPost } from '../../scripts/rou
 
 const html = htm.bind(h);
 
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const AUTH_API_BASE = isLocalhost
-  ? 'http://localhost:5000/api/auth'
-  : 'https://adobe-forum-12iq.onrender.com/api/auth';
+const AUTH_API_BASE = `${API_BASE}/auth`;
 
 const PAGE_SIZE = 12;
 const domParser = new DOMParser();

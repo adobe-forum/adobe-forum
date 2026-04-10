@@ -263,10 +263,10 @@ function ProfilePopup({ onClose }) {
   const handleOverlay = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const handleLogout = () => {
-    // Always destroy the server session first â€” otherwise the session cookie
+    // Always destroy the server session first — otherwise the session cookie
     // remains valid and auth-form's getMe() call returns 200, which immediately
     // redirects back to '/' causing a redirect loop.
-    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+    fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' })
       .finally(() => {
         localStorage.removeItem('af_user');
         window.location.replace('/auth-form');
@@ -334,7 +334,7 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
     // Always destroy the server session first â€” otherwise the session cookie
     // remains valid and auth-form's getMe() call returns 200, which immediately
     // redirects back to '/' causing a redirect loop.
-    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+    fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' })
       .finally(() => {
         localStorage.removeItem('af_user');
         window.location.replace('/auth-form');
@@ -753,7 +753,7 @@ function HeaderComponent() {
 
     const doLogout = () => {
       if (window.location.pathname.startsWith('/auth-form')) return;
-      fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
+      fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' })
         .finally(() => {
           localStorage.removeItem('af_user');
           window.location.replace('/auth-form');
@@ -841,7 +841,7 @@ function HeaderComponent() {
 
   const handleSessionRelogin = async () => {
     try {
-      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch (e) { /* ignore network errors */ }
     localStorage.removeItem('af_user');
     window.location.replace('/auth-form');
