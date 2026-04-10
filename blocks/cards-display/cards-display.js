@@ -11,7 +11,7 @@ const html = htm.bind(h);
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const AUTH_API_BASE = isLocalhost
   ? 'http://localhost:5000/api/auth'
-  : 'https://api.yourproductiondomain.com/api/auth'; // TODO: Update with your production API URL
+  : 'https://adobe-forum-12iq.onrender.com/api/auth';
 
 const PAGE_SIZE = 12;
 const domParser = new DOMParser();
