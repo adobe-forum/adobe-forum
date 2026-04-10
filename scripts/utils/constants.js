@@ -16,7 +16,7 @@ const isLocal = typeof window !== 'undefined'
 /** Base URL for all forum API calls (e.g. /api/posts, /api/sidebar-items) */
 export const API_BASE = isLocal
   ? 'http://localhost:5000/api'
-  : 'https://api.yourproductiondomain.com/api'; // TODO: Update with production URL
+  : 'https://adobe-forum-12iq.onrender.com/api';
 
 /** Base URL for auth API calls */
 export const AUTH_API_BASE = `${API_BASE}/auth`;
