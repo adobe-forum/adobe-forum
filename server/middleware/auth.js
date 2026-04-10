@@ -14,7 +14,7 @@ export default async function requireAuth(req, res, next) {
   }
 
   try {
-    const user = await User.findById(userId).select('-password -resetToken -resetTokenExpiry -createdAt -updatedAt');
+    const user = await User.findById(userId).select('-password -resetToken -resetTokenExpiry');
 
     if (!user) {
       // User was deleted after session was created

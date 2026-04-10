@@ -36,7 +36,8 @@ function openEditForm(post, sid) {
  */
 function isOwner(post, currentUser) {
   if (!currentUser || !post?.createdBy) return false;
-  return String(post.createdBy) === getStrId(currentUser);
+  // eslint-disable-next-line no-underscore-dangle
+  return String(post.createdBy) === String(currentUser._id);
 }
 
 // ============================================
@@ -72,17 +73,12 @@ const ForumPost = ({ blockEl }) => {
     }
   }, [post?.comments]);
 
-  // Load current user from session on mount + re-load when auth state changes
+  // Load current user on mount + re-load when auth state changes
   useEffect(() => {
-    const loadUser = () => {
-      fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => { if (data?.user) setCurrentUser(data.user); })
-        .catch(() => {});
-    };
-    loadUser();
-    window.addEventListener('forum-auth-changed', loadUser);
-    return () => window.removeEventListener('forum-auth-changed', loadUser);
+    setCurrentUser(getCurrentUser());
+    const onAuthChanged = () => setCurrentUser(getCurrentUser());
+    window.addEventListener('forum-auth-changed', onAuthChanged);
+    return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
   }, []);
 
   // Language label map
@@ -302,12 +298,14 @@ const ForumPost = ({ blockEl }) => {
               ? `${cb.firstName} ${cb.lastName || ''}`.trim()
               : (fetchedPost.author || 'Anonymous');
             const transformedPost = {
-              id: getStrId(fetchedPost),
+              // eslint-disable-next-line no-underscore-dangle
+              id: fetchedPost._id,
               title: fetchedPost.title,
               topic: fetchedPost.category,
               author: authorName,
               // Store createdBy id so we can check ownership
-              createdBy: cb ? (getStrId(cb) ?? String(cb)) : null,
+              // eslint-disable-next-line no-underscore-dangle
+              createdBy: cb ? String(cb._id || cb) : null,
               tags: fetchedPost.tags || [],
               body: fetchedPost.body,
               status: fetchedPost.status || 'published',
@@ -316,14 +314,17 @@ const ForumPost = ({ blockEl }) => {
             setPost(transformedPost);
 
             // ── View increment — skip for the post's own author ───────────────
-            // Use currentUser from state (set via /me on mount)
-            const isAuthor = currentUser && getId(currentUser) && getStrId(currentUser) === String(getStrId(cb) ?? cb ?? '');
+            const cu = getCurrentUser();
+            // eslint-disable-next-line no-underscore-dangle
+            const isAuthor = cu && cu._id && String(cu._id) === String(cb?._id || cb || '');
             if (!isAuthor) {
               const viewedPosts = JSON.parse(localStorage.getItem('af_viewed_posts') || '[]');
               if (!viewedPosts.includes(postId)) {
+                // Fire-and-forget — increment on the server
                 fetch(`${API_BASE}/posts/${postId}?view=1`).catch(() => { });
                 viewedPosts.push(postId);
                 localStorage.setItem('af_viewed_posts', JSON.stringify(viewedPosts));
+                // Show the incremented count locally too
                 fetchedPost.views = (fetchedPost.views || 0) + 1;
               }
             }
@@ -333,23 +334,28 @@ const ForumPost = ({ blockEl }) => {
             setLikesCount(fetchedLikes.length);
             setViewsCount(fetchedPost.views || 0);
 
+            // Broadcast the loaded view count to any listening components (like the cards)
             window.dispatchEvent(new CustomEvent('af-post-updated', {
               detail: {
-                id: getStrId(fetchedPost),
+                // eslint-disable-next-line no-underscore-dangle
+                id: fetchedPost._id,
                 views: fetchedPost.views || 0,
                 likes: fetchedLikes.length,
               },
             }));
 
-            // Check if current user likes this post
-            if (currentUser && getId(currentUser)) {
-              setHasLiked(fetchedLikes.includes(getStrId(currentUser)));
+            // Check if current user explicitly likes this post (cu already declared above)
+            // eslint-disable-next-line no-underscore-dangle
+            if (cu && cu._id) {
+              // eslint-disable-next-line no-underscore-dangle
+              setHasLiked(fetchedLikes.includes(String(cu._id)));
             } else {
               setHasLiked(false);
             }
 
             // Fetch review data for this post
-            const reviewUrl = `${API_BASE}/reviews/by-post/${getStrId(fetchedPost)}`;
+            // eslint-disable-next-line no-underscore-dangle
+            const reviewUrl = `${API_BASE}/reviews/by-post/${fetchedPost._id}`;
             fetch(reviewUrl, { credentials: 'include' })
               .then((r) => { if (r.ok) return r.json(); return null; })
               .then((d) => {
@@ -368,9 +374,9 @@ const ForumPost = ({ blockEl }) => {
             }
           }
         }
-      } catch (fetchError) {
+      } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('❌ Network/fetch error:', fetchError.message);
+        console.error('❌ Network/fetch error:', error.message);
       } finally {
         setLoading(false);
       }
@@ -474,7 +480,7 @@ const ForumPost = ({ blockEl }) => {
       if (!response.ok) {
         throw new Error('Server rejected like toggle');
       }
-    } catch {
+    } catch (error) {
       // Revert on failure
       const revertedLikesCount = originallyLiked ? newLikesCount + 1 : newLikesCount - 1;
       setHasLiked(originallyLiked);
@@ -490,11 +496,13 @@ const ForumPost = ({ blockEl }) => {
   const canEdit = isOwner(post, currentUser);
 
   // Determine review context
-  const currentUserId = currentUser ? getStrId(currentUser) : null;
+  // eslint-disable-next-line no-underscore-dangle
+  const currentUserId = currentUser ? String(currentUser._id) : null;
   const isReviewer = reviewData && currentUserId
     ? reviewData.reviewers.some((rv) => {
       const rvId = rv.userId && typeof rv.userId === 'object'
-        ? getStrId(rv.userId) : String(rv.userId);
+        // eslint-disable-next-line no-underscore-dangle
+        ? String(rv.userId._id) : String(rv.userId);
       return rvId === currentUserId;
     })
     : false;
@@ -506,15 +514,14 @@ const ForumPost = ({ blockEl }) => {
     if (!reviewData) return;
 
     if (actionStatus === 'changes_requested' && !reviewComment.trim()) {
-      setReviewComment((c) => c); // trigger re-render
-      // Show inline validation — no alert needed
-      window.dispatchEvent(new CustomEvent('forum-notify', { detail: { message: 'Please provide a comment explaining what changes are needed.', type: 'warning' } }));
+      // eslint-disable-next-line no-alert
+      alert('Please provide a comment explaining what changes are needed.');
       return;
     }
 
     try {
-      const reviewId = getStrId(reviewData);
-      const response = await fetch(`${API_BASE}/reviews/${reviewId}`, {
+      // eslint-disable-next-line no-underscore-dangle
+      const response = await fetch(`${API_BASE}/reviews/${reviewData._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -538,8 +545,8 @@ const ForumPost = ({ blockEl }) => {
   const handleResubmit = async () => {
     if (!reviewData) return;
     try {
-      const resubmitId = getStrId(reviewData);
-      const response = await fetch(`${API_BASE}/reviews/${resubmitId}`, {
+      // eslint-disable-next-line no-underscore-dangle
+      const response = await fetch(`${API_BASE}/reviews/${reviewData._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

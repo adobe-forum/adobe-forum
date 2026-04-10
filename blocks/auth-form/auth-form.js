@@ -48,6 +48,18 @@ function emailValidator(v) {
   return null;
 }
 
+function storeClientAuthState(user, loginAt) {
+  if (!user) return;
+
+  /* eslint-disable no-underscore-dangle */
+  const storedUser = { ...user };
+  if (storedUser._id && !storedUser.id) storedUser.id = String(storedUser._id);
+  if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
+  /* eslint-enable no-underscore-dangle */
+  if (loginAt) storedUser.loginAt = loginAt;
+  localStorage.setItem('af_user', JSON.stringify(storedUser));
+}
+
 /* ── 3. SVG icon components ─────────────────────────────────────────────── */
 const IconEye = () => html`
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -213,12 +225,13 @@ function Field({
 }
 
 /* ── 6. Primary button with loading spinner ─────────────────────────────── */
-function SubmitBtn({ loading, children }) {
+function SubmitBtn({ loading, onClick, children }) {
   return html`
     <button
-      type="submit"
+      type="button"
       class=${`auth-form-btn${loading ? ' is-loading' : ''}`}
       disabled=${loading}
+      onClick=${onClick}
     >
       <span class="auth-form-btn-spinner" aria-hidden="true"/>
       <span class="auth-form-btn-label">${children}</span>
@@ -226,11 +239,14 @@ function SubmitBtn({ loading, children }) {
 }
 
 /* ── 8. Login panel ─────────────────────────────────────────────────────── */
-function LoginPanel({ onForgot, active, justRegistered }) {
+function LoginPanel({ onForgot, active }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Show a success notice when redirected here after registration
+  const justRegistered = new URLSearchParams(window.location.search).get('registered') === '1';
 
   const clearErr = (key) => setErrors((e) => ({ ...e, [key]: undefined }));
 
@@ -252,7 +268,14 @@ function LoginPanel({ onForgot, active, justRegistered }) {
 
     setLoading(true);
     try {
-      await loginUser({ email, password });
+      const data = await loginUser({ email, password });
+      if (data.user) {
+        // Store loginAt alongside user so session timer works across page reloads.
+        // _id is always preserved — needed for reviewer assignments even after expiry.
+        const toStore = { ...data.user };
+        if (data.loginAt) toStore.loginAt = data.loginAt;
+        localStorage.setItem('af_user', JSON.stringify(toStore));
+      }
       window.location.href = '/';
     } catch (err) {
       setErrors({ password: err.message });
@@ -297,7 +320,7 @@ function LoginPanel({ onForgot, active, justRegistered }) {
           Forgot password?
         </button>
 
-        <${SubmitBtn} loading=${loading}>
+        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
           Sign in
         <//>
 
@@ -306,7 +329,7 @@ function LoginPanel({ onForgot, active, justRegistered }) {
 }
 
 /* ── 9. Sign-up panel ───────────────────────────────────────────────────── */
-function SignupPanel({ active, onRegistered }) {
+function SignupPanel({ active }) {
   const [f, setF] = useState({
     first: '', last: '', email: '', pass: '', confirm: '',
   });
@@ -364,8 +387,8 @@ function SignupPanel({ active, onRegistered }) {
     setLoading(true);
     try {
       await registerUser(f);
-      // Switch to login panel with success banner — no page redirect needed
-      onRegistered();
+      // Registration successful — redirect to login so the user signs in explicitly
+      window.location.href = '/auth-form?registered=1';
     } catch (err) {
       setErrors({ email: err.message });
     } finally {
@@ -418,7 +441,7 @@ function SignupPanel({ active, onRegistered }) {
           onChange=${setField('confirm')} onBlur=${handleBlur('confirm')}
         />
 
-        <${SubmitBtn} loading=${loading}>
+        <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
           Create account
         <//>
 
@@ -440,6 +463,7 @@ function ForgotPanel({ onBack, active }) {
     if (err) { setError(err); return; }
     setLoading(true);
     try {
+      // Actually calls POST /api/auth/forgot-password — not a fake timeout
       await forgotPassword({ email });
       setSent(true);
     } catch (fpErr) {
@@ -477,7 +501,7 @@ function ForgotPanel({ onBack, active }) {
                 onBlur=${handleBlur}
               />
 
-              <${SubmitBtn} loading=${loading}>
+              <${SubmitBtn} loading=${loading} onClick=${handleSubmit}>
                 Send reset link
               <//>
 
@@ -489,12 +513,6 @@ function ForgotPanel({ onBack, active }) {
 /* ── 11. Root AuthForm component ────────────────────────────────────────── */
 function AuthForm({ initPanel }) {
   const [panel, setPanel] = useState(initPanel);
-  const [justRegistered, setJustRegistered] = useState(false);
-
-  const handleRegistered = () => {
-    setJustRegistered(true);
-    setPanel('login');
-  };
 
   return html`
     <div class="auth-form-overlay">
@@ -526,7 +544,7 @@ function AuthForm({ initPanel }) {
               role="tab"
               aria-controls="auth-login"
               aria-selected=${String(panel === 'login')}
-              onClick=${() => { setPanel('login'); setJustRegistered(false); }}
+              onClick=${() => setPanel('login')}
             >Sign in</button>
             <button
               type="button"
@@ -535,7 +553,7 @@ function AuthForm({ initPanel }) {
               role="tab"
               aria-controls="auth-signup"
               aria-selected=${String(panel === 'signup')}
-              onClick=${() => { setPanel('signup'); setJustRegistered(false); }}
+              onClick=${() => setPanel('signup')}
             >Create account</button>
           </div>
         `}
@@ -551,11 +569,9 @@ function AuthForm({ initPanel }) {
         <${LoginPanel}
           active=${panel === 'login'}
           onForgot=${() => setPanel('forgot')}
-          justRegistered=${justRegistered}
         />
         <${SignupPanel}
           active=${panel === 'signup'}
-          onRegistered=${handleRegistered}
         />
         <${ForgotPanel}
           active=${panel === 'forgot'}
@@ -575,8 +591,9 @@ function AuthEntry({ initPanel }) {
     let cancelled = false;
 
     getMe()
-      .then(() => {
+      .then((data) => {
         if (cancelled) return;
+        storeClientAuthState(data.user, data.loginAt);
         setIsAuthenticated(true);
       })
       .catch(() => {
