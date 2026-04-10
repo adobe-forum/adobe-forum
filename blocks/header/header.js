@@ -3,15 +3,14 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
-import { API_BASE } from '../../scripts/utils/constants.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
   PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
   UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
   BellIcon,
 } from '../../scripts/utils/icons.js';
-import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
 function getStoredUser() {
   try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
@@ -81,7 +80,7 @@ function ChangePasswordView({ userId, onBack, onSuccess }) {
     setLoading(true);
     setGlobalErr(null);
     try {
-      const res = await fetch(`${AUTH_API_BASE}/change-password`, {
+      const res = await fetch(`${API_BASE}/auth/change-password`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, currentPassword: current, newPassword: newPw }),
@@ -146,7 +145,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
     setGlobalErr(null);
     try {
       // eslint-disable-next-line no-underscore-dangle
-      const res = await fetch(`${AUTH_API_BASE}/profile`, {
+      const res = await fetch(`${API_BASE}/auth/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user._id, firstName, lastName }), // eslint-disable-line no-underscore-dangle
@@ -403,9 +402,9 @@ function NotificationsDropdown({ onClose }) {
           .catch(() => ({ success: false }));
 
         const [pendingRes, myRequestsRes, notifRes, postNotifRes] = await Promise.all([
-          fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/pending')),
-          fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/my-requests')),
-          fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/author-notifications')),
+          fetchSafe(`${API_BASE}/reviews/pending`),
+          fetchSafe(`${API_BASE}/reviews/my-requests`),
+          fetchSafe(`${API_BASE}/reviews/author-notifications`),
           fetchSafe(`${API_BASE}/posts/notifications`),
         ]);
 
@@ -517,7 +516,7 @@ function NotificationsDropdown({ onClose }) {
     // Dismiss the reviewer-side notification so the badge clears after clicking
     if (reviewId) {
       try {
-        await fetch(AUTH_API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+        await fetch(`${API_BASE}/reviews/${reviewId}/dismiss-notification`, {
           method: 'PATCH',
           credentials: 'include',
         });
@@ -530,7 +529,7 @@ function NotificationsDropdown({ onClose }) {
   const handleDismiss = async (e, postId, reviewId) => {
     e.preventDefault();
     try {
-      await fetch(AUTH_API_BASE.replace('/auth', `/reviews/${reviewId}/dismiss-notification`), {
+      await fetch(`${API_BASE}/reviews/${reviewId}/dismiss-notification`, {
         method: 'PATCH',
         credentials: 'include',
       });
@@ -681,9 +680,9 @@ function HeaderComponent() {
       };
 
       Promise.all([
-        fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/pending')),
-        fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/my-requests')),
-        fetchSafe(AUTH_API_BASE.replace('/auth', '/reviews/author-notifications')),
+        fetchSafe(`${API_BASE}/reviews/pending`),
+        fetchSafe(`${API_BASE}/reviews/my-requests`),
+        fetchSafe(`${API_BASE}/reviews/author-notifications`),
         fetchSafe(`${API_BASE}/posts/notifications`),
       ]).then(([pendingRes, myRequestsRes, notifRes, postNotifRes]) => {
         let count = 0;
@@ -799,10 +798,10 @@ function HeaderComponent() {
     };
 
     // Ask the server for the authoritative loginAt from the session store.
-    // 200 â†’ schedule from server loginAt (most accurate).
-    // 401 â†’ session gone, clear stale client auth and redirect once.
-    // network error â†’ fall back to localStorage loginAt, do NOT logout.
-      fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
+    // 200 → schedule from server loginAt (most accurate).
+    // 401 → session gone, clear stale client auth and redirect once.
+    // network error → fall back to localStorage loginAt, do NOT logout.
+    fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
           handleUnauthorized();
