@@ -1,14 +1,14 @@
 /**
  * auth-api.js — fetch helpers for the auth-form block
- * Mirrors the same BASE_URL pattern used by the rest of the frontend.
- *
- * BASE_URL resolution order:
- *   1. window.AUTH_API_BASE  — set this in your EDS page/env config
- *   2. Falls back to http://localhost:5000/api/auth for local dev
+ * Uses centralized API_BASE from scripts/utils/constants.js
  */
 
-const BASE_URL = (typeof window !== 'undefined' && window.AUTH_API_BASE)
-  || 'http://localhost:5000/api/auth';
+import { API_BASE } from '../../scripts/utils/constants.js';
+
+/**
+ * Extract auth endpoint from API_BASE (/api) → (/api/auth)
+ */
+const BASE_URL = `${API_BASE}/auth`;
 
 /**
  * POST /api/auth/login

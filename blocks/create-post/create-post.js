@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 import renderTabbedCodeBlocks from '../../scripts/code-tabs.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
 
@@ -1664,7 +1665,7 @@ function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
     setSelected([]);
     setSearch('');
     setLoadingUsers(true);
-    fetch('http://localhost:5000/api/users', { credentials: 'include' })
+    fetch(`${API_BASE}/users`, { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setUsers(data.users || []);
@@ -1892,7 +1893,7 @@ function CreatePost() {
   // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
   useEffect(() => {
     const restoreFolderId = (draftCategory) => {
-      fetch('http://localhost:5000/api/sidebar/categories', { credentials: 'include' })
+      fetch(`${API_BASE}/sidebar/categories`, { credentials: 'include' })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (!data?.success) return;
@@ -1944,7 +1945,7 @@ function CreatePost() {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/posts', {
+      const response = await fetch(`${API_BASE}/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1959,7 +1960,7 @@ function CreatePost() {
 
         // Add to sidebar
         try {
-          await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
+          await fetch(`${API_BASE}/sidebar-items/smart-add`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1976,7 +1977,7 @@ function CreatePost() {
 
         // Create review document
         try {
-          await fetch('http://localhost:5000/api/reviews', {
+          await fetch(`${API_BASE}/reviews`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',

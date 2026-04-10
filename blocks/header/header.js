@@ -3,6 +3,7 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
 import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
@@ -801,7 +802,7 @@ function HeaderComponent() {
     // 200 â†’ schedule from server loginAt (most accurate).
     // 401 â†’ session gone, clear stale client auth and redirect once.
     // network error â†’ fall back to localStorage loginAt, do NOT logout.
-    fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
+      fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
           handleUnauthorized();

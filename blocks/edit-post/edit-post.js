@@ -2,6 +2,7 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import { decorateBlock, loadBlock } from '../../scripts/aem.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
 
@@ -1811,7 +1812,7 @@ function EditPost() {
         category: draft.category || '',
       });
 
-      fetch('http://localhost:5000/api/sidebar/categories', { credentials: 'include' })
+      fetch(`${API_BASE}/sidebar/categories`, { credentials: 'include' })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (!data?.success) return;
@@ -1877,7 +1878,7 @@ function EditPost() {
     };
 
     try {
-      const response = await fetch(`http://localhost:5000/api/posts/${editId}`, {
+      const response = await fetch(`${API_BASE}/posts/${editId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1893,7 +1894,7 @@ function EditPost() {
           try {
             const titleChanged = title.trim() !== originalDraft?.title?.trim();
             if (titleChanged) {
-              const renameResponse = await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}`, {
+              const renameResponse = await fetch(`${API_BASE}/sidebar-items/${editSidebarItemId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -1905,7 +1906,7 @@ function EditPost() {
             const locationChanged = category !== originalCategory
               || (folderId || null) !== originalFolderId;
             if (locationChanged) {
-              const moveResponse = await fetch(`http://localhost:5000/api/sidebar-items/${editSidebarItemId}/move`, {
+              const moveResponse = await fetch(`${API_BASE}/sidebar-items/${editSidebarItemId}/move`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
