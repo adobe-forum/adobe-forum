@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import User from '../models/User.js';
+import User from '../models/user.js';
 import requireAuth from '../middleware/auth.js';
 import transporter from '../helpers/mailer.js';
 
