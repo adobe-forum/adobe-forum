@@ -6,22 +6,29 @@ import {
 } from '../../scripts/utils/icons.js';
 import { API_BASE } from '../../scripts/utils/constants.js';
 import { CSS_COLOR_VARS } from '../../scripts/utils/colors.js';
-import { navigateTo, navigateToPost } from '../../scripts/router.js';
+import { navigateTo } from '../../scripts/router.js';
 
 // ============================================
 // NORMALIZE
-// ============================================`
+// ============================================
+
+/**
+ * Extracts a post ID from a postId field which may be:
+ * - null/undefined → returns null
+ * - string → returns as-is
+ * - object with _id or id → returns stringified _id or id
+ */
+function extractPostId(postIdField) {
+  if (!postIdField) return null;
+  if (typeof postIdField === 'string') return postIdField;
+  // eslint-disable-next-line no-underscore-dangle
+  return String(postIdField._id || postIdField.id || '');
+}
 
 function normalizeItems(items) {
   return (items || []).map((item) => {
     const children = normalizeItems(item.children || []);
-    // eslint-disable-next-line no-underscore-dangle
-    const postId = item.postId
-      ? typeof item.postId === 'string'
-        ? item.postId
-        // eslint-disable-next-line no-underscore-dangle
-        : String(item.postId._id || item.postId.id || '')
-      : null;
+    const postId = extractPostId(item.postId);
     return {
       ...item,
       // eslint-disable-next-line no-underscore-dangle
