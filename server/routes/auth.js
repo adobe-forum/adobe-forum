@@ -88,8 +88,22 @@ router.post('/login', async (req, res) => {
     // to MongoDB before the client redirects and calls /me. Without this, the
     // session may not be persisted yet and /me returns 401 causing instant logout.
     await new Promise((resolve, reject) =>
-      req.session.save((err) => (err ? reject(err) : resolve()))
+      req.session.save((err) => {
+        if (err) {
+          console.error('❌ Session save failed:', err.message);
+          reject(err);
+        } else {
+          console.log('✅ Session saved successfully for user:', user.email);
+          resolve();
+        }
+      })
     );
+
+    console.log('📝 Response headers will include:', {
+      'Set-Cookie': `connect.sid=${req.sessionID}`,
+      'Access-Control-Allow-Credentials': true,
+      'Access-Control-Allow-Origin': process.env.CLIENT_ORIGIN,
+    });
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
     return res.json({ success: true, user: { ...safeUser, _id: String(user._id) }, loginAt });

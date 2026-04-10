@@ -13,8 +13,11 @@ const app = express();
 
 /* ── CORS ───────────────────────────────────────────────────────────────────── */
 
+const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+console.log('🌐 CORS configured for origin:', clientOrigin);
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000',
+  origin: clientOrigin,
   credentials: true,
 }));
 
@@ -24,17 +27,27 @@ app.use(express.json({ limit: '5mb' }));
 
 /* ── Sessions ───────────────────────────────────────────────────────────────── */
 
+const store = MongoStore.create({
+  mongoUrl: process.env.MONGODB_URI,
+  collectionName: 'sessions',
+  ttl: 30 * 60,    // 30 minutes — hard expiry in MongoDB
+  touchAfter: 0,   // never auto-extend TTL on touch
+});
+
+store.on('error', (err) => {
+  console.error('⚠️ MongoStore error:', err.message);
+});
+
+store.on('connected', () => {
+  console.log('✅ MongoStore connected to sessions collection');
+});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
   rolling: false, // session expiry is fixed from loginAt, not sliding
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    collectionName: 'sessions',
-    ttl: 30 * 60,    // 30 minutes — hard expiry in MongoDB
-    touchAfter: 0,   // never auto-extend TTL on touch
-  }),
+  store,
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
