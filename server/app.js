@@ -45,10 +45,20 @@ app.use(session({
 
 /* ── Routes ─────────────────────────────────────────────────────────────────── */
 
+// Health check endpoint for monitoring and load balancers
+app.get('/', (req, res) => {
+  res.json({ status: 'OK', message: 'Adobe Forum API is running' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api', sidebarRoutes);       // sidebar routes use mixed prefixes (/api/sidebar-items and /api/sidebar)
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint not found', path: req.path });
+});
 
 export default app;
