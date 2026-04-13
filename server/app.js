@@ -103,6 +103,18 @@ console.log('🔐 Session cookie config:', {
 // Debug middleware to log session creation
 app.use((req, res, next) => {
   const userId = req.session?.userId;
+  const cookieHeader = req.headers.cookie;
+  
+  // Detailed logging for auth endpoint
+  if (req.path === '/api/auth/me' && req.method === 'GET') {
+    console.log('📡 [AUTH CHECK] GET /api/auth/me');
+    console.log('   Session ID:', req.sessionID || '❌ [MISSING]');
+    console.log('   Session exists:', req.session ? '✅' : '❌');
+    console.log('   User ID in session:', userId || '❌ [EMPTY]');
+    console.log('   Cookie header present:', cookieHeader ? '✅' : '❌ [MISSING - browser not sending cookie!]');
+    console.log('   Full Cookie:', cookieHeader || '[NONE]');
+  }
+  
   console.log('📝 Request:', req.method, req.path);
   console.log('   Session ID:', req.sessionID);
   console.log('   User ID:', userId || 'none');

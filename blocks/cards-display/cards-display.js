@@ -67,6 +67,8 @@ function buildStoredUser(user, loginAt) {
 async function restoreClientAuthFromSession() {
   try {
     console.log('📡 Calling /api/auth/me with credentials: include');
+    console.log('   Browser will send cookies:', document.cookie ? `✅ (${document.cookie.length} bytes)` : '❌ (no cookies)');
+    
     const res = await fetch(`${AUTH_API_BASE}/me`, {
       credentials: 'include',
       cache: 'no-store',
