@@ -47,6 +47,12 @@
 
 ## ✅ Completed
 
+### 2026-04-13
+- [x] **Auth session persistence fix**: Changed `saveUninitialized: false` → `true` so sessions are created and persisted to MongoDB immediately, preventing redirect loops after successful login.
+- [x] **Auth flow debugging infrastructure**: Added comprehensive logging across session middleware, auth endpoints, and client-side auth state to make troubleshooting transparent.
+- [x] **Auth environment validation**: Server now validates `MONGODB_URI` is set and warns if missing, preventing silent session store failures.
+- [x] **Auth troubleshooting guide**: Created `AUTH_DEBUG_GUIDE.md` with step-by-step test procedures, expected logs, common issues, and MongoDB inspection commands.
+
 ### 2026-04-08
 - [x] **SPA post routing**: Added a centralized client router with shareable `/?post=<id>` URLs, browser history support, and route-driven home/post rendering without page reloads.
 - [x] **EDS-safe post deep linking**: Standardized post entry on the homepage query route so pasted post links open correctly in a fresh tab without relying on rewrites or 404-page fallback behavior.

@@ -62,6 +62,57 @@ Events that trigger re-fetch:
   window resize ≥768px → re-open sidebar if collapsed
 ```
 
+### 4. Authentication & Session Flow
+
+```
+User Login (auth-form.js):
+  User fills email + password
+       │
+       ▼
+  POST /api/auth/login → Express creates session + writes to MongoDB store
+       │
+       ▼
+  Response includes Set-Cookie: connect.sid (httpOnly, secure in prod)
+       │
+       ▼
+  Client stores user in localStorage('af_user')
+       │
+       ▼
+  Redirect to / → User is now authenticated
+
+Page Load (cards-display.js):
+  Check localStorage('af_user')
+    ├─ Found? → Skip restore, render cards
+    └─ Not found?
+         │
+         ▼
+       GET /api/auth/me (credentials: include)
+         │
+         ├─ Session valid? → Restore user to localStorage, render cards
+         └─ 401? → Session expired/missing, redirect to /auth-form
+
+Subsequent API Calls (all blocks):
+  All fetch requests include credentials: 'include'
+    │
+    ▼
+  Browser automatically sends connect.sid cookie
+    │
+    ▼
+  Express middleware validates session, loads user into req.user
+    │
+    ▼
+  requireAuth middleware checks req.session.userId
+    ├─ Found? → Load user from DB, attach to req.user, call next()
+    └─ Not found? → Return 401
+
+Session Persistence:
+  Expression-session with saveUninitialized: true ensures:
+    - Empty sessions are created on first request
+    - Populated sessions (with userId) persist to MongoDB immediately
+    - MongoDB store uses TTL: 30 minutes (hard expiry)
+    - No idle renewal — expiry is fixed from loginAt timestamp
+```
+
 ---
 
 ## API Structure

@@ -24,7 +24,7 @@ An internal Adobe community forum built on **Adobe Edge Delivery Services (EDS)*
 | Runtime | Node.js |
 | Framework | Express.js |
 | Database | MongoDB (via Mongoose) |
-| Auth | Session-based (`express-session`) |
+| Auth | Session-based (`express-session` with MongoDB store) |
 | Dev server | AEM CLI (`hlx`) + Express on port 5000 |
 
 ---
@@ -78,6 +78,10 @@ server/
     reviews.js      — /api/reviews/* (pending, my-requests, submit)
     sidebar.js      — /api/sidebar/* + /api/sidebar-items/*
     users.js        — /api/users (list for reviewer picker)
+  middleware/
+    auth.js         — Session validation and user loading
+  helpers/
+    mailer.js       — Email sending for password resets
 ```
 
 ---
@@ -85,3 +89,9 @@ server/
 ## Environment
 - Frontend dev: `http://localhost:3000` (AEM CLI)
 - Backend API: `http://localhost:5000/api`
+
+---
+
+## Debugging & Troubleshooting
+
+See [AUTH_DEBUG_GUIDE.md](../AUTH_DEBUG_GUIDE.md) for comprehensive authentication troubleshooting procedures, expected log output, and common issues/solutions.

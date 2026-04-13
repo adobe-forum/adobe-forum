@@ -42,11 +42,15 @@ store.on('connected', () => {
   console.log('✅ MongoStore connected to sessions collection');
 });
 
+if (!process.env.MONGODB_URI) {
+  console.error('❌ MONGODB_URI not set! Session storage will not work properly.');
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
-  saveUninitialized: false,
-  rolling: false, // session expiry is fixed from loginAt, not sliding
+  saveUninitialized: true,  // Allow session creation on first request
+  rolling: false,           // session expiry is fixed from loginAt, not sliding
   store,
   cookie: {
     httpOnly: true,
@@ -55,6 +59,12 @@ app.use(session({
     maxAge: 30 * 60 * 1000, // 30 minutes
   },
 }));
+
+// Debug middleware to log session creation
+app.use((req, res, next) => {
+  console.log('📝 Request:', req.method, req.path, '| Session ID:', req.sessionID, '| User:', req.session.userId || 'none');
+  next();
+});
 
 /* ── Routes ─────────────────────────────────────────────────────────────────── */
 

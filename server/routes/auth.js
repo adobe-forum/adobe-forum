@@ -136,6 +136,11 @@ router.get('/me', requireAuth, (req, res) => {
   // Prefer session loginAt (precise); fall back to User doc loginAt (survives page reloads).
   const loginAt = req.session.loginAt
     || (req.user.loginAt ? new Date(req.user.loginAt).getTime() : null);
+  
+  console.log('✅ /me endpoint — authenticated user:', req.user.email);
+  console.log('📋 Session ID:', req.sessionID);
+  console.log('👤 User ID:', req.user._id);
+  
   return res.json({ success: true, user: req.user, loginAt });
 });
 

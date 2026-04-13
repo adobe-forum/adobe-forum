@@ -582,15 +582,22 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
 export default async function decorate(block) {
   if (!localStorage.getItem('af_user')) {
     try {
-      await restoreClientAuthFromSession();
+      console.log('📋 No af_user in localStorage, attempting to restore from session...');
+      const authData = await restoreClientAuthFromSession();
+      console.log('✅ Session restored successfully:', authData.user?.email);
     } catch (err) {
+      console.error('❌ Session restore failed:', err.message, err.status);
       clearClientAuthState();
       if (err.status === 401) {
+        console.log('🔐 Not authenticated (401), redirecting to auth-form');
         window.location.replace('/auth-form');
         return;
       }
-      throw err;
+      // For other errors (network issues), don't block the user
+      console.warn('⚠️ Auth check error but continuing anyway:', err.message);
     }
+  } else {
+    console.log('✅ af_user found in localStorage, skipping session restore');
   }
 
   const rows = [...block.children];

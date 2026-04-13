@@ -2,6 +2,45 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-13] Session Persistence and Auth Debugging
+
+### Context
+Users were being redirected back to `/auth-form` immediately after successful login. Investigation revealed two critical issues: (1) express-session was configured with `saveUninitialized: false`, preventing sessions from persisting to MongoDB immediately after login, and (2) lack of comprehensive logging made troubleshooting unclear.
+
+### Decisions Made
+
+**1. Enable immediate session persistence with `saveUninitialized: true`**
+Changed session middleware configuration in `server/app.js` to `saveUninitialized: true`. This ensures that a session object is created and persisted to MongoDB on the first request, before any user data is stored. This is critical for login flow: after `POST /api/auth/login` succeeds and stores `userId` in the session, the session is immediately written to the database. Subsequent requests (like `GET /api/auth/me`) can then retrieve it reliably.
+
+**2. Add comprehensive auth flow logging**
+Implemented detailed logging across the authentication chain:
+- `server/app.js`: Debug middleware logs every request with session ID and userId
+- `server/middleware/auth.js`: Logs session validation, user lookup success/failure
+- `server/routes/auth.js`: Logs successful `/me` endpoint calls with user email and session ID
+- `blocks/cards-display.js`: Logs localStorage state, session restore attempts, and redirect reasons
+
+This logging enables developers to trace auth failures from client to server without guessing.
+
+**3. Added validation for missing environment configuration**
+Server now warns if `MONGODB_URI` is not set, preventing silent session store failures. Sessions require MongoDB to persist; without the URI set, all auth attempts fail with misleading 401 responses.
+
+**4. Created AUTH_DEBUG_GUIDE.md**
+A standalone troubleshooting guide with:
+- Step-by-step test procedures
+- Expected log output at each stage
+- Common issues and solutions
+- MongoDB session inspection commands
+- Environment variable checklist
+
+### Files Changed
+- `server/app.js` — session config + debug middleware + env validation
+- `server/middleware/auth.js` — detailed session/user lookup logging
+- `server/routes/auth.js` — `/me` endpoint logging
+- `blocks/cards-display.js` — enhanced session restore logging
+- `AUTH_DEBUG_GUIDE.md` — new troubleshooting documentation
+
+---
+
 ## [2026-04-08] SPA Router and Shareable Post URLs
 
 ### Context
