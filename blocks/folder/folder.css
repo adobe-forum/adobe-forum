@@ -64,7 +64,7 @@ body.fm-scroll-lock {
   gap: 6px;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .fm-back {
@@ -109,12 +109,18 @@ body.fm-scroll-lock {
   display: flex;
   align-items: center;
   gap: 2px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   min-width: 0;
   background: #efefef;
   border-radius: 8px;
   padding: 3px 6px;
   border: 1px solid #e0e0e0;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .fm-crumb {
@@ -666,8 +672,8 @@ body.fm-scroll-lock {
   outline: none;
 
   &:focus-visible {
-    box-shadow: 0 0 0 3px rgb(229 57 53 / 30%);
-    border-color: #e53935;
+    box-shadow: 0 0 0 3px rgb(0 0 0 / 12%);
+    border-color: var(--sp-gray-400, #b0b0b0);
   }
 
   &:hover {
@@ -680,18 +686,18 @@ body.fm-scroll-lock {
   }
 
   &.fm-tile--sel {
-    background: #fff0f0;
-    border-color: #e53935;
-    box-shadow: 0 0 0 2px rgb(229 57 53 / 18%);
+    background: var(--sp-gray-100, #f5f5f5);
+    border-color: var(--sp-gray-300, #d0d0d0);
+    box-shadow: none;
 
     & .fm-tile-dots {
       opacity: 1;
     }
 
-    /* Prevent hover from overriding the red selected state */
+    /* Prevent hover from overriding the selected state */
     &:hover {
-      background: #fff0f0;
-      border-color: #e53935;
+      background: var(--sp-gray-200, #e8e8e8);
+      border-color: var(--sp-gray-400, #b0b0b0);
     }
   }
 
@@ -897,32 +903,82 @@ body.fm-scroll-lock {
   }
 }
 
-/* ── Spectrum Alert Dialog (mirrors sidebar.css) ─────────────────────────── */
+/* ── Spectrum Alert Dialog (matches sidebar.css exactly) ─────────────────── */
 .sp-alert-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 50%);
+  background: rgb(0 0 0 / 45%);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(1px);
 }
 
 .sp-alert-dialog {
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 8px 32px rgb(0 0 0 / 24%), 0 2px 8px rgb(0 0 0 / 12%);
+  background: var(--sp-gray-50, #fafafa);
+  border-radius: var(--sp-radius-lg, 8px);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 6%),
+    0 4px 16px rgb(0 0 0 / 14%),
+    0 16px 32px rgb(0 0 0 / 10%);
   width: 100%;
   max-width: 400px;
+  min-width: 288px;
   margin: 16px;
   overflow: hidden;
-  animation: sp-dialog-in 0.15s ease;
+  animation: sp-dialog-in 0.13s ease;
+
+  & .sp-alert-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px 24px 0;
+
+    & .sp-alert-icon {
+      color: var(--sp-red-600, #d7373f);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      margin-top: 1px;
+    }
+
+    & .sp-alert-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--sp-gray-900, #1d1d1d);
+      margin: 0;
+      line-height: 1.3;
+      font-family: inherit;
+    }
+  }
+
+  & .sp-alert-body {
+    padding: 12px 24px 24px;
+
+    & .sp-alert-message {
+      font-size: 14px;
+      color: var(--sp-gray-700, #4b4b4b);
+      margin: 0;
+      line-height: 1.6;
+    }
+  }
+
+  & .sp-alert-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--sp-gray-200, #e0e0e0);
+    background: var(--sp-gray-75, #f5f5f5);
+  }
 }
 
 @keyframes sp-dialog-in {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(4px);
+    transform: scale(0.97) translateY(6px);
   }
 
   to {
@@ -931,82 +987,61 @@ body.fm-scroll-lock {
   }
 }
 
-.sp-alert-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 24px 0;
-}
-
-.sp-alert-icon {
-  color: #d7373f;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-.sp-alert-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1d1d1d;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.sp-alert-body {
-  padding: 12px 24px 20px;
-}
-
-.sp-alert-message {
-  font-size: 14px;
-  color: #4b4b4b;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.sp-alert-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid #e0e0e0;
-  background: #fafafa;
-}
-
+/* ── Spectrum 1 Buttons (matches sidebar.css exactly) ── */
 .sp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 7px 16px;
+  height: var(--sp-height-sm, 32px);
+  padding: 0 16px;
   font-size: 14px;
-  font-weight: 600;
-  border-radius: 4px;
-  border: none;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: var(--sp-radius-md, 4px);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.13s, box-shadow 0.13s;
   outline: none;
   min-width: 72px;
+  white-space: nowrap;
+  transition: background 0.13s, border-color 0.13s, box-shadow 0.13s;
+  letter-spacing: 0.01em;
 }
 
 .sp-btn-secondary {
-  background: transparent;
-  color: #1473e6;
-  border: 1px solid #b3b3b3;
-}
+  background: var(--sp-gray-50, #fafafa);
+  color: var(--sp-gray-800, #2c2c2c);
+  border-color: var(--sp-gray-300, #b3b3b3);
 
-.sp-btn-secondary:hover {
-  background: #f5f5f5;
-  border-color: #6e6e6e;
+  &:hover {
+    background: var(--sp-gray-100, #f5f5f5);
+    border-color: var(--sp-gray-400, #6e6e6e);
+  }
+
+  &:active {
+    background: var(--sp-gray-200, #e8e8e8);
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--sp-gray-50), 0 0 0 4px var(--sp-blue-500, #2680eb);
+  }
 }
 
 .sp-btn-destructive {
-  background: #d7373f;
-  color: #fff;
-  border: 1px solid transparent;
-}
+  background: var(--sp-red-600, #d7373f);
+  color: var(--sp-gray-50, #fafafa);
+  border-color: transparent;
 
-.sp-btn-destructive:hover {
-  background: #bb2e35;
+  &:hover {
+    background: var(--sp-red-700, #bb2e35);
+  }
+
+  &:active {
+    background: #b71c1c;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--sp-gray-50), 0 0 0 4px var(--sp-red-600, #d7373f);
+  }
 }
 
 /* ── Loading spinner ─────────────────────────────────────────────────── */
@@ -1075,5 +1110,168 @@ body.fm-scroll-lock {
   & strong {
     font-weight: 700;
     margin-right: 4px;
+  }
+}
+
+/* =============================================
+   MOBILE RESPONSIVE  (<= 600px)
+   ============================================= */
+
+@media (width <= 600px) {
+
+  /* ── Overlay: small padding so modal doesn't touch edges ── */
+  .fm-overlay {
+    padding: 12px;
+    align-items: center;
+  }
+
+  /* ── Modal: full-width centered, max height capped ── */
+  .fm-modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 12px;
+    transform: translateY(14px);
+  }
+
+  .fm-overlay--in .fm-modal {
+    transform: translateY(0);
+  }
+
+  /* ── Header: two-row layout on mobile — breadcrumb row + actions row ── */
+  .fm-header {
+    padding: 10px 12px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Nav takes full width on first row */
+  .fm-nav {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  /* ── Breadcrumb: full width, scrollable, LTR, scrolled to end ── */
+  .fm-breadcrumb {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+    direction: ltr;
+  }
+
+  .fm-breadcrumb::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Actions + close sit on second row, pushed to the right */
+  .fm-actions {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  /* ── Crumb text: no wrap ── */
+  .fm-crumb {
+    white-space: nowrap;
+  }
+
+  /* ── Add Folder button: smaller on mobile ── */
+  .fm-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  /* ── Search bar ── */
+  .fm-search-bar {
+    padding: 8px 12px;
+  }
+
+  /* ── Body: less padding ── */
+  .fm-body {
+    padding: 12px;
+    min-height: 240px;
+  }
+
+  /* ── Grid: 2 columns on mobile instead of auto-fill ── */
+  .fm-tiles-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* ── Tiles: slightly more compact ── */
+  .fm-tile {
+    padding: 10px 10px;
+    gap: 10px;
+  }
+
+  .fm-tile-ico {
+    width: 36px;
+    height: 32px;
+  }
+
+  .fm-tile-name {
+    font-size: 12px;
+  }
+
+  .fm-tile-folders {
+    font-size: 10px;
+  }
+
+  /* ── Limit warning: tighter margin ── */
+  .fm-limit-warning {
+    margin: 10px 12px 4px;
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
+  /* ── Hint banner ── */
+  .fm-hint-wrap {
+    padding: 0 12px;
+  }
+
+  /* ── Footer: full-width stacked buttons ── */
+  .fm-footer {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .fm-foot-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 16px;
+  }
+
+  /* ── Alert dialog: full width with bottom sheet feel ── */
+  .sp-alert-dialog {
+    margin: 12px;
+    max-width: calc(100vw - 24px);
+  }
+}
+
+/* ── Small tablets / large phones (601px–768px) ── */
+@media (601px <= width <= 768px) {
+
+  .fm-modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .fm-tiles-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .fm-breadcrumb {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .fm-breadcrumb::-webkit-scrollbar {
+    display: none;
   }
 }
