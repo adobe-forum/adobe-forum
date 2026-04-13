@@ -92,6 +92,35 @@ server/
 
 ---
 
+## Production Deployment (Render.com)
+
+### Required Environment Variables
+```env
+# MongoDB
+MONGODB_URI=<your-connection-string>
+
+# Session security
+SESSION_SECRET=<strong-random-secret>
+
+# CORS & deployment
+NODE_ENV=production
+CLIENT_ORIGIN=<your-render-domain>  # Optional, defaults to same-origin
+FORCE_SECURE=true  # Optional, force HTTPS cookies in non-prod
+
+# Email (for password resets)
+GMAIL_USER=<your-email>
+GMAIL_PASS=<your-app-password>
+```
+
+### Important Notes
+- CORS is automatically configured: dev allows `localhost:*`, production allows same-origin
+- Session cookies are `Secure` flag set automatically in production (HTTPS only)
+- `SameSite=none` is used in production to allow subdomain authentication
+- Express-session with `proxy: true` trusts `X-Forwarded-Proto` from Render's load balancer
+- MongoDB must have a TTL index on sessions collection (30-minute expiry)
+
+---
+
 ## Debugging & Troubleshooting
 
 See [AUTH_DEBUG_GUIDE.md](../AUTH_DEBUG_GUIDE.md) for comprehensive authentication troubleshooting procedures, expected log output, and common issues/solutions.

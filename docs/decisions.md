@@ -2,7 +2,82 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-13] Production Session & CORS Configuration for Render.com
+
+### Context
+After deploying to Render.com, users were redirected to login immediately after successful authentication. Sessions were being created in development but failing in production. Root causes: (1) CORS wasn't configured to allow same-origin deployment, (2) session cookie sameSite was too strict for cross-origin auth, (3) no proxy trust for HTTPS termination.
+
+### Decisions Made
+
+**1. CORS dynamic configuration for dev vs production**
+- **Development**: Whitelist `localhost:3000` and `localhost:5000` only
+- **Production**: Allow all origins with credentials (Render.com same-domain deployment handles origin)
+- **Both**: Explicitly allow credentials, OPTIONS preflight, Content-Type and Authorization headers
+
+**2. Session cookie security-aware SameSite policy**
+- **Development**: `sameSite: 'lax'` (allows same-site cookies)
+- **Production**: `sameSite: 'none'` with `secure: true` (allows cross-origin cookies via HTTPS)
+- Combined with `httpOnly: true` to prevent XSS access to session token
+- `proxy: true` on express-session to trust `X-Forwarded-Proto` header from Render.com
+
+**3. Enhanced debug logging for production troubleshooting**
+- Log session ID, user ID, and cookie presence on every request
+- Verbose CORS configuration logging on startup with NODE_ENV indicator
+- Session cookie config logged at startup for verification
+
+### Files Changed
+- `server/app.js` — CORS dynamic config, session proxy trust, debug logging
+- `server/middleware/auth.js` — existing logging for user lookup verification
+- `server/routes/auth.js` — existing session save logging
+
+### Testing Checklist for Production
+- Verify `NODE_ENV=production` is set on Render.com
+- Check Render.com logs for "🌐 CORS configured" and "🔐 Session cookie config"
+- Browser DevTools → Cookies: should show `connect.sid` with `Secure` flag (HTTPS only)
+- After login, subsequent `/api/auth/me` calls should include `Cookie` header
+
+---
+
 ## [2026-04-13] Session Persistence and Auth Debugging
+
+### Context
+Users were being redirected back to `/auth-form` immediately after successful login. Investigation revealed two critical issues: (1) express-session was configured with `saveUninitialized: false`, preventing sessions from persisting to MongoDB immediately after login, and (2) lack of comprehensive logging made troubleshooting unclear.
+
+### Decisions Made
+
+**1. Enable immediate session persistence with `saveUninitialized: true`**
+Changed session middleware configuration in `server/app.js` to `saveUninitialized: true`. This ensures that a session object is created and persisted to MongoDB on the first request, before any user data is stored. This is critical for login flow: after `POST /api/auth/login` succeeds and stores `userId` in the session, the session is immediately written to the database. Subsequent requests (like `GET /api/auth/me`) can then retrieve it reliably.
+
+**2. Add comprehensive auth flow logging**
+Implemented detailed logging across the authentication chain:
+- `server/app.js`: Debug middleware logs every request with session ID and userId
+- `server/middleware/auth.js`: Logs session validation, user lookup success/failure
+- `server/routes/auth.js`: Logs successful `/me` endpoint calls with user email and session ID
+- `blocks/cards-display.js`: Logs localStorage state, session restore attempts, and redirect reasons
+
+This logging enables developers to trace auth failures from client to server without guessing.
+
+**3. Added validation for missing environment configuration**
+Server now warns if `MONGODB_URI` is not set, preventing silent session store failures. Sessions require MongoDB to persist; without the URI set, all auth attempts fail with misleading 401 responses.
+
+**4. Created AUTH_DEBUG_GUIDE.md**
+A standalone troubleshooting guide with:
+- Step-by-step test procedures
+- Expected log output at each stage
+- Common issues and solutions
+- MongoDB session inspection commands
+- Environment variable checklist
+
+### Files Changed
+- `server/app.js` — session config + debug middleware + env validation
+- `server/middleware/auth.js` — detailed session/user lookup logging
+- `server/routes/auth.js` — `/me` endpoint logging
+- `blocks/cards-display.js` — enhanced session restore logging
+- `AUTH_DEBUG_GUIDE.md` — new troubleshooting documentation
+
+---
+
+## [2026-04-08] SPA Router and Shareable Post URLs
 
 ### Context
 Users were being redirected back to `/auth-form` immediately after successful login. Investigation revealed two critical issues: (1) express-session was configured with `saveUninitialized: false`, preventing sessions from persisting to MongoDB immediately after login, and (2) lack of comprehensive logging made troubleshooting unclear.

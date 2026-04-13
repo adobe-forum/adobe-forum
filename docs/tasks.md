@@ -48,6 +48,8 @@
 ## ✅ Completed
 
 ### 2026-04-13
+- [x] **Production CORS & session config**: Fixed Render.com deployment with dynamic CORS (dev vs prod), proper sameSite cookie policy ('none' with secure flag in prod), and proxy trust for HTTPS termination.
+- [x] **Enhanced production debug logging**: Added cookie presence logging, session ID tracking, and CORS config verification on startup.
 - [x] **Auth session persistence fix**: Changed `saveUninitialized: false` → `true` so sessions are created and persisted to MongoDB immediately, preventing redirect loops after successful login.
 - [x] **Auth flow debugging infrastructure**: Added comprehensive logging across session middleware, auth endpoints, and client-side auth state to make troubleshooting transparent.
 - [x] **Auth environment validation**: Server now validates `MONGODB_URI` is set and warns if missing, preventing silent session store failures.

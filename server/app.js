@@ -13,12 +13,32 @@ const app = express();
 
 /* ── CORS ───────────────────────────────────────────────────────────────────── */
 
-const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+// In production, allow same-origin requests (frontend and backend on same domain)
+// In development, allow localhost:3000
+const clientOrigin = process.env.CLIENT_ORIGIN || process.env.NODE_ENV === 'production' ? '*' : 'http://localhost:3000';
 console.log('🌐 CORS configured for origin:', clientOrigin);
+console.log('📍 Environment:', process.env.NODE_ENV || 'development');
 
 app.use(cors({
-  origin: clientOrigin,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In production, allow same-origin (frontend on same render.com domain)
+    if (process.env.NODE_ENV === 'production') {
+      callback(null, true); // Allow all origins in production (render.com handles same-origin)
+    } else {
+      // In development, only allow localhost
+      if (origin === 'http://localhost:3000' || origin === 'http://localhost:5000') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 /* ── Body parsing ───────────────────────────────────────────────────────────── */
@@ -52,17 +72,29 @@ app.use(session({
   saveUninitialized: true,  // Allow session creation on first request
   rolling: false,           // session expiry is fixed from loginAt, not sliding
   store,
+  proxy: process.env.NODE_ENV === 'production', // Trust proxy headers in production
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    secure: process.env.NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true', // HTTPS only in production
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' requires Secure flag
     maxAge: 30 * 60 * 1000, // 30 minutes
   },
 }));
 
+console.log('🔐 Session cookie config:', {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: '30 minutes',
+});
+
 // Debug middleware to log session creation
 app.use((req, res, next) => {
-  console.log('📝 Request:', req.method, req.path, '| Session ID:', req.sessionID, '| User:', req.session.userId || 'none');
+  const userId = req.session?.userId;
+  console.log('📝 Request:', req.method, req.path);
+  console.log('   Session ID:', req.sessionID);
+  console.log('   User ID:', userId || 'none');
+  console.log('   Cookie header:', req.headers.cookie ? '[present]' : '[missing]');
   next();
 });
 
