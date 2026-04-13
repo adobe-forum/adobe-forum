@@ -48,13 +48,14 @@
 ## ✅ Completed
 
 ### 2026-04-13
-- [x] **Mobile Safari session & storage fix**: Changed session cookie `sameSite` from 'none' to 'lax', added explicit `path: '/'` and `domain: undefined` for Safari iOS same-origin compatibility. Added dual-storage (localStorage + sessionStorage) fallback—auth now persists even if Safari ITP clears localStorage.
+- [x] **Cross-domain session cookie fix**: Changed session cookie `sameSite` from `'lax'` to conditional `'none'` (production) / `'lax'` (dev) to allow cookies across different domains (AEM frontend on adobe-forum--adobe-forum.aem.live + Render backend on adobe-forum-12iq.onrender.com). Fixes browser blocking Set-Cookie header due to privacy settings.
+- [x] **Mobile Safari session & storage fix**: Added sessionStorage fallback (localStorage + sessionStorage dual-storage) for better mobile Safari compatibility. Added explicit `path: '/'` and user-agent detection for Safari iOS.
 - [x] **Client-side dual-storage implementation**: Updated `cards-display.js` `restoreClientAuthFromSession()` to store in both localStorage and sessionStorage; added Safari iOS user-agent detection in `decorate()` with sessionStorage fallback logic.
 - [x] **Auth-form dual-storage**: Updated `auth-form.js` `storeClientAuthState()` and login handler to persist user data to both localStorage and sessionStorage on successful authentication.
-- [x] **Production CORS & session config**: Fixed Render.com deployment with dynamic CORS (dev vs prod), proper sameSite cookie policy ('lax' for Safari compatibility), and proxy trust for HTTPS termination.
-- [x] **Enhanced production debug logging**: Added cookie presence logging, session ID tracking, and CORS config verification on startup.
+- [x] **Production CORS & session config**: Fixed Render.com deployment with dynamic CORS (dev vs prod), proper sameSite cookie policy, and proxy trust for HTTPS termination.
+- [x] **Enhanced production debug logging**: Added comprehensive logging for auth checks (cookie presence, session ID, login flow) to diagnose cross-domain and session persistence issues.
 - [x] **Auth session persistence fix**: Changed `saveUninitialized: false` → `true` so sessions are created and persisted to MongoDB immediately, preventing redirect loops after successful login.
-- [x] **Auth flow debugging infrastructure**: Added comprehensive logging across session middleware, auth endpoints, and client-side auth state to make troubleshooting transparent.
+- [x] **Auth flow debugging infrastructure**: Added detailed logging across session middleware, auth endpoints, and client-side auth state to make troubleshooting transparent.
 - [x] **Auth environment validation**: Server now validates `MONGODB_URI` is set and warns if missing, preventing silent session store failures.
 - [x] **Auth troubleshooting guide**: Created `AUTH_DEBUG_GUIDE.md` with step-by-step test procedures, expected logs, common issues, and MongoDB inspection commands.
 

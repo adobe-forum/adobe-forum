@@ -2,6 +2,31 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-13] Cross-Domain Session Cookie (AEM Frontend + Render Backend)
+
+### Context
+Production authentication was failing on Render.com because the frontend (adobe-forum--adobe-forum.aem.live) and backend (adobe-forum-12iq.onrender.com) are on **different domains**. Browser privacy settings were blocking the session cookie with: "This attempt to set a cookie via a Set-Cookie header was blocked due to user preferences." Root cause: `sameSite: 'lax'` is insufficient for cross-domain cookies; `sameSite: 'none'` is required, but was incorrectly labeled as "Safari fallback."
+
+### Decisions Made
+
+**Changed session cookie SameSite policy for production cross-domain deployment**
+- **Production**: `sameSite: 'none'` (required for cross-domain AEM↔Render setup)
+- **Development**: `sameSite: 'lax'` (localhost on same port is same-origin)
+- **Why**: `sameSite: 'none'` explicitly tells browsers to accept cross-domain cookies when `Secure: true` and `HttpOnly: true` are set
+- **Alternative considered**: Moving backend to same domain (not feasible—Adobe EDS CDN handles frontend)
+
+### Files Changed
+- `server/app.js` — Session cookie config: changed `sameSite: 'lax'` → conditional `'none'` (prod) / `'lax'` (dev)
+- Enhanced logging to document SameSite policy per environment
+
+### Testing Checklist for Production
+- After login, browser Cookie storage should show `connect.sid` without "blocked" warning
+- POST /api/auth/login response headers should include `Set-Cookie: connect.sid=...`
+- Subsequent requests should include `Cookie: connect.sid=...` automatically
+- `/api/auth/me` should return 200 with authenticated user, not 401
+
+---
+
 ## [2026-04-13] Mobile Safari Session & Storage Fallback
 
 ### Context

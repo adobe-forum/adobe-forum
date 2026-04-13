@@ -113,11 +113,27 @@ GMAIL_PASS=<your-app-password>
 ```
 
 ### Important Notes
-- CORS is automatically configured: dev allows `localhost:*`, production allows same-origin
-- Session cookies are `Secure` flag set automatically in production (HTTPS only)
-- `SameSite=lax` is used for best compatibility across browsers, especially Safari iOS (Intelligent Tracking Prevention)
+
+**Cross-Domain Setup (Adobe EDS + Render.com)**
+- Frontend: `adobe-forum--adobe-forum.aem.live` (Adobe Edge Delivery Services)
+- Backend: `adobe-forum-12iq.onrender.com` (Render.com API)
+- Session cookie uses `SameSite: 'none'` in production to allow cross-domain authentication
+- `Secure: true` flag is required when `SameSite: 'none'` is used (HTTPS only)
+- This is NOT the same as same-origin authentication; it's an explicit cross-domain configuration
+
+**Session & Cookie Configuration**
+- CORS is automatically configured: dev allows `localhost:*`, production allows all origins
+- `secure` flag set automatically in production (HTTPS only)
+- Session cookies use:
+  - `httpOnly: true` (JavaScript cannot access `document.cookie`)
+  - `sameSite: 'none'` in production (cross-domain) / `'lax'` in dev
+  - `path: '/'` (explicit for consistent cookie matching)
+  - 30-minute TTL with MongoDB session store
+
+**Infrastructure Requirements**
 - Express-session with `proxy: true` trusts `X-Forwarded-Proto` from Render's load balancer
 - MongoDB must have a TTL index on sessions collection (30-minute expiry)
+- Browser privacy settings (Enhanced Tracking Prevention) must allow Set-Cookie for cross-domain
 
 ### Mobile Safari Support
 - Authenticated user data is stored in **both** `localStorage` and `sessionStorage` for redundancy

@@ -82,28 +82,21 @@ app.use(session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true', // HTTPS only in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // 'lax' works better for Safari iOS same-origin, 'none' requires Secure + may fail on old Safari
-    path: '/',  // Explicit path — required for Safari cookie handling
-    domain: undefined, // Let browser handle domain for same-origin cookies (more reliable on Safari)
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-domain (AEM frontend + Render backend), 'lax' for dev
+    path: '/',
+    domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Render.com handles domain automatically
     maxAge: 30 * 60 * 1000, // 30 minutes
   },
 }));
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
-console.log('🔐 Session cookie config:', {
-  sameSite: NODE_ENV === 'production' ? 'lax' : 'lax',
-  secure: NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true',
+console.log('🔐 Session cookie config (NODE_ENV=' + NODE_ENV + '):', {
+  sameSite: NODE_ENV === 'production' ? 'none (cross-domain, required for AEM+Render)' : 'lax (dev)',
+  secure: NODE_ENV === 'production' ? true : 'false (dev)',
   httpOnly: true,
   path: '/',
   maxAge: '30 minutes',
-  note: 'Using sameSite=lax for better Safari iOS compatibility',
-});
-
-console.log('🔐 Session cookie config:', {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: '30 minutes',
+  note: NODE_ENV === 'production' ? 'Using sameSite=none for cross-domain AEM↔Render' : 'Using sameSite=lax for dev localhost',
 });
 
 // Debug middleware to log session creation
