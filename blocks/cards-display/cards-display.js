@@ -66,6 +66,7 @@ function buildStoredUser(user, loginAt) {
 
 async function restoreClientAuthFromSession() {
   try {
+    console.log('📡 Calling /api/auth/me with credentials: include');
     const res = await fetch(`${AUTH_API_BASE}/me`, {
       credentials: 'include',
       cache: 'no-store',
@@ -75,9 +76,12 @@ async function restoreClientAuthFromSession() {
     });
     const data = await res.json().catch(() => ({}));
 
+    console.log(`📡 /api/auth/me response status: ${res.status}, ok: ${res.ok}`);
+    
     if (!res.ok) {
       const error = new Error(data.error || 'Not authenticated.');
       error.status = res.status;
+      console.error(`❌ /api/auth/me failed with ${res.status}:`, error.message);
       throw error;
     }
 
@@ -86,6 +90,7 @@ async function restoreClientAuthFromSession() {
       // Store in both localStorage and sessionStorage for better mobile Safari support
       localStorage.setItem('af_user', JSON.stringify(storedUser));
       sessionStorage.setItem('af_user_session', JSON.stringify(storedUser));
+      console.log('✅ User data stored in both localStorage and sessionStorage');
     }
 
     return data;
@@ -603,27 +608,36 @@ export default async function decorate(block) {
   const hasSessionStorage = sessionStorage.getItem('af_user_session');
   const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
   
+  console.log('🔍 cards-display decorate() starting...');
+  console.log('  - localStorage.af_user:', hasLocalStorage ? '✅ present' : '❌ missing');
+  console.log('  - sessionStorage.af_user_session:', hasSessionStorage ? '✅ present' : '❌ missing');
+  console.log('  - isMobileSafari:', isMobileSafari);
+  
   if (!hasLocalStorage && !hasSessionStorage) {
     try {
-      console.log('📋 No af_user in storage, attempting to restore from session...');
+      console.log('📋 No stored user found, attempting to restore from server session...');
       const authData = await restoreClientAuthFromSession();
-      console.log('✅ Session restored successfully:', authData.user?.email);
+      console.log('✅ Session restored successfully from server:', authData.user?.email);
     } catch (err) {
-      console.error('❌ Session restore failed:', err.message, err.status);
+      console.error('❌ Session restore failed:', {
+        message: err.message,
+        status: err.status,
+        timestamp: new Date().toISOString(),
+      });
       clearClientAuthState();
       sessionStorage.removeItem('af_user_session'); // Clear fallback on auth failure
       if (err.status === 401) {
-        console.log('🔐 Not authenticated (401), redirecting to auth-form');
+        console.log('🔐 Server returned 401 Not authenticated, redirecting to auth-form');
         window.location.replace('/auth-form');
         return;
       }
       // For other errors (network issues), don't block the user
-      console.warn('⚠️ Auth check error but continuing anyway:', err.message);
+      console.warn('⚠️ Auth check error (non-401) but continuing anyway:', err.message);
     }
   } else if (hasLocalStorage) {
-    console.log('✅ af_user found in localStorage, skipping session restore');
+    console.log('✅ af_user found in localStorage, skipping server session restore');
   } else if (hasSessionStorage && isMobileSafari) {
-    console.log('📱 Mobile Safari: using sessionStorage fallback for auth');
+    console.log('📱 Mobile Safari: restoring from sessionStorage fallback');
     localStorage.setItem('af_user', sessionStorage.getItem('af_user_session'));
   }
 

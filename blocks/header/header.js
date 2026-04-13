@@ -760,14 +760,46 @@ function HeaderComponent() {
         });
     };
 
-    const handleUnauthorized = () => {
+    const handleUnauthorized = (retryCount = 0) => {
+      console.warn('⚠️ Header: /api/auth/me returned 401 (attempt', retryCount + 1, ')');
+      
+      // If this is the first 401, wait a bit and retry in case session is still being written
+      if (retryCount === 0) {
+        console.log('⏳ Retrying auth check after 500ms (session may still be persisting)...');
+        setTimeout(() => {
+          fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
+            .then((r) => {
+              console.log('🔄 Retry: /api/auth/me returned', r.status);
+              if (r.status === 401) {
+                handleUnauthorized(1); // Second attempt failed, now redirect
+              } else if (r.ok) {
+                return r.json().then(data => {
+                  console.log('✅ Retry succeeded, user:', data.user?.email);
+                  const serverLoginAt = data.loginAt;
+                  if (serverLoginAt) scheduleTimers(serverLoginAt);
+                });
+              }
+            })
+            .catch((err) => {
+              console.error('🔄 Retry failed with network error:', err);
+              if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
+            });
+        }, 500);
+        return;
+      }
+
+      // Second attempt failed, now clear auth
       setSessionWarning(false);
       clearClientAuthState();
 
-      if (authRedirectedRef.current) return;
+      if (authRedirectedRef.current) {
+        console.log('ℹ️ Already redirected, skipping duplicate redirect');
+        return;
+      }
       authRedirectedRef.current = true;
 
       if (!window.location.pathname.startsWith('/auth-form')) {
+        console.log('🔐 Session invalid after retry, redirecting to auth-form');
         window.location.replace('/auth-form');
       }
     };
