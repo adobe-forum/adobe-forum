@@ -115,9 +115,15 @@ GMAIL_PASS=<your-app-password>
 ### Important Notes
 - CORS is automatically configured: dev allows `localhost:*`, production allows same-origin
 - Session cookies are `Secure` flag set automatically in production (HTTPS only)
-- `SameSite=none` is used in production to allow subdomain authentication
+- `SameSite=lax` is used for best compatibility across browsers, especially Safari iOS (Intelligent Tracking Prevention)
 - Express-session with `proxy: true` trusts `X-Forwarded-Proto` from Render's load balancer
 - MongoDB must have a TTL index on sessions collection (30-minute expiry)
+
+### Mobile Safari Support
+- Authenticated user data is stored in **both** `localStorage` and `sessionStorage` for redundancy
+- Safari iOS may clear localStorage due to ITP (Intelligent Tracking Prevention); sessionStorage fallback ensures auth persists
+- Client-side Safari detection (user-agent) activates fallback logic only on mobile Safari
+- If sessionStorage fallback is used in logs, check if Safari privacy settings are clearing localStorage
 
 ---
 
