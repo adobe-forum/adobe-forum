@@ -48,7 +48,10 @@
 ## ✅ Completed
 
 ### 2026-04-13
-- [x] **Production CORS & session config**: Fixed Render.com deployment with dynamic CORS (dev vs prod), proper sameSite cookie policy ('none' with secure flag in prod), and proxy trust for HTTPS termination.
+- [x] **Mobile Safari session & storage fix**: Changed session cookie `sameSite` from 'none' to 'lax', added explicit `path: '/'` and `domain: undefined` for Safari iOS same-origin compatibility. Added dual-storage (localStorage + sessionStorage) fallback—auth now persists even if Safari ITP clears localStorage.
+- [x] **Client-side dual-storage implementation**: Updated `cards-display.js` `restoreClientAuthFromSession()` to store in both localStorage and sessionStorage; added Safari iOS user-agent detection in `decorate()` with sessionStorage fallback logic.
+- [x] **Auth-form dual-storage**: Updated `auth-form.js` `storeClientAuthState()` and login handler to persist user data to both localStorage and sessionStorage on successful authentication.
+- [x] **Production CORS & session config**: Fixed Render.com deployment with dynamic CORS (dev vs prod), proper sameSite cookie policy ('lax' for Safari compatibility), and proxy trust for HTTPS termination.
 - [x] **Enhanced production debug logging**: Added cookie presence logging, session ID tracking, and CORS config verification on startup.
 - [x] **Auth session persistence fix**: Changed `saveUninitialized: false` → `true` so sessions are created and persisted to MongoDB immediately, preventing redirect loops after successful login.
 - [x] **Auth flow debugging infrastructure**: Added comprehensive logging across session middleware, auth endpoints, and client-side auth state to make troubleshooting transparent.
