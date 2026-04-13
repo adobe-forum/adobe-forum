@@ -76,10 +76,22 @@ app.use(session({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true', // HTTPS only in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' requires Secure flag
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // 'lax' works better for Safari iOS same-origin, 'none' requires Secure + may fail on old Safari
+    path: '/',  // Explicit path — required for Safari cookie handling
+    domain: undefined, // Let browser handle domain for same-origin cookies (more reliable on Safari)
     maxAge: 30 * 60 * 1000, // 30 minutes
   },
 }));
+
+const NODE_ENV = process.env.NODE_ENV || 'development';
+console.log('🔐 Session cookie config:', {
+  sameSite: NODE_ENV === 'production' ? 'lax' : 'lax',
+  secure: NODE_ENV === 'production' || process.env.FORCE_SECURE === 'true',
+  httpOnly: true,
+  path: '/',
+  maxAge: '30 minutes',
+  note: 'Using sameSite=lax for better Safari iOS compatibility',
+});
 
 console.log('🔐 Session cookie config:', {
   httpOnly: true,

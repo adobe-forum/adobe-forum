@@ -57,7 +57,9 @@ function storeClientAuthState(user, loginAt) {
   if (storedUser.id && !storedUser._id) storedUser._id = String(storedUser.id);
   /* eslint-enable no-underscore-dangle */
   if (loginAt) storedUser.loginAt = loginAt;
-  localStorage.setItem('af_user', JSON.stringify(storedUser));
+  const userJson = JSON.stringify(storedUser);
+  localStorage.setItem('af_user', userJson);
+  sessionStorage.setItem('af_user_session', userJson);  // Backup for mobile Safari
 }
 
 /* ── 3. SVG icon components ─────────────────────────────────────────────── */
@@ -274,7 +276,9 @@ function LoginPanel({ onForgot, active }) {
         // _id is always preserved — needed for reviewer assignments even after expiry.
         const toStore = { ...data.user };
         if (data.loginAt) toStore.loginAt = data.loginAt;
-        localStorage.setItem('af_user', JSON.stringify(toStore));
+        const userJson = JSON.stringify(toStore);
+        localStorage.setItem('af_user', userJson);
+        sessionStorage.setItem('af_user_session', userJson);  // Backup for mobile Safari
       }
       window.location.href = '/';
     } catch (err) {

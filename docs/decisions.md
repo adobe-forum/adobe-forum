@@ -2,6 +2,42 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-13] Mobile Safari Session & Storage Fallback
+
+### Context
+After production deployment to Render.com, authentication was failing specifically on **Safari iOS** (mobile), redirecting users back to login even after successful authentication. Desktop Safari and all other browsers worked correctly. Root causes: (1) Safari's Intelligent Tracking Prevention (ITP) can clear localStorage for privacy, (2) `sameSite='none'` can fail on older Safari versions for same-origin cookies, (3) no fallback storage mechanism.
+
+### Decisions Made
+
+**1. Changed sameSite policy from 'none' to 'lax' for better Safari compatibility**
+- **Why**: `sameSite='none'` is designed for cross-origin cookies but can fail on older Safari iOS versions for same-origin cookies
+- **Solution**: Use `sameSite='lax'` for both dev and production (same-origin is safer and more compatible)
+- **Trade-off**: Slightly less restrictive than 'strict', but works reliably across all Safari versions
+
+**2. Explicit cookie path and domain for Safari same-origin handling**
+- Added `path: '/'` to cookie config for explicit cookie matching on mobile Safari
+- Set `domain: undefined` to let browser handle domain naturally for same-origin cookies (more reliable on Safari)
+
+**3. Dual-storage fallback: localStorage + sessionStorage**
+- Store authenticated user data in **both** localStorage and sessionStorage after login
+- On load, check both storages; restore from sessionStorage fallback if localStorage is missing (Safari ITP may clear it)
+- Mobile Safari detection via user-agent; activate fallback logic only on Safari iOS (`/iPhone|iPad|iPod/` + `/Safari/` + `!/Chrome/`)
+- Clear sessionStorage only on actual auth failure (401), not on app restart
+
+### Files Changed
+- `server/app.js` — Changed `sameSite: 'none'` → `'lax'`, added explicit `path: '/'` and `domain: undefined`
+- `blocks/cards-display/cards-display.js` — Updated `restoreClientAuthFromSession()` to store in both storages, added Safari fallback in `decorate()` function
+- `blocks/auth-form/auth-form.js` — Updated `storeClientAuthState()` and login handler to store in both localStorage and sessionStorage
+
+### Testing Checklist for Safari iOS
+- On Safari iOS, login and verify no redirect to auth-form
+- Check browser storages (via DevTools in Xcode): both localStorage and sessionStorage should contain user data
+- Reload page → should stay authenticated (sessionStorage fallback should work)
+- Check DevTools Network tab: `Cookie` header should be present on `/api/auth/me` request
+- Verify `connect.sid` cookie has `Secure` flag set
+
+---
+
 ## [2026-04-13] Production Session & CORS Configuration for Render.com
 
 ### Context
