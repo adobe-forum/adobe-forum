@@ -64,6 +64,7 @@ router.post('/register', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
   try {
+    console.log('🔵 [LOGIN] Starting login process...');
     const { email, password } = req.body;
 
     if (!email || !password)
@@ -77,9 +78,16 @@ router.post('/login', async (req, res) => {
     if (!match)
       return res.status(401).json({ error: 'Invalid email or password.' });
 
+    console.log('🔵 [LOGIN] Password matched. Setting session userId...');
     const loginAt = Date.now();
     req.session.userId = String(user._id);
     req.session.loginAt = loginAt;
+    
+    console.log('🔵 [LOGIN] Session state before save:', {
+      userId: req.session.userId,
+      loginAt: req.session.loginAt,
+      sessionID: req.sessionID,
+    });
 
     // Persist loginAt on User doc so it survives session expiry and page reloads.
     await User.findByIdAndUpdate(user._id, { $set: { loginAt: new Date(loginAt) } }, { strict: false });
@@ -87,29 +95,36 @@ router.post('/login', async (req, res) => {
     // Explicitly save session before responding — ensures the session is written
     // to MongoDB before the client redirects and calls /me. Without this, the
     // session may not be persisted yet and /me returns 401 causing instant logout.
-    await new Promise((resolve, reject) =>
+    console.log('🔵 [LOGIN] Calling req.session.save()...');
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.error('❌ [LOGIN] Session save TIMEOUT (no callback after 5s)');
+        reject(new Error('Session save timeout'));
+      }, 5000);
+
       req.session.save((err) => {
+        clearTimeout(timeout);
         if (err) {
-          console.error('❌ Session save failed:', err.message);
+          console.error('❌ [LOGIN] Session save FAILED:', err.message);
           reject(err);
         } else {
-          console.log('✅ Session saved successfully for user:', user.email);
+          console.log('✅ [LOGIN] Session saved successfully to MongoDB');
+          console.log('✅ [LOGIN] Session ID:', req.sessionID);
+          console.log('✅ [LOGIN] User:', user.email);
           resolve();
         }
-      })
-    );
-
-    console.log('📝 Response headers will include:', {
-      'Set-Cookie': `connect.sid=${req.sessionID}`,
-      'Access-Control-Allow-Credentials': true,
-      'Access-Control-Allow-Origin': process.env.CLIENT_ORIGIN,
+      });
     });
+
+    console.log('✅ [LOGIN] Session save completed. Now responding to client...');
+    console.log('📝 [LOGIN] Response will include Set-Cookie header with Session ID:', req.sessionID);
 
     const { password: _pw, resetToken: _rt, resetTokenExpiry: _rte, ...safeUser } = user.toObject();
     return res.json({ success: true, user: { ...safeUser, _id: String(user._id) }, loginAt });
 
   } catch (err) {
-    console.error(err);
+    console.error('❌ [LOGIN] ERROR:', err.message);
+    console.error('❌ [LOGIN] Stack:', err.stack);
     return res.status(500).json({ error: 'Sign-in failed.' });
   }
 });

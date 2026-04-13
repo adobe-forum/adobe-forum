@@ -24,14 +24,19 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    console.log('🔍 CORS check for origin:', origin);
+    
     // In production, allow same-origin (frontend on same render.com domain)
     if (process.env.NODE_ENV === 'production') {
+      console.log('✅ CORS allowing (production mode allows all)');
       callback(null, true); // Allow all origins in production (render.com handles same-origin)
     } else {
       // In development, only allow localhost
       if (origin === 'http://localhost:3000' || origin === 'http://localhost:5000') {
+        console.log('✅ CORS allowing (whitelisted localhost)');
         callback(null, true);
       } else {
+        console.log('❌ CORS BLOCKED:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     }
@@ -39,6 +44,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie', 'X-Session-ID'], // Explicitly allow Set-Cookie to be exposed to client
 }));
 
 /* ── Body parsing ───────────────────────────────────────────────────────────── */
