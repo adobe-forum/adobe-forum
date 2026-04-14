@@ -17,35 +17,51 @@ const BASE_URL = `${API_BASE}/auth`;
  */
 export async function loginUser({ email, password }) {
   console.log('📡 [CLIENT LOGIN] Sending POST /api/auth/login with credentials: include');
+  console.log('  - Email:', email);
+  console.log('  - To URL:', `${BASE_URL}/login`);
   
-  const res = await fetch(`${BASE_URL}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ email, password }),
-  });
-  
-  console.log('📡 [CLIENT LOGIN] Response received:');
-  console.log('  - Status:', res.status);
-  console.log('  - OK:', res.ok);
-  console.log('  - Headers type:', res.headers.constructor.name);
-  
-  // Try to log all response headers (may be limited by browser)
-  const setCookie = res.headers.get('Set-Cookie');
-  console.log('  - Set-Cookie header:', setCookie ? '✅ present' : '❌ NOT present');
-  
-  // Check if cookies are actually stored by the browser
-  console.log('  - document.cookie after login:', document.cookie ? `✅ (${document.cookie.length} bytes)` : '❌ empty');
-  
-  const data = await res.json().catch(() => ({}));
-  
-  if (!res.ok) {
-    console.error('❌ [CLIENT LOGIN] Login failed: ', data.error || 'Sign-in failed.');
-    throw new Error(data.error || 'Sign-in failed.');
+  try {
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+    
+    console.log('📡 [CLIENT LOGIN] Response received:');
+    console.log('  - Status:', res.status);
+    console.log('  - OK:', res.ok);
+    console.log('  - Headers type:', res.headers.constructor.name);
+    
+    // Try to log all response headers (may be limited by browser)
+    const setCookie = res.headers.get('Set-Cookie');
+    console.log('  - Set-Cookie header:', setCookie ? '✅ present' : '❌ NOT present');
+    
+    // Check if cookies are actually stored by the browser
+    console.log('  - document.cookie after login:', document.cookie ? `✅ (${document.cookie.length} bytes)` : '❌ empty');
+    
+    const data = await res.json().catch((parseErr) => {
+      console.error('❌ [CLIENT LOGIN] Failed to parse JSON response:', parseErr.message);
+      return {};
+    });
+    
+    if (!res.ok) {
+      console.error('❌ [CLIENT LOGIN] Login failed (status ' + res.status + ')');
+      console.error('  - Server error:', data.error || 'Unknown error');
+      console.error('  - Full response:', data);
+      throw new Error(data.error || 'Sign-in failed.');
+    }
+    
+    console.log('✅ [CLIENT LOGIN] Login successful, user:', data.user?.email);
+    return data;
+  } catch (err) {
+    // Rethrow network errors with additional context
+    console.error('❌ [CLIENT LOGIN] Network/Exception during login:', err.message);
+    if (err instanceof TypeError) {
+      console.error('  → This is likely a CORS error or network failure');
+    }
+    throw err;
   }
-  
-  console.log('✅ [CLIENT LOGIN] Login successful, user:', data.user?.email);
-  return data;
 }
 
 /**

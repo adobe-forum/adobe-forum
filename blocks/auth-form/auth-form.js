@@ -228,12 +228,22 @@ function Field({
 
 /* ── 6. Primary button with loading spinner ─────────────────────────────── */
 function SubmitBtn({ loading, onClick, children }) {
+  const handleClick = (e) => {
+    console.log('🖱️ [BUTTON CLICK] Sign In button clicked:', { loading, disabled: loading });
+    if (loading) {
+      console.log('  → Already loading, ignoring click');
+      return;
+    }
+    console.log('  → Calling onClick handler...');
+    onClick();
+  };
+
   return html`
     <button
       type="button"
       class=${`auth-form-btn${loading ? ' is-loading' : ''}`}
       disabled=${loading}
-      onClick=${onClick}
+      onClick=${handleClick}
     >
       <span class="auth-form-btn-spinner" aria-hidden="true"/>
       <span class="auth-form-btn-label">${children}</span>
@@ -262,28 +272,46 @@ function LoginPanel({ onForgot, active }) {
   };
 
   const handleSubmit = async () => {
+    console.log('📝 [FORM SUBMIT] handleSubmit called');
+    console.log('  - Email:', email || '❌ EMPTY');
+    console.log('  - Password:', password ? '✅ entered' : '❌ EMPTY');
+    
     const e = {};
     const emailErr = emailValidator(email);
     if (emailErr) e.email = emailErr;
     if (!password) e.password = 'Password is required.';
-    if (Object.keys(e).length) { setErrors(e); return; }
+    
+    if (Object.keys(e).length) {
+      console.log('❌ [FORM SUBMIT] Validation failed:', e);
+      setErrors(e);
+      return;
+    }
 
+    console.log('✅ [FORM SUBMIT] Validation passed, sending login request...');
     setLoading(true);
+    
     try {
+      console.log('📡 [FORM SUBMIT] Calling loginUser()...');
       const data = await loginUser({ email, password });
+      console.log('✅ [FORM SUBMIT] Login successful, data:', data);
+      
       if (data.user) {
-        // Store loginAt alongside user so session timer works across page reloads.
-        // _id is always preserved — needed for reviewer assignments even after expiry.
+        console.log('✅ [FORM SUBMIT] Storing user in localStorage + sessionStorage');
         const toStore = { ...data.user };
         if (data.loginAt) toStore.loginAt = data.loginAt;
         const userJson = JSON.stringify(toStore);
         localStorage.setItem('af_user', userJson);
-        sessionStorage.setItem('af_user_session', userJson);  // Backup for mobile Safari
+        sessionStorage.setItem('af_user_session', userJson);
       }
+      
+      console.log('🔄 [FORM SUBMIT] Redirecting to /');
       window.location.href = '/';
     } catch (err) {
+      console.error('❌ [FORM SUBMIT] Catch block triggered:', err.message);
+      console.error('  - Error stack:', err.stack);
       setErrors({ password: err.message });
     } finally {
+      console.log('✅ [FORM SUBMIT] Finally block, setting loading=false');
       setLoading(false);
     }
   };
