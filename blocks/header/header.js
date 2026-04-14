@@ -1000,3 +1000,4 @@ export default async function decorate(block) {
     console.error('Failed to load global footer', e);
   }
 }
+
