@@ -241,3 +241,51 @@ export const DotsIcon = ({ size = 14 } = {}) => html`
     <circle cx="12" cy="12" r="2"/>
     <circle cx="19" cy="12" r="2"/>
   </svg>`;
+
+export const FolderPlusIcon = ({ size = 13 } = {}) => html`
+  <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    <line x1="12" y1="11" x2="12" y2="17"/>
+    <line x1="9" y1="14" x2="15" y2="14"/>
+  </svg>`;
+
+export const EmptyBoxIcon = () => html`
+  <svg viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 36C12 30.5 16.5 26 22 26H72L90 44H158C163.5 44 168 48.5 168 54V114C168 119.5 163.5 124 158 124H22C16.5 124 12 119.5 12 114V36Z" fill="#FFF3E0"/>
+    <path d="M12 68H168V114C168 119.5 163.5 124 158 124H22C16.5 124 12 119.5 12 114V68Z" fill="#FFB300" opacity="0.12"/>
+    <circle cx="90" cy="86" r="22" fill="#FFE082" opacity="0.5"/>
+    <path d="M82 86H98M90 78V94" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+
+/* ── Header / Notifications Status Badges ────────────────────────────────────── */
+
+export const ApprovedBadgeIcon = ({ color = COLOR_TOKENS.success, size = 12 } = {}) => html`
+  <svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+    <circle cx="8" cy="8" r="8" fill="${color}"/>
+    <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+export const ChangesBadgeIcon = ({ color = COLOR_TOKENS.warning, size = 12 } = {}) => html`
+  <svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+    <circle cx="8" cy="8" r="8" fill="${color}"/>
+    <path d="M8 4.5V8.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="8" cy="11" r="0.9" fill="${COLOR_TOKENS.white}"/>
+  </svg>`;
+
+export const PendingReviewBadgeIcon = ({ infoColor = COLOR_TOKENS.info, infoSurfaceColor = COLOR_TOKENS.infoSurface, size = 12 } = {}) => html`
+  <svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+    <circle cx="8" cy="8" r="7.25" stroke="${infoColor}" stroke-width="1.5" fill="${infoSurfaceColor}"/>
+    <path d="M8 4.5V8l2.5 2" stroke="${infoColor}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+export const LikeBadgeIcon = ({ color = COLOR_TOKENS.accent, size = 12 } = {}) => html`
+  <svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;">
+    <path d="M8 13.2 3.7 9.3a2.7 2.7 0 0 1 0-3.9 2.7 2.7 0 0 1 3.8 0L8 5.9l0.5-0.5a2.7 2.7 0 0 1 3.8 0 2.7 2.7 0 0 1 0 3.9L8 13.2Z" fill="${color}"/>
+  </svg>`;
+
+export const SessionWarningIcon = ({ size = 16 } = {}) => html`
+  <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>`;

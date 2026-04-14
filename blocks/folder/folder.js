@@ -2,6 +2,10 @@ import { html, render } from '../../vendor/htm-preact.js';
 import {
   useState, useRef, useEffect, useCallback, useMemo,
 } from '../../vendor/preact-hooks.js';
+import {
+  CloseIcon, BackIcon, SearchIcon, PlusIcon, DotsIcon, EditIcon, TrashIcon,
+  FolderPlusIcon, EmptyBoxIcon,
+} from '../../scripts/utils/icons.js';
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -90,24 +94,6 @@ const isOwner = (node, currentUser) => {
   // eslint-disable-next-line no-underscore-dangle
   return node.createdBy === String(currentUser._id || currentUser.id);
 };
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
-const IcoClose = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-const IcoBack = () => html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
-const IcoSearch = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-const IcoPlus = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-const IcoDots = () => html`<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
-const IcoEdit = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-const IcoTrash = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
-const IcoFolderPlus = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`;
-const IcoEmptyBox = () => html`
-  <svg viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 36C12 30.5 16.5 26 22 26H72L90 44H158C163.5 44 168 48.5 168 54V114C168 119.5 163.5 124 158 124H22C16.5 124 12 119.5 12 114V36Z" fill="#FFF3E0"/>
-    <path d="M12 68H168V114C168 119.5 163.5 124 158 124H22C16.5 124 12 119.5 12 114V68Z" fill="#FFB300" opacity="0.12"/>
-    <circle cx="90" cy="86" r="22" fill="#FFE082" opacity="0.5"/>
-    <path d="M82 86H98M90 78V94" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
-  </svg>`;
 
 // ─── Spectrum Alert Dialog (mirrors sidebar's SpectrumAlertDialog) ─────────────
 
@@ -249,19 +235,19 @@ function CtxMenu({
         disabled=${subAtLimit}
         title=${subAtLimit ? `Maximum of ${MAX_DEPTH} subfolders reached` : ''}
         onClick=${() => { if (!subAtLimit) { onAddSub(node); onClose(); } }}>
-        <${IcoFolderPlus}/> Add Subfolder
+        <${FolderPlusIcon}/> Add Subfolder
         ${subAtLimit && html`<span class="fm-ctx-limit"> (limit reached)</span>`}
       </button>
       ${canRename && html`
         <button type="button" class="fm-ctx-btn"
           onClick=${() => { onRename(node); onClose(); }}>
-          <${IcoEdit}/> Rename
+          <${EditIcon}/> Rename
         </button>`}
       ${canDelete && html`
         <div class="fm-ctx-divider"></div>
         <button type="button" class="fm-ctx-btn fm-ctx-btn--danger"
           onClick=${() => { onDelete(node); onClose(); }}>
-          <${IcoTrash}/> Delete
+          <${TrashIcon}/> Delete
         </button>`}
     </div>`;
 }
@@ -270,7 +256,7 @@ function CtxMenu({
 
 function SearchResults({ results, onNavigate }) {
   if (results.length === 0) {
-    return html`<div class="fm-search-empty"><${IcoSearch}/><p>No folders found</p></div>`;
+    return html`<div class="fm-search-empty"><${SearchIcon}/><p>No folders found</p></div>`;
   }
   return html`
     <div class="fm-search-results">
@@ -345,7 +331,7 @@ function GridPanel({
     <div class="fm-panel" onClick=${() => onSelect(null)}>
       ${empty && html`
         <div class="fm-empty">
-          <${IcoEmptyBox}/>
+          <${EmptyBoxIcon}/>
           <p>${isRoot ? 'No folders yet' : 'Empty folder'}</p>
           <span>${emptyHint}</span>
         </div>`}
@@ -396,7 +382,7 @@ function GridPanel({
               ${currentUser && html`
                 <button type="button" class="fm-tile-dots"
                   onClick=${(e) => { e.stopPropagation(); onCtx(e, node); }}
-                  title="More options"><${IcoDots}/></button>`}
+                  title="More options"><${DotsIcon}/></button>`}
             </div>`;
   })}
         ${adding && html`
@@ -697,7 +683,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         <div class="fm-header">
           <div class="fm-nav">
             ${!isRoot && !isSearching && html`
-              <button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
+              <button type="button" class="fm-back" onClick=${goBack}><${BackIcon}/></button>`}
             <div class="fm-breadcrumb" ref=${breadcrumbRef}>
               <button type="button"
                 class=${`fm-crumb${isRoot && !showSelectedCrumb && !isSearching ? ' fm-crumb--cur' : ''}`}
@@ -719,7 +705,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
             <div class="fm-actions">
               <button type="button" class="fm-btn"
                 onClick=${() => { setAdding(true); setRenamingId(null); setSearchQ(''); }}>
-                <${IcoPlus}/> Add Folder
+                <${PlusIcon}/> Add Folder
               </button>
             </div>`}
           <button type="button" class="fm-close" onClick=${onClose}>
@@ -730,13 +716,13 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         </div>
 
         <div class="fm-search-bar">
-          <span class="fm-search-ico"><${IcoSearch}/></span>
+          <span class="fm-search-ico"><${SearchIcon}/></span>
           <input type="text" class="fm-search-input" placeholder="Search folders…"
             value=${searchQ} onInput=${(e) => setSearchQ(e.target.value)}
             onClick=${(e) => e.stopPropagation()}/>
           ${isSearching && html`
             <button type="button" class="fm-search-clear" onClick=${() => setSearchQ('')}>
-              <${IcoClose}/>
+              <${CloseIcon}/>
             </button>`}
         </div>
 
@@ -749,7 +735,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               ${folderError}
-              <button type="button" class="fm-folder-error-close"><${IcoClose}/></button>
+              <button type="button" class="fm-folder-error-close"><${CloseIcon}/></button>
             </div>`}
 
           ${loading && !treeCache.current && html`

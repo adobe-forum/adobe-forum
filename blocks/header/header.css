@@ -26,8 +26,8 @@ body.pp-scroll-lock {
   --status-pending-border: var(--color-info);
   --status-pending-badge: var(--color-info-badge);
   --status-pending-badge-text: var(--color-text-info-strong);
-  --status-like-bg: #fff0f1;
-  --status-like-border: #da1f26;
+  --status-like-bg: var(--color-accent-soft-alt);
+  --status-like-border: var(--color-accent);
 }
 
 /* Sidebar is in-flow on mobile — no scroll lock needed */

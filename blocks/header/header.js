@@ -3,12 +3,11 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
-import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
 import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
   PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
   UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
-  BellIcon,
+  BellIcon, ApprovedBadgeIcon, ChangesBadgeIcon, PendingReviewBadgeIcon, LikeBadgeIcon, SessionWarningIcon,
 } from '../../scripts/utils/icons.js';
 import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
@@ -558,23 +557,11 @@ function NotificationsDropdown({ onClose }) {
     navigateToPost(postId);
   };
 
-  const approvedIcon = html`
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.success}"/>
-      <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
+  const approvedIcon = html`<${ApprovedBadgeIcon}/>`;
 
-  const changesIcon = html`
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.warning}"/>
-      <path d="M8 4.5V8.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round"/>
-      <circle cx="8" cy="11" r="0.9" fill="${COLOR_TOKENS.white}"/>
-    </svg>`;
+  const changesIcon = html`<${ChangesBadgeIcon}/>`;
 
-  const likeIcon = html`
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <path d="M8 13.2 3.7 9.3a2.7 2.7 0 0 1 0-3.9 2.7 2.7 0 0 1 3.8 0L8 5.9l0.5-0.5a2.7 2.7 0 0 1 3.8 0 2.7 2.7 0 0 1 0 3.9L8 13.2Z" fill="#da1f26"/>
-    </svg>`;
+  const likeIcon = html`<${LikeBadgeIcon}/>`;
 
   return html`
     <div class="pd-dropdown nd-dropdown" role="menu" aria-label="Notifications menu">
@@ -599,10 +586,7 @@ function NotificationsDropdown({ onClose }) {
               <li role="none" class="nd-tl-row">
                 <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId, rId)}>
                   <span class="nd-pill-row">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-                      <circle cx="8" cy="8" r="7.25" stroke="${COLOR_TOKENS.info}" stroke-width="1.5" fill="${COLOR_TOKENS.infoSurface}"/>
-                      <path d="M8 4.5V8l2.5 2" stroke="${COLOR_TOKENS.info}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                    <${PendingReviewBadgeIcon}/>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
                   <span class="nd-tl-title"><span class="nd-tl-title-text">${postTitle}</span><span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
@@ -907,10 +891,7 @@ function HeaderComponent() {
 
     ${sessionWarning && html`
       <div class="session-warning-banner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
+        <${SessionWarningIcon}/>
         Your session expires in 5 minutes.${' '}
         <button
           type="button"

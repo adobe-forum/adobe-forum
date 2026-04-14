@@ -1,70 +1,3 @@
-/*
- * auth-form.css — Adobe EDS / da.live
- * Spectrum 2 (S2) design system — SSO login card
- *
- * Token audit against @spectrum-css/tokens + spectrum-web-components:
- *
- *  SIZING   (medium scale, desktop)
- *    --spectrum-component-height-100        = 32px   → input, button height
- *    --spectrum-component-height-75         = 24px   → pw-btn touch target
- *    --spectrum-font-size-75                = 11px   → label, hint, help, legal
- *    --spectrum-font-size-100               = 14px   → input, tab, button text
- *    --spectrum-font-size-200               = 16px   → brand name
- *    --spectrum-font-size-300               = 18px   → heading
- *    --spectrum-spacing-100                 = 4px
- *    --spectrum-spacing-200                 = 8px
- *    --spectrum-spacing-300                 = 12px
- *    --spectrum-spacing-400                 = 16px
- *    --spectrum-spacing-500                 = 20px
- *    --spectrum-spacing-600                 = 24px
- *    --spectrum-spacing-700                 = 28px
- *    --spectrum-spacing-800                 = 32px
- *    --spectrum-corner-radius-100           = 4px    → input, button, card
- *    --spectrum-border-width-100            = 1px    → input default border
- *    --spectrum-border-width-200            = 2px    → tab underline, button border
- *    --spectrum-component-edge-to-text-100  = 12px   → input padding-inline
- *
- *  COLORS   (light theme — Adobe red accent surface)
- *    --spectrum-gray-50    = #fff      → surfaces
- *    --spectrum-gray-100   = #f5f5f5  → subtle bg
- *    --spectrum-gray-300   = #d5d5d5  → dividers, card border
- *    --spectrum-gray-400   = #b3b3b3  → input default border
- *    --spectrum-gray-500   = #8e8e8e  → placeholders
- *    --spectrum-gray-600   = #6e6e6e  → secondary text
- *    --spectrum-gray-700   = #4b4b4b  → label text
- *    --spectrum-gray-800   = #2c2c2c  → input text, keyfocus border (S2 update)
- *    --spectrum-gray-900   = #1a1a1a  → primary text (S2 uses 1a, not 1d)
- *    --spectrum-accent-900 = #da1f26  → Adobe red — primary actions, tabs, links
- *    --spectrum-accent-1000= #b71418  → button hover
- *    --spectrum-accent-1100= #960f13  → button active/pressed
- *    --spectrum-red-800    = #d7373f  → negative/error
- *    --spectrum-green-800  = #268e6c  → positive/success
- *
- *  FOCUS RINGS  (S2 — red accent surface)
- *    Textfield default focus  → red-900 border (#da1f26) + 2px red ring
- *    Textfield keyfocus (S2)  → gray-800 border (#2c2c2c)   ← S2 change
- *    Button focus             → 2px solid red-900, offset 4px
- *    Link/quiet focus         → 2px solid red-900, offset 2px
- *
- *  FONT WEIGHT
- *    --spectrum-regular-font-weight  = 400
- *    --spectrum-medium-font-weight   = 500
- *    --spectrum-bold-font-weight     = 700
- *
- *  OPACITY
- *    --spectrum-opacity-disabled     = 0.3
- *
- *  ANIMATION
- *    --spectrum-animation-duration-100 = 130ms
- *
- * Hover-isolation strategy:
-
- *   Every interactive element opens with `all: unset !important` so zero
- *   site-level button/input/link styles can bleed in. Properties are then
- *   rebuilt explicitly. Critical box-model props use !important.
- */
-
-/* ── S2 token fallbacks (scoped to overlay so they don't pollute global) ── */
 
 /* ════════════════════════════════════════════════════════════════════════════
    OVERLAY  — S2 token fallbacks + fixed full-viewport layout (single block)
@@ -390,20 +323,6 @@
 
 /* ── Spectrum Textfield input ────────────────────────────────────────────── */
 
-/*
- * S2 Textfield (medium):
- *   height         = 32px  (component-height-100)
- *   padding-inline = 12px  (component-edge-to-text-100)
- *   border         = 1px solid gray-400 (#b3b3b3)
- *   border-radius  = 4px   (corner-radius-100)
- *   font-size      = 14px  (font-size-100)
- *   color          = gray-800 (#2c2c2c)   ← S2 uses 2c not 4b
- *   bg             = gray-50 (#fff)
- *   placeholder    = gray-500 (#8e8e8e)
- *   hover border   = gray-800 (#2c2c2c)  ← S2 spec
- *   focus border   = red-900 (#da1f26) + 2px ring
- *   keyfocus border= gray-800 (#2c2c2c)  ← S2 spec change
- */
 .auth-form-input {
   all: unset !important;
   display: block !important;
@@ -612,14 +531,6 @@
 
 /* ════════════════════════════════════════════════════════════════════════════
    PRIMARY BUTTON — Spectrum Button, accent fill variant
-   S2: border-radius = 4px (corner-radius-100), NOT pill-shaped
-       height        = 32px (component-height-100, medium)
-       font-size     = 14px (font-size-100)
-       font-weight   = 700  (bold)
-       bg            = Adobe red-900 (#da1f26)
-       hover bg      = Adobe red-1000 (#b71418)
-       active bg     = Adobe red-1100 (#960f13)
-       text          = white (#fff) — always
    ════════════════════════════════════════════════════════════════════════════ */
 .auth-form-btn {
   all: unset !important;
@@ -850,12 +761,4 @@
   }
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   RESPONSIVE
-   S2 large scale (mobile/touch): component-height-100 = 40px
-   ════════════════════════════════════════════════════════════════════════════ */
 
-/* ════════════════════════════════════════════════════════════════════════════
-   RESPONSIVE — overrides live in styles/responsive.css
-   xs (≤ 480px): 2-col form → 1-col; sm (≤ 768px): card padding + iOS font fix
-   ════════════════════════════════════════════════════════════════════════════ */
