@@ -26,6 +26,8 @@ body.pp-scroll-lock {
   --status-pending-border: var(--color-info);
   --status-pending-badge: var(--color-info-badge);
   --status-pending-badge-text: var(--color-text-info-strong);
+  --status-like-bg: #fff0f1;
+  --status-like-border: #da1f26;
 }
 
 /* Sidebar is in-flow on mobile — no scroll lock needed */
@@ -1111,6 +1113,11 @@ footer,
   border-left-color: var(--status-changes-border);
 }
 
+.nd-tl-card--like {
+  background: var(--status-like-bg);
+  border-left-color: var(--status-like-border);
+}
+
 /* stylelint-enable selector-class-pattern */
 
 /* Icon + pill inline row */
@@ -1121,14 +1128,37 @@ footer,
   margin-bottom: 2px;
 }
 
+/* approved / changes / pending: title + time on ONE line, time hugs title */
 .nd-tl-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-text-strong);
+  line-height: 1.3;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* shrinks when long (shows ...) but does NOT grow — so time hugs right after */
+.nd-tl-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* like: title only, truncates if long */
+.nd-tl-like-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
   display: block;
 }
 
@@ -1136,13 +1166,35 @@ footer,
   font-size: 10.5px;
   font-weight: 400;
   color: var(--color-text-subtle);
-  margin-left: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
+.nd-tl-time-sep {
+  font-size: 10.5px;
+  color: var(--color-text-subtle);
+  flex-shrink: 0;
+}
+
+/* like meta row: "X liked your post · time" — time hugs after text */
 .nd-tl-meta {
   font-size: 11.5px;
   color: var(--color-text-secondary);
   line-height: 1.3;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* shrinks if long, does NOT grow — time hugs right after */
+.nd-tl-meta-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* ── Small badge pill in header notifications ── */
@@ -1238,9 +1290,18 @@ footer,
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
+  background: transparent;
 
   &:hover {
-    color: var(--color-info-hover);
+    color: var(--color-info);
+    text-decoration: none;
+    background: transparent;
+  }
+
+  &:active,
+  &:focus {
+    background: transparent;
+    outline: none;
   }
 }
 

@@ -1900,18 +1900,26 @@ function CreatePost() {
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
 
-  // Desktop: always full path with / separators
+  // Truncate a single segment: if > 5 chars show first 5 + ellipsis, else as-is
+  const truncSeg = (s) => (s.length > 5 ? `${s.slice(0, 5)}…` : s);
+
+  // Desktop: all segments shown, each capped at 5 chars
   const truncatePath = (path) => {
     if (!path) return '';
-    return path.split(' > ').join(' / ');
+    return path.split(' > ').map(truncSeg).join(' / ');
   };
 
-  // Mobile: First / SecondLast / Last (no ellipsis, just first + last 2)
+  // Mobile: first / … / second-last / last  (each segment also capped at 5 chars)
   const truncatePathMobile = (path) => {
     if (!path) return '';
     const parts = path.split(' > ');
-    if (parts.length <= 2) return parts.join(' / ');
-    return `${parts[0]} / ${parts[parts.length - 2]} / ${parts[parts.length - 1]}`;
+    if (parts.length <= 3) return parts.map(truncSeg).join(' / ');
+    return [
+      truncSeg(parts[0]),
+      '…',
+      truncSeg(parts[parts.length - 2]),
+      truncSeg(parts[parts.length - 1]),
+    ].join(' / ');
   };
 
   // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
