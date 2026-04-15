@@ -3,12 +3,11 @@ import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
-import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
 import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
   PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
   UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
-  BellIcon,
+  BellIcon, ApprovedBadgeIcon, ChangesBadgeIcon, PendingReviewBadgeIcon, LikeBadgeIcon, SessionWarningIcon,
 } from '../../scripts/utils/icons.js';
 import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
@@ -97,7 +96,7 @@ function ChangePasswordView({ userId, onBack, onSuccess }) {
 
   return html`
     <div class="pp-body">
-      <button type="button" class="pp-back" onClick=${onBack}>â† Back to Profile</button>
+      <button type="button" class="pp-back" onClick=${onBack}>← Back to Profile</button>
       <h2 class="pp-section-title">Change Password</h2>
       ${globalErr && html`<div class="pp-msg pp-msg--error"><${AlertIcon}/><span>${globalErr}</span></div>`}
       <${PwField} id="cp-cur" label="Current password" placeholder="Enter current password"
@@ -117,7 +116,7 @@ function ChangePasswordView({ userId, onBack, onSuccess }) {
         <button type="button" class="pp-btn pp-btn--primary${loading ? ' is-loading' : ''}"
           disabled=${loading} onClick=${handleSubmit}>
           <span class="pp-spinner" aria-hidden="true"/>
-          <span class="pp-btn-label">${loading ? 'Savingâ€¦' : 'Update Password'}</span>
+          <span class="pp-btn-label">${loading ? 'Saving…' : 'Update Password'}</span>
         </button>
       </div>
     </div>`;
@@ -221,7 +220,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
           <button type="button" class="pp-btn pp-btn--primary${loading ? ' is-loading' : ''}"
             disabled=${loading} onClick=${handleSave}>
             <span class="pp-spinner" aria-hidden="true"/>
-            <span class="pp-btn-label">${loading ? 'Savingâ€¦' : 'Save Changes'}</span>
+            <span class="pp-btn-label">${loading ? 'Saving…' : 'Save Changes'}</span>
           </button>
         `}
       </div>
@@ -263,7 +262,7 @@ function ProfilePopup({ onClose }) {
   const handleOverlay = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const handleLogout = () => {
-    // Always destroy the server session first â€” otherwise the session cookie
+    // Always destroy the server session first — otherwise the session cookie
     // remains valid and auth-form's getMe() call returns 200, which immediately
     // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
@@ -331,7 +330,7 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
   }, [onClose]);
 
   const handleLogout = () => {
-    // Always destroy the server session first â€” otherwise the session cookie
+    // Always destroy the server session first — otherwise the session cookie
     // remains valid and auth-form's getMe() call returns 200, which immediately
     // redirects back to '/' causing a redirect loop.
     fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' })
@@ -429,10 +428,10 @@ function NotificationsDropdown({ onClose }) {
         }
 
         // Author side: use author-notifications as the primary source for
-        // both approved AND changes_requested â€” it is the authoritative
+        // both approved AND changes_requested — it is the authoritative
         // dismissed/undismissed list maintained by the backend.
         // CRITICAL: only show notifications where the post's authorId matches
-        // the current logged-in user â€” prevents reviewer accounts from seeing
+        // the current logged-in user — prevents reviewer accounts from seeing
         // author-side notifications that belong to someone else.
         // my-requests is kept as a fallback only when author-notifications fails.
         if (notifRes.success && notifRes.reviews) {
@@ -466,10 +465,18 @@ function NotificationsDropdown({ onClose }) {
             .forEach((notification) => combined.push({ type: 'post_like', data: notification }));
         }
 
+        // Drop notifications older than 30 days (client-side TTL)
+        const TTL_MS = 30 * 24 * 60 * 60 * 1000;
+        const filtered = combined.filter((item) => {
+          const date = item.data.updatedAt || item.data.createdAt;
+          if (!date) return true;
+          return Date.now() - new Date(date).getTime() <= TTL_MS;
+        });
+
         // sort by most recent updatedAt/createdAt
-        combined.sort((a, b) => new Date(b.data.updatedAt || b.data.createdAt)
+        filtered.sort((a, b) => new Date(b.data.updatedAt || b.data.createdAt)
           - new Date(a.data.updatedAt || a.data.createdAt));
-        setItems(combined);
+        setItems(filtered);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to fetch notifications', err);
@@ -499,7 +506,7 @@ function NotificationsDropdown({ onClose }) {
       window.location.href = `/?post=${encodeURIComponent(postId)}`;
       return;
     }
-    // Already on home page â€” same DOM + event pattern as sidebar
+    // Already on home page — same DOM + event pattern as sidebar
     navigateToPostRoute(postId, { source: 'header-notification' });
   };
 
@@ -550,23 +557,11 @@ function NotificationsDropdown({ onClose }) {
     navigateToPost(postId);
   };
 
-  const approvedIcon = html`
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.success}"/>
-      <polyline points="4.5,8.5 7,11 11.5,5.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
+  const approvedIcon = html`<${ApprovedBadgeIcon}/>`;
 
-  const changesIcon = html`
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <circle cx="8" cy="8" r="8" fill="${COLOR_TOKENS.warning}"/>
-      <path d="M8 4.5V8.5" stroke="${COLOR_TOKENS.white}" stroke-width="1.8" stroke-linecap="round"/>
-      <circle cx="8" cy="11" r="0.9" fill="${COLOR_TOKENS.white}"/>
-    </svg>`;
+  const changesIcon = html`<${ChangesBadgeIcon}/>`;
 
-  const likeIcon = html`
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-      <path d="M8 13.2 3.7 9.3a2.7 2.7 0 0 1 0-3.9 2.7 2.7 0 0 1 3.8 0L8 5.9l0.5-0.5a2.7 2.7 0 0 1 3.8 0 2.7 2.7 0 0 1 0 3.9L8 13.2Z" fill="#da1f26"/>
-    </svg>`;
+  const likeIcon = html`<${LikeBadgeIcon}/>`;
 
   return html`
     <div class="pd-dropdown nd-dropdown" role="menu" aria-label="Notifications menu">
@@ -586,21 +581,15 @@ function NotificationsDropdown({ onClose }) {
       const pId = getId(r.postId);
       const rId = getId(r); // eslint-disable-line no-underscore-dangle
       const postTitle = getTitle(r.postId) || 'Untitled Post';
-      const authorFirst = getFirstName(r.authorId);
-      const authorLast = getLastName(r.authorId);
       const timeAgo = formatTimeAgo(r.updatedAt);
       return html`
               <li role="none" class="nd-tl-row">
                 <a href="#" class="nd-tl-card nd-tl-card--pending" role="menuitem" onClick=${(e) => handlePendingClick(e, pId, rId)}>
                   <span class="nd-pill-row">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0">
-                      <circle cx="8" cy="8" r="7.25" stroke="${COLOR_TOKENS.info}" stroke-width="1.5" fill="${COLOR_TOKENS.infoSurface}"/>
-                      <path d="M8 4.5V8l2.5 2" stroke="${COLOR_TOKENS.info}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                    <${PendingReviewBadgeIcon}/>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> Â· ${timeAgo}</span></span>
-                  <span class="nd-tl-meta">Requested by ${authorFirst} ${authorLast}</span>
+                  <span class="nd-tl-title"><span class="nd-tl-title-text">${postTitle}</span><span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
@@ -622,7 +611,7 @@ function NotificationsDropdown({ onClose }) {
                     ${statusIcon}
                     <span class="nd-pill ${pillClass}">${pillLabel}</span>
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> Â· ${timeAgo}</span></span>
+                  <span class="nd-tl-title"><span class="nd-tl-title-text">${postTitle}</span><span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
@@ -635,12 +624,12 @@ function NotificationsDropdown({ onClose }) {
       const timeAgo = formatTimeAgo(n.createdAt);
       return html`
               <li role="none" class="nd-tl-row">
-                <a href="#" class="nd-tl-card" role="menuitem" onClick=${(e) => handlePostNotificationClick(e, pId, nId)}>
+                <a href="#" class="nd-tl-card nd-tl-card--like" role="menuitem" onClick=${(e) => handlePostNotificationClick(e, pId, nId)}>
                   <span class="nd-pill-row">
                     ${likeIcon}
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
-                  <span class="nd-tl-meta">${actorName} liked your post</span>
+                  <span class="nd-tl-like-title">${postTitle}</span>
+                  <span class="nd-tl-meta"><span class="nd-tl-meta-text">${actorName} liked your post</span><span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
@@ -732,11 +721,11 @@ function HeaderComponent() {
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
   }, []);
 
-  // â”€â”€ Session timeout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Session timeout ─────────────────────────────────────────────────────
   // Reads loginAt from /me (authoritative) or localStorage (fallback).
   // At 25 min: show warning banner. At 30 min: logout and redirect.
   // The effect re-runs whenever the stored user changes so timers are
-  // always anchored to the current loginAt â€” not a stale captured value.
+  // always anchored to the current loginAt — not a stale captured value.
   useEffect(() => {
     const SESSION_MS = 30 * 60 * 1000; // 30 min
     const WARNING_MS = 5 * 60 * 1000; //  5 min before logout = 25 min mark
@@ -748,7 +737,7 @@ function HeaderComponent() {
       try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
     })();
 
-    // No user in localStorage at all â€” nothing to time out, don't touch session
+    // No user in localStorage at all — nothing to time out, don't touch session
     if (!storedUser) return () => { };
 
     const doLogout = () => {
@@ -779,7 +768,7 @@ function HeaderComponent() {
       const elapsed = now - loginAt;
       const remaining = SESSION_MS - elapsed;
 
-      // loginAt is in the future or wildly wrong â€” treat as fresh login
+      // loginAt is in the future or wildly wrong — treat as fresh login
       const safeRemaining = (remaining > SESSION_MS || remaining < 0) ? SESSION_MS : remaining;
 
       if (safeRemaining <= 0) {
@@ -789,7 +778,7 @@ function HeaderComponent() {
 
       const warnIn = safeRemaining - WARNING_MS;
       if (warnIn <= 0) {
-        // Already past the 25-min mark â€” show warning immediately
+        // Already past the 25-min mark — show warning immediately
         setSessionWarning(true);
       } else {
         warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
@@ -798,16 +787,16 @@ function HeaderComponent() {
     };
 
     // Ask the server for the authoritative loginAt from the session store.
-    // 200 â†’ schedule from server loginAt (most accurate).
-    // 401 â†’ session gone, clear stale client auth and redirect once.
-    // network error â†’ fall back to localStorage loginAt, do NOT logout.
+    // 200 → schedule from server loginAt (most accurate).
+    // 401 → session gone, clear stale client auth and redirect once.
+    // network error → fall back to localStorage loginAt, do NOT logout.
     fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
       .then((r) => {
         if (r.status === 401) {
           handleUnauthorized();
           return null;
         }
-        if (!r.ok) return null; // other server error â€” skip, don't logout
+        if (!r.ok) return null; // other server error — skip, don't logout
         return r.json();
       })
       .then((data) => {
@@ -821,12 +810,12 @@ function HeaderComponent() {
           } catch { /* ignore */ }
           scheduleTimers(serverLoginAt);
         } else {
-          // Session alive but loginAt missing â€” fall back to localStorage
+          // Session alive but loginAt missing — fall back to localStorage
           scheduleTimers(storedUser.loginAt || Date.now());
         }
       })
       .catch(() => {
-        // Network error â€” keep the user logged in, schedule from localStorage
+        // Network error — keep the user logged in, schedule from localStorage
         if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
       });
 
@@ -902,10 +891,7 @@ function HeaderComponent() {
 
     ${sessionWarning && html`
       <div class="session-warning-banner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
+        <${SessionWarningIcon}/>
         Your session expires in 5 minutes.${' '}
         <button
           type="button"
@@ -913,7 +899,7 @@ function HeaderComponent() {
           onClick=${handleSessionRelogin}
         >Log in again</button>${' '}
         to stay signed in.
-        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>âœ•</button>
+        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>×</button>
       </div>`}`;
 }
 

@@ -1,23 +1,43 @@
 import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
-import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 import renderTabbedCodeBlocks from '../../scripts/code-tabs.js';
 
 const html = htm.bind(h);
 
-// Lazy-load folder block via AEM infrastructure (once)
+// Lazy-load folder modal directly (once)
 let folderReady = false;
 
 async function ensureFolder() {
   if (folderReady) return;
-  const wrapper = document.createElement('div');
-  const block = document.createElement('div');
-  block.classList.add('folder');
-  wrapper.appendChild(block);
-  document.body.appendChild(wrapper);
-  decorateBlock(block);
-  await loadBlock(block);
+
+  // Reuse existing mount if already in DOM
+  let folderMount = document.getElementById('folder-modal-root');
+  if (!folderMount) {
+    folderMount = document.createElement('div');
+    folderMount.id = 'folder-modal-root';
+    // Must have the block class so folder.js decorate() recognises it
+    folderMount.classList.add('folder', 'block');
+    document.body.appendChild(folderMount);
+  }
+
+  // Load CSS once
+  if (!document.head.querySelector('link[href*="folder.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/blocks/folder/folder.css';
+    document.head.appendChild(link);
+  }
+
+  // Dynamic import and render into the block element
+  try {
+    const { default: decorateFolder } = await import('../folder/folder.js');
+    decorateFolder(folderMount);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load folder modal:', err);
+  }
+
   folderReady = true;
 }
 
@@ -1544,7 +1564,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
       <div className="tags-field">
         <div className="tags-input-container">
           ${tags.map((tag) => html`
-            <span key=${tag} className="tag-chip">
+            <div key=${tag} className="tag-chip">
               ${tag}
               <button
                 type="button"
@@ -1554,7 +1574,7 @@ function TagsInput({ tags, onTagsChange, maxTags = 5 }) {
               >
                 ×
               </button>
-            </span>
+            </div>
           `)}
           <input
             ref=${inputRef}
@@ -1845,6 +1865,17 @@ function CreatePost() {
   const [showReviewerPicker, setShowReviewerPicker] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Pre-warm the folder block on mount so first click opens instantly
+  useEffect(() => { ensureFolder(); }, []);
+
+  // Track window width so path display updates on resize/orientation change
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const showToast = (message, type = 'success', onConfirm = null) => {
     setToast({ message, type, onConfirm });
     if (!onConfirm) {
@@ -1888,6 +1919,28 @@ function CreatePost() {
     window.addEventListener('folder:selected', onSelected);
     return () => window.removeEventListener('folder:selected', onSelected);
   }, []);
+
+  // Truncate a single segment: if > 5 chars show first 5 + ellipsis, else as-is
+  const truncSeg = (s) => (s.length > 5 ? `${s.slice(0, 5)}…` : s);
+
+  // Desktop: all segments shown, each capped at 5 chars
+  const truncatePath = (path) => {
+    if (!path) return '';
+    return path.split(' > ').map(truncSeg).join(' / ');
+  };
+
+  // Mobile: first / … / second-last / last  (each segment also capped at 5 chars)
+  const truncatePathMobile = (path) => {
+    if (!path) return '';
+    const parts = path.split(' > ');
+    if (parts.length <= 3) return parts.map(truncSeg).join(' / ');
+    return [
+      truncSeg(parts[0]),
+      '…',
+      truncSeg(parts[parts.length - 2]),
+      truncSeg(parts[parts.length - 1]),
+    ].join(' / ');
+  };
 
   // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
   useEffect(() => {
@@ -2066,14 +2119,16 @@ function CreatePost() {
               <div className="cp-category-field">
                 ${category ? html`
                   <div className="cp-category-selected">
-                    <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0;color:#6b6b6b">
+                    <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor" style="flex-shrink:0">
                       <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>
                     </svg>
-                    <span className="cp-category-value">${category}</span>
+                    <span className="cp-category-value" title=${category}>
+                      ${windowWidth < 768 ? truncatePathMobile(category) : truncatePath(category)}
+                    </span>
                     <button
                       type="button"
                       className="cp-category-clear"
-                      onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); setCategory(''); }}
+                      onClick=${(e) => { e.preventDefault(); e.stopPropagation(); setCategory(''); }}
                       aria-label="Clear category"
                     >×</button>
                   </div>
@@ -2081,7 +2136,7 @@ function CreatePost() {
                 <button
                   type="button"
                   className="cp-folder-btn"
-                  onMouseDown=${(e) => { e.preventDefault(); e.stopPropagation(); openFolder(); }}
+                  onClick=${(e) => { e.stopPropagation(); openFolder(); }}
                 >
                   <svg width="14" height="14" viewBox="0 0 18 18" fill="currentColor">
                     <path d="M16 6H9L7 4H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>

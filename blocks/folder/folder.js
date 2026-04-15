@@ -3,11 +3,11 @@ import {
   useState, useRef, useEffect, useCallback, useMemo,
 } from '../../vendor/preact-hooks.js';
 import {
-  CloseIcon as IcoClose, BackIcon as IcoBack, SearchIcon as IcoSearch,
-  PlusIcon as IcoPlus, DotsIcon as IcoDots, EditIcon as IcoEdit,
-  TrashIcon as IcoTrash,
+  CloseIcon, BackIcon, SearchIcon, PlusIcon, DotsIcon, EditIcon, TrashIcon,
+  FolderPlusIcon, EmptyBoxIcon,
 } from '../../scripts/utils/icons.js';
-import { API_BASE } from '../../scripts/utils/constants.js';
+
+const API_BASE = 'http://localhost:5000/api';
 
 const MAX_DEPTH = 10; // max folder nesting depth (breadcrumb levels, root = level 1)
 
@@ -94,17 +94,6 @@ const isOwner = (node, currentUser) => {
   // eslint-disable-next-line no-underscore-dangle
   return node.createdBy === String(currentUser._id || currentUser.id);
 };
-
-// ─── Local icons (folder-specific, not in shared icons.js) ───────────────────
-// eslint-disable-next-line max-len
-const IcoFolderPlus = () => html`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`;
-const IcoEmptyBox = () => html`
-  <svg viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 36C12 30.5 16.5 26 22 26H72L90 44H158C163.5 44 168 48.5 168 54V114C168 119.5 163.5 124 158 124H22C16.5 124 12 119.5 12 114V36Z" fill="#FFF3E0"/>
-    <path d="M12 68H168V114C168 119.5 163.5 124 158 124H22C16.5 124 12 119.5 12 114V68Z" fill="#FFB300" opacity="0.12"/>
-    <circle cx="90" cy="86" r="22" fill="#FFE082" opacity="0.5"/>
-    <path d="M82 86H98M90 78V94" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
-  </svg>`;
 
 // ─── Spectrum Alert Dialog (mirrors sidebar's SpectrumAlertDialog) ─────────────
 
@@ -231,9 +220,9 @@ function CtxMenu({
   // Subfolder count for Add Subfolder limit check
   const subAtLimit = nodeDepth >= MAX_DEPTH - 1;
 
-  // Rename: only owner, not category root
-  const canRename = !node.isCategoryRoot && isOwner(node, currentUser);
-  // Delete: only owner
+  // Rename: only owner (now applies to all folders including category root)
+  const canRename = isOwner(node, currentUser);
+  // Delete: only owner (now applies to all folders including category root)
   const canDelete = isOwner(node, currentUser);
 
   const left = x + 170 > window.innerWidth ? x - 170 : x;
@@ -246,19 +235,19 @@ function CtxMenu({
         disabled=${subAtLimit}
         title=${subAtLimit ? `Maximum of ${MAX_DEPTH} subfolders reached` : ''}
         onClick=${() => { if (!subAtLimit) { onAddSub(node); onClose(); } }}>
-        <${IcoFolderPlus}/> Add Subfolder
+        <${FolderPlusIcon}/> Add Subfolder
         ${subAtLimit && html`<span class="fm-ctx-limit"> (limit reached)</span>`}
       </button>
       ${canRename && html`
         <button type="button" class="fm-ctx-btn"
           onClick=${() => { onRename(node); onClose(); }}>
-          <${IcoEdit}/> Rename
+          <${EditIcon}/> Rename
         </button>`}
       ${canDelete && html`
         <div class="fm-ctx-divider"></div>
         <button type="button" class="fm-ctx-btn fm-ctx-btn--danger"
           onClick=${() => { onDelete(node); onClose(); }}>
-          <${IcoTrash}/> Delete
+          <${TrashIcon}/> Delete
         </button>`}
     </div>`;
 }
@@ -267,7 +256,7 @@ function CtxMenu({
 
 function SearchResults({ results, onNavigate }) {
   if (results.length === 0) {
-    return html`<div class="fm-search-empty"><${IcoSearch}/><p>No folders found</p></div>`;
+    return html`<div class="fm-search-empty"><${SearchIcon}/><p>No folders found</p></div>`;
   }
   return html`
     <div class="fm-search-results">
@@ -342,7 +331,7 @@ function GridPanel({
     <div class="fm-panel" onClick=${() => onSelect(null)}>
       ${empty && html`
         <div class="fm-empty">
-          <${IcoEmptyBox}/>
+          <${EmptyBoxIcon}/>
           <p>${isRoot ? 'No folders yet' : 'Empty folder'}</p>
           <span>${emptyHint}</span>
         </div>`}
@@ -360,12 +349,12 @@ function GridPanel({
               onClick=${(e) => {
     e.stopPropagation();
     if (isTouchDevice.current) {
-      // On touch: first tap selects, second tap opens
       if (sel) { onOpen(node); } else { onSelect(node.id); }
     } else {
       onSelect(node.id);
     }
   }}
+              onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
               onDblClick=${(e) => { e.stopPropagation(); onOpen(node); }}
               onKeyDown=${(e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(node); }
@@ -393,7 +382,7 @@ function GridPanel({
               ${currentUser && html`
                 <button type="button" class="fm-tile-dots"
                   onClick=${(e) => { e.stopPropagation(); onCtx(e, node); }}
-                  title="More options"><${IcoDots}/></button>`}
+                  title="More options"><${DotsIcon}/></button>`}
             </div>`;
   })}
         ${adding && html`
@@ -438,10 +427,19 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const [ctx, setCtx] = useState(null);
   const [folderError, setFolderError] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(null); // REQ 6: Spectrum dialog
+  const [deleteError, setDeleteError] = useState(null);
   // REQ 2: session-based current user (same as sidebar)
   const [currentUser, setCurrentUser] = useState(null);
   // REQ 7: in-memory cache so re-opens are instant
   const treeCache = useRef(null);
+  const breadcrumbRef = useRef(null);
+
+  // Scroll breadcrumb to the right whenever stack changes (show current crumb)
+  useEffect(() => {
+    if (breadcrumbRef.current) {
+      breadcrumbRef.current.scrollLeft = breadcrumbRef.current.scrollWidth;
+    }
+  }, [stack, selected]);
 
   // Mirror sidebar's fetchCurrentUser pattern
   useEffect(() => {
@@ -593,16 +591,19 @@ function FolderModal({ isOpen, onClose, onSelect }) {
     }
   };
 
-  // REQ 5: Rename subfolder
+  // REQ 5: Rename folder (now includes category root)
   const handleCommitRename = async (node, name) => {
     setRenamingId(null);
-    if (node.isCategoryRoot || name === node.name) return;
+    if (name === node.name) return;
     try {
-      const res = await fetch(`${API_BASE}/sidebar-items/${node.id}`, {
+      const url = node.isCategoryRoot
+        ? `${API_BASE}/sidebar/categories/${node.id}`
+        : `${API_BASE}/sidebar-items/${node.id}`;
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title: name }),
+        body: JSON.stringify({ name }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -621,53 +622,33 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   // REQ 6: opens Spectrum dialog (not window.confirm)
   // Walks a node's children recursively to find the first item (file or subfolder)
   // not owned by currentUser
-  const findBlockingChild = useCallback((node, user) => {
-    const children = node.children || [];
-    for (let i = 0; i < children.length; i += 1) {
-      const child = children[i];
-      if (!isOwner(child, user)) return child; // files and folders both checked
-      if (child.isFolder) {
-        const nested = findBlockingChild(child, user);
-        if (nested) return nested;
-      }
-    }
-    return null;
-  }, []);
-
-  // Show "Are you sure?" first — blocker check happens on confirm
+  // Show "Are you sure?" first — server enforces all blocking rules on confirm
   const handleDelete = (node) => setDeleteDialog(node);
 
   const confirmDelete = async () => {
+    if (!deleteDialog) return;
     const node = deleteDialog;
     setDeleteDialog(null);
-    if (!node || node.blocked) return;
-
-    // After user confirms, check if any descendant is owned by another user
-    const blocker = findBlockingChild(node, currentUser);
-    if (blocker) {
-      setFolderError(null);
-      setDeleteDialog({
-        blocked: true,
-        blockerName: blocker.name,
-        blockerType: blocker.isFolder ? 'subfolder' : 'file',
-        parentName: node.name,
-      });
-      return;
-    }
-
+    setDeleteError(null);
     try {
       const url = node.isCategoryRoot
         ? `${API_BASE}/sidebar/categories/${node.id}`
         : `${API_BASE}/sidebar-items/${node.id}`;
-      await fetch(url, { method: 'DELETE', credentials: 'include' });
-      if (selected === node.id) setSelected(null);
-      if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
-      treeCache.current = null;
-      await fetchFolders(true);
-      window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+      const response = await fetch(url, { method: 'DELETE', credentials: 'include' });
+      const data = await response.json();
+      if (data.success) {
+        if (selected === node.id) setSelected(null);
+        if (stack.includes(node.id)) setStack(stack.slice(0, stack.indexOf(node.id)));
+        treeCache.current = null;
+        await fetchFolders(true);
+        window.dispatchEvent(new CustomEvent('refresh-sidebar'));
+      } else {
+        setDeleteError(data.error || 'Delete failed.');
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Delete failed:', err);
+      setDeleteError('Network error. Please try again.');
     }
   };
 
@@ -695,15 +676,15 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const addAtLimit = depthAtLimit;
 
   return html`
-    <div class=${`fm-overlay${visible && isOpen ? ' fm-overlay--in' : ''}`}
+    <div class=${`fm-overlay${visible && isOpen ? ' fm-overlay-in' : ''}`}
       onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="fm-modal" onClick=${() => { setCtx(null); }}>
 
         <div class="fm-header">
           <div class="fm-nav">
             ${!isRoot && !isSearching && html`
-              <button type="button" class="fm-back" onClick=${goBack}><${IcoBack}/></button>`}
-            <div class="fm-breadcrumb">
+              <button type="button" class="fm-back" onClick=${goBack}><${BackIcon}/></button>`}
+            <div class="fm-breadcrumb" ref=${breadcrumbRef}>
               <button type="button"
                 class=${`fm-crumb${isRoot && !showSelectedCrumb && !isSearching ? ' fm-crumb--cur' : ''}`}
                 onClick=${goRoot}>Folders</button>
@@ -724,7 +705,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
             <div class="fm-actions">
               <button type="button" class="fm-btn"
                 onClick=${() => { setAdding(true); setRenamingId(null); setSearchQ(''); }}>
-                <${IcoPlus}/> Add Folder
+                <${PlusIcon}/> Add Folder
               </button>
             </div>`}
           <button type="button" class="fm-close" onClick=${onClose}>
@@ -735,13 +716,13 @@ function FolderModal({ isOpen, onClose, onSelect }) {
         </div>
 
         <div class="fm-search-bar">
-          <span class="fm-search-ico"><${IcoSearch}/></span>
+          <span class="fm-search-ico"><${SearchIcon}/></span>
           <input type="text" class="fm-search-input" placeholder="Search folders…"
             value=${searchQ} onInput=${(e) => setSearchQ(e.target.value)}
             onClick=${(e) => e.stopPropagation()}/>
           ${isSearching && html`
             <button type="button" class="fm-search-clear" onClick=${() => setSearchQ('')}>
-              <${IcoClose}/>
+              <${CloseIcon}/>
             </button>`}
         </div>
 
@@ -754,7 +735,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               ${folderError}
-              <button type="button" class="fm-folder-error-close"><${IcoClose}/></button>
+              <button type="button" class="fm-folder-error-close"><${CloseIcon}/></button>
             </div>`}
 
           ${loading && !treeCache.current && html`
@@ -815,20 +796,21 @@ function FolderModal({ isOpen, onClose, onSelect }) {
           onClose=${() => setCtx(null)}/>`}
 
       <${SpectrumAlertDialog}
-        isOpen=${!!(deleteDialog && !deleteDialog.blocked)}
+        isOpen=${!!deleteDialog}
         title="Delete Folder"
-        message=${deleteDialog && !deleteDialog.blocked ? `Are you sure you want to delete "${deleteDialog.name}"? This action cannot be undone.` : ''}
+        message=${`Are you sure you want to delete "${deleteDialog ? deleteDialog.name : ''}"? This action cannot be undone.`}
         confirmLabel="Delete"
         onConfirm=${confirmDelete}
         onCancel=${() => setDeleteDialog(null)}
       />
+
       <${SpectrumAlertDialog}
-        isOpen=${!!(deleteDialog && deleteDialog.blocked)}
+        isOpen=${!!deleteError}
         title="Cannot Delete"
-        message=${deleteDialog && deleteDialog.blocked ? `Cannot delete: "${deleteDialog.blockerName}" ${deleteDialog.blockerType === 'file' ? '(a file)' : '(a subfolder)'} in this folder was created by another user. Ask them to remove it first.` : ''}
+        message=${deleteError || ''}
         confirmLabel="OK"
-        onConfirm=${() => setDeleteDialog(null)}
-        onCancel=${() => setDeleteDialog(null)}
+        onConfirm=${() => setDeleteError(null)}
+        onCancel=${() => setDeleteError(null)}
       />
     </div>`;
 }
@@ -837,6 +819,11 @@ function FolderModal({ isOpen, onClose, onSelect }) {
 
 function FolderApp() {
   const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    // One-time migration: clear the legacy localStorage key now that
+    // folder selection is persisted on the backend instead.
+    localStorage.removeItem('folder:pending-selection');
+  }, []);
   useEffect(() => {
     const onOpen = () => setIsOpen(true);
     window.addEventListener('folder:open', onOpen);
@@ -853,12 +840,6 @@ function FolderApp() {
 
 // ─── Decorate ─────────────────────────────────────────────────────────────────
 
-export default function decorate() {
-  let mount = document.getElementById('folder-root');
-  if (!mount) {
-    mount = document.createElement('div');
-    mount.id = 'folder-root';
-    document.body.appendChild(mount);
-  }
-  render(html`<${FolderApp}/>`, mount);
+export default function decorate(block) {
+  render(html`<${FolderApp}/>`, block);
 }
