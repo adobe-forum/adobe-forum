@@ -1,23 +1,43 @@
 import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
-import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 import renderTabbedCodeBlocks from '../../scripts/code-tabs.js';
 
 const html = htm.bind(h);
 
-// Lazy-load folder block via AEM infrastructure (once)
+// Lazy-load folder modal directly (once)
 let folderReady = false;
 
 async function ensureFolder() {
   if (folderReady) return;
-  const wrapper = document.createElement('div');
-  const block = document.createElement('div');
-  block.classList.add('folder');
-  wrapper.appendChild(block);
-  document.body.appendChild(wrapper);
-  decorateBlock(block);
-  await loadBlock(block);
+
+  // Reuse existing mount if already in DOM
+  let folderMount = document.getElementById('folder-modal-root');
+  if (!folderMount) {
+    folderMount = document.createElement('div');
+    folderMount.id = 'folder-modal-root';
+    // Must have the block class so folder.js decorate() recognises it
+    folderMount.classList.add('folder', 'block');
+    document.body.appendChild(folderMount);
+  }
+
+  // Load CSS once
+  if (!document.head.querySelector('link[href*="folder.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/blocks/folder/folder.css';
+    document.head.appendChild(link);
+  }
+
+  // Dynamic import and render into the block element
+  try {
+    const { default: decorateFolder } = await import('../folder/folder.js');
+    decorateFolder(folderMount);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load folder modal:', err);
+  }
+
   folderReady = true;
 }
 

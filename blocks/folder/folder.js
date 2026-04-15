@@ -676,7 +676,7 @@ function FolderModal({ isOpen, onClose, onSelect }) {
   const addAtLimit = depthAtLimit;
 
   return html`
-    <div class=${`fm-overlay${visible && isOpen ? ' fm-overlay--in' : ''}`}
+    <div class=${`fm-overlay${visible && isOpen ? ' fm-overlay-in' : ''}`}
       onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="fm-modal" onClick=${() => { setCtx(null); }}>
 
@@ -840,12 +840,6 @@ function FolderApp() {
 
 // ─── Decorate ─────────────────────────────────────────────────────────────────
 
-export default function decorate() {
-  let mount = document.getElementById('folder-root');
-  if (!mount) {
-    mount = document.createElement('div');
-    mount.id = 'folder-root';
-    document.body.appendChild(mount);
-  }
-  render(html`<${FolderApp}/>`, mount);
+export default function decorate(block) {
+  render(html`<${FolderApp}/>`, block);
 }
