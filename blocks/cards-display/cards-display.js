@@ -3,6 +3,7 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
+import { getCurrentRoute, navigateHome, navigateToPost } from '../../scripts/router.js';
 import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);

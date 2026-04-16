@@ -1,6 +1,8 @@
 /* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useEffect } from '../../vendor/preact-hooks.js';
+import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
+import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
 import {
   PlusIcon, CloseIcon, EditIcon, LogoutIcon, PostsIcon,
   UserIcon, ChevronIcon, CheckIcon, AlertIcon,
