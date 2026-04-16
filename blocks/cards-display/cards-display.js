@@ -3,15 +3,10 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
-import { API_BASE } from '../../scripts/utils/constants.js';
 import { getCurrentRoute, navigateHome, navigateToPost } from '../../scripts/router.js';
+import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
-
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const AUTH_API_BASE = isLocalhost
-  ? 'http://localhost:5000/api/auth'
-  : 'https://api.yourproductiondomain.com/api/auth'; // TODO: Update with your production API URL
 
 const PAGE_SIZE = 12;
 const domParser = new DOMParser();
@@ -589,7 +584,9 @@ export default async function decorate(block) {
     } catch (err) {
       clearClientAuthState();
       if (err.status === 401) {
-        window.location.replace('/auth-form');
+        if (window.adobeIMS) {
+          window.adobeIMS.signIn();
+        }
         return;
       }
       throw err;

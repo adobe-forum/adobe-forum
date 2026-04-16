@@ -3,13 +3,13 @@
  * Preact + htm (vendor imports, no bundler)
  *
  * Reads ?token= from the URL, lets the user set a new password,
- * then calls POST /api/auth/reset-password via auth-api.js.
+ * then calls POST /api/auth/reset-password.
  */
 
 import { h, render } from '../../vendor/preact.js';
 import { useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
-import { resetPassword } from '../auth-form/auth-api.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
 
@@ -187,11 +187,16 @@ function ResetPassword() {
 
     setLoading(true);
     try {
-      // Uses auth-api.js — BASE_URL is resolved from window.AUTH_API_BASE or localhost fallback
-      await resetPassword({ token, password });
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Reset failed.');
       setSuccess(true);
-      // Redirect to sign in after 3 seconds
-      setTimeout(() => { window.location.href = '/auth-form'; }, 3000);
+      // Redirect to home after 3 seconds.
+      setTimeout(() => { window.location.href = '/'; }, 3000);
     } catch (err) {
       setGlobalError(err.message);
     } finally {
@@ -207,7 +212,7 @@ function ResetPassword() {
         <p class="auth-form-success-title">Password updated!</p>
         <p class="auth-form-success-desc">
           Your password has been reset successfully.
-          Redirecting you to sign in…
+          Redirecting you to the forum...
         </p>
       </div>`;
     }
@@ -218,8 +223,8 @@ function ResetPassword() {
         <${IconAlertCircle}/>
         <span>${globalError}</span>
       </div>
-      <a href="/auth-form" class="auth-form-back" style="margin-top:24px">
-        ← Back to sign in
+      <a href="/" class="auth-form-back" style="margin-top:24px">
+        Back to forum
       </a>`;
     }
 
