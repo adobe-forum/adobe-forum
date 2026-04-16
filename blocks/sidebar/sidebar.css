@@ -37,10 +37,10 @@
   --sn-muted: var(--sp-gray-500);
 
   /* Icons, placeholders */
-  --sn-folder: #e68619;
+  --sn-folder: var(--color-warning);
 
   /* Folder amber      */
-  --sn-folder-open: #cb6f10;
+  --sn-folder-open: var(--color-warning-alt);
   --sn-file: var(--sp-gray-500);
   --sn-error: var(--sp-red-600);
   --sn-focus-ring: var(--sp-blue-500);
@@ -108,28 +108,7 @@
     left: calc(-1 * var(--sidebar-width));
   }
 
-  /* Mobile / tablet (≤1024px): Fixed 50vh panel with internal scroll */
-  @media (width <= 1024px) {
-    /* --- Closed state (default) --- */
-    position: static;
-    width: 100%;
-    height: 0;
-    overflow: hidden;
-    z-index: auto;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s, height 0.2s; /* smooth reveal */
-
-    /* --- Open state: 50vh panel with internal scroll --- */
-    &.is-open {
-      height: 50vh;
-      opacity: 1;
-      pointer-events: auto;
-      overflow-y: auto;
-      border-bottom: 1px solid var(--sn-border);
-      box-shadow: none;
-    }
-  }
+  /* Mobile/tablet breakpoints live in styles/responsive.css (md ≤ 1024px) */
 }
 
 /* Backdrop — only meaningful on desktop fixed overlay (tablet/mobile no longer need it) */
@@ -156,23 +135,11 @@
   color: var(--sn-item-text);
   padding: var(--sn-padding-y) 0 var(--sn-padding-y);
 
-  /* —— Mobile/tablet (≤1024px): fixed 50vh panel, internal scroll handled by wrapper —— */
-  @media (width <= 1024px) {
-    padding-top: 0;
-    height: 100%;
-    max-height: 50vh;
-    overflow-y: auto;
-    border-right: none;
-    border-bottom: none;
-  }
+  /* —— Mobile/tablet (≤1024px) breakpoints live in styles/responsive.css —— */
 
-  /* ── Overlay header (mobile only): title + close button ── */
+  /* overlay header always hidden — no close X for 50vh panel */
   & .sidebar-overlay-header {
     display: none;
-
-    @media (width <= 1024px) {
-      display: none; /* We don't need the close 'X' header for a 50vh panel, users can tap bar to close */
-    }
   }
 
 
@@ -218,12 +185,7 @@
     flex-shrink: 0;
     padding: 0 var(--sn-padding-x);
     margin-bottom: 16px;
-
-    /* Balance vertical spacing on mobile since outer wrapper drops its padding */
-    @media (width <= 1024px) {
-      padding: 16px var(--sn-padding-x);
-      margin-bottom: 8px;
-    }
+    padding-top: 16px;
 
     & .sidebar-search-input {
       width: 100%;
@@ -370,10 +332,7 @@
       background: transparent;
     }
 
-    /* Full-width on mobile only — desktop keeps 4px radius */
-    @media (width <= 1024px) {
-      border-radius: 0;
-    }
+    /* breakpoints live in styles/responsive.css (md ≤ 1024px) */
 
     /* Always-on child styles (desktop + mobile) */
     & .category-chevron {
@@ -398,24 +357,7 @@
       white-space: nowrap;
     }
 
-    /* Mobile: reorder chevron to right so folder icon aligns with sidebar-item
-       icons on the 16px rail. CSS order is purely visual — no markup change. */
-    @media (width <= 1024px) {
-      & .category-chevron {
-        order: 3;        /* move '>' to right side */
-        margin-left: auto;
-        width: auto;     /* let it size naturally when float-right */
-      }
-
-      & .category-icon {
-        order: 1;        /* folder icon first — aligns with sidebar-item icons */
-      }
-
-      & .category-name {
-        order: 2;
-        flex: 1;
-      }
-    }
+    /* Chevron/icon order reflows live in styles/responsive.css (md ≤ 1024px) */
   }
 
   /* ── Tree lists ──────────────────────────── */
@@ -446,9 +388,7 @@
     /* mobile: align right edge with the 16px rail */
     margin-right: 0;
 
-    @media (width <= 1024px) {
-      border-radius: 0;
-    }
+    /* border-radius breakpoints live in styles/responsive.css (md ≤ 1024px) */
 
     &:hover {
       background: var(--sn-item-bg-hover);
@@ -790,82 +730,5 @@
   display: none;
 }
 
-@media (width <= 1024px) {
-  .sidebar-tapbar {
-    /* 1. Reset first — wipes ALL inherited/global button styles */
-    all: unset;
-    box-sizing: border-box;
-
-    /* 2. Restore position AFTER reset (all:unset would have wiped it) */
-    position: relative;
-    z-index: 401;
-
-    /* Layout */
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 44px;
-    padding: 0 var(--sn-padding-x); /* same 16px rail as sidebar content */
-    gap: var(--sn-icon-gap);
-
-    /* Visual — no border-left accent (it shifted content by 3px) */
-    background: var(--sp-gray-75);
-    border-bottom: 1px solid var(--sn-border);
-
-    /* Typography */
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--sn-item-text);
-    letter-spacing: 0.01em;
-    line-height: normal;
-
-    /* Interaction */
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s;
-
-    &:hover {
-      background: var(--sn-item-bg-hover);
-    }
-
-    &:active {
-      background: var(--sn-item-bg-active);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--sn-focus-ring);
-      outline-offset: -2px;
-    }
-
-    /* Open state: background-only indicator (no border-left shift) */
-    &[aria-expanded="true"] {
-      background: var(--sn-item-bg-hover);
-    }
-  }
-
-  .sidebar-tapbar-icon {
-    flex-shrink: 0;
-    color: var(--sn-muted);
-    display: block;
-  }
-
-  .sidebar-tapbar-label {
-    flex: 1;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .sidebar-tapbar-chevron {
-    flex-shrink: 0;
-    color: var(--sn-muted);
-    transition: transform 0.2s ease;
-
-    &.is-open {
-      transform: rotate(180deg);
-      color: var(--sn-item-text);
-    }
-  }
-}
+/* ── Tap bar — mobile/tablet (≤ 1024px) ──
+   Full styles live in styles/responsive.css  */

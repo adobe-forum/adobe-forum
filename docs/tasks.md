@@ -22,7 +22,7 @@
 - [ ] Sidebar: make "Home" button navigate correctly when on non-root pages
 - [ ] Cards display: add pagination or infinite scroll
 - [ ] Forum post viewer: add reply/comment thread support
-- [ ] Mobile responsiveness audit across all blocks (toolbar done ✓, tablet layout done ✓, sidebar overlay done ✓, mobile tap bar done ✓)
+- [x] Mobile responsiveness audit across all blocks ✅ **complete** — canonical 480/768/1024px breakpoints enforced with centralized responsive rules in `styles/responsive.css`
 
 ### Review Workflow
 - [ ] Edit-post flow: allow author to resubmit after "changes requested"
@@ -46,6 +46,17 @@
 ---
 
 ## ✅ Completed
+
+### 2026-04-08
+- [x] **SPA post routing**: Added a centralized client router with shareable `/?post=<id>` URLs, browser history support, and route-driven home/post rendering without page reloads.
+- [x] **EDS-safe post deep linking**: Standardized post entry on the homepage query route so pasted post links open correctly in a fresh tab without relying on rewrites or 404-page fallback behavior.
+- [x] **Responsive loading fix**: Centralized responsive rules live in `styles/responsive.css`, and the EDS loader now re-appends that stylesheet after block CSS so global mobile/tablet overrides apply reliably.
+- [x] **Responsive CSS strategy corrected**: Block CSS is base-only again, while `styles/responsive.css` holds the shared responsive layer for the application.
+- [x] **Normalized non-canonical breakpoints**: `440px → 480px`, `600px → 768px`, `900px → 1024px`.
+- [x] **ArrowIcon moved to `icons.js`**: Removed local inline definition from `forum-post.js`; `ArrowIcon` is now a named export in `scripts/utils/icons.js`.
+- [x] **Global color token system**: Added shared `--color-*` tokens in `styles/styles.css` so common text, surface, border, status, and code colors come from one place.
+- [x] **JS color utility added**: Added `scripts/utils/colors.js` for inline SVG/status UI that needs the same centralized palette outside CSS.
+- [x] **Header + forum-post token cleanup**: Replaced live hardcoded colors in `header.css` and `forum-post.css` with shared tokens and local aliases.
 
 ### 2026-04-01
 - [x] **Mobile tap bar navigation**: Replaced hamburger menu with full-width in-flow tap bar at ≤1024px. Single 1024px breakpoint, no fixed positioning.
@@ -91,3 +102,5 @@
 - [x] Sidebar hierarchical tree with expand/collapse and live search
 - [x] Draft auto-save and restore via `sessionStorage`
 - [x] Session-based authentication with forgot/reset password
+
+

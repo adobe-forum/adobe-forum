@@ -99,6 +99,10 @@ function toggleViews(showCards) {
   document.body.classList.toggle('is-viewing-post', !showCards);
 }
 
+function syncCardsView(route) {
+  toggleViews(route?.view !== 'post');
+}
+
 function Card({ post, onClick }) {
   const id = post._id || post.id;
   const tags = (post.tags || []).slice(0, 3).map((tag) => (tag.startsWith('#') ? tag : `#${tag}`));
@@ -290,17 +294,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   }
 
   useEffect(() => {
-    const handleReturn = (e) => {
-      const isPopstate = e?.type === 'popstate';
-      const leavingPost = isPopstate && e.state?.view !== 'post';
-
-      if (!leavingPost) return;
-
-      toggleViews(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setRefreshTick((t) => t + 1);
-    };
-
     const handlePostUpdated = (e) => {
       const { id, views, likes } = e.detail;
       if (!id) return;
@@ -321,11 +314,22 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       }));
     };
 
-    window.addEventListener('popstate', handleReturn);
+    const handleRouteChange = (e) => {
+      const route = e.detail || getCurrentRoute();
+      syncCardsView(route);
+
+      if (route.view !== 'post' && e.detail?.source === 'popstate') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setRefreshTick((t) => t + 1);
+      }
+    };
+
+    syncCardsView(getCurrentRoute());
+    window.addEventListener('af-route-change', handleRouteChange);
     window.addEventListener('af-post-updated', handlePostUpdated);
 
     return () => {
-      window.removeEventListener('popstate', handleReturn);
+      window.removeEventListener('af-route-change', handleRouteChange);
       window.removeEventListener('af-post-updated', handlePostUpdated);
     };
   }, []);
@@ -405,11 +409,6 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       setCurrentPage(1);
     };
 
-    const handleShowCards = () => {
-      toggleViews(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
     const handleRefresh = (e) => {
       if (e?.detail?.mine) {
         setIsMine(true);
@@ -417,22 +416,20 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
       } else if (e?.detail?.resetView) {
         setIsMine(false);
         setAuthorId('');
-        window.history.replaceState({}, '', '/');
+        navigateHome({ replace: true, scroll: false, source: 'refresh-cards-reset' });
       }
       setRefreshTick((t) => t + 1);
     };
 
     window.addEventListener('search-posts', handleSearch);
     window.addEventListener('filter-category', handleFilter);
-    window.addEventListener('show-cards', handleShowCards);
     window.addEventListener('refresh-cards', handleRefresh);
     window.addEventListener('edit-post:saved', handleRefresh);
-    toggleViews(true);
+    syncCardsView(getCurrentRoute());
 
     return () => {
       window.removeEventListener('search-posts', handleSearch);
       window.removeEventListener('filter-category', handleFilter);
-      window.removeEventListener('show-cards', handleShowCards);
       window.removeEventListener('refresh-cards', handleRefresh);
       window.removeEventListener('edit-post:saved', handleRefresh);
     };
@@ -455,8 +452,7 @@ function CardsDisplay({ initialTitle, initialSubtitle, blockElement }) {
   };
 
   const handleCardClick = (postId) => {
-    toggleViews(false);
-    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
+    navigateToPost(postId, { source: 'cards-display', scroll: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

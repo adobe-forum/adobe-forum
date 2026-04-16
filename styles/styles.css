@@ -1,10 +1,173 @@
-/* ── Global Responsive Utilities (must be first) ───────────────────────── */
-@import url('./responsive.css');
-
+/* Global styles. Centralized responsive rules are loaded separately from styles/responsive.css. */
 :root {
   /* --- App Layout Dimensions --- */
   --nav-width: 256px; /* matched to sidebar-width in sidebar.css */
   --header-height: 64px; /* Hardcoded to match header.css to prevent layout shifts */
+
+  /* =============================================
+     Global Color Tokens
+     Single source of truth for shared UI colors
+     ============================================= */
+  --color-white: #fff;
+  --color-white-alpha-30: rgb(255 255 255 / 30%);
+  --color-black: #000;
+  --color-text-strong: #1a1a1a;
+  --color-text-primary: #1c1c1c;
+  --color-text-secondary: #6e6e6e;
+  --color-text-muted: #909090;
+  --color-text-subtle: #9a9a9a;
+  --color-text-label: #333;
+  --color-text-dim: #555;
+  --color-text-warning-strong: #7d5a00;
+  --color-text-warning: #9b5000;
+  --color-text-info-strong: #0d5dbf;
+  --color-text-success-strong: #1e7a5c;
+  --color-text-link: #1473e6;
+  --color-text-link-hover: #0d66d0;
+  --color-surface-base: #fff;
+  --color-surface-alt: #fafafa;
+  --color-surface-muted: #f5f5f5;
+  --color-surface-subtle: #f8f9fb;
+  --color-surface-hover: #f0f1f3;
+  --color-surface-hover-strong: #e4e6ea;
+  --color-surface-chip: #eff0f2;
+  --color-surface-chip-active: #d8d9dc;
+  --color-surface-overlay: rgb(255 255 255 / 80%);
+  --color-surface-scrim: rgb(0 0 0 / 45%);
+  --color-surface-scrim-strong: rgb(0 0 0 / 50%);
+  --color-border-soft: #eaeaea;
+  --color-border-default: #d3d3d3;
+  --color-border-medium: #dde1e7;
+  --color-border-light: #eceef1;
+  --color-border-lighter: #f4f5f7;
+  --color-border-strong: #c0c0c0;
+  --color-border-faint: rgb(0 0 0 / 5%);
+  --color-border-faint-strong: rgb(0 0 0 / 6%);
+  --color-accent: #da1f26;
+  --color-accent-hover: #b81219;
+  --color-accent-pressed: #960f13;
+  --color-accent-soft: #ffeaea;
+  --color-accent-soft-alt: #fff0f1;
+  --color-accent-border-soft: rgb(218 31 38 / 18%);
+  --color-accent-ring-soft: rgb(218 31 38 / 8%);
+  --color-accent-ring: rgb(218 31 38 / 12%);
+  --color-accent-ring-strong: rgb(218 31 38 / 15%);
+  --color-accent-ring-stronger: rgb(218 31 38 / 22%);
+  --color-accent-shadow: rgb(218 31 38 / 28%);
+  --color-accent-shadow-fab: rgb(218 31 38 / 35%);
+  --color-accent-shadow-fab-hover: rgb(218 31 38 / 45%);
+  --color-accent-gradient-end: #ff6b6b;
+  --color-danger: #d7373f;
+  --color-danger-hover: #c9252d;
+  --color-danger-strong: #b02a30;
+  --color-danger-deep: #b71c1c;
+  --color-danger-surface: #ffebee;
+  --color-danger-surface-soft: rgb(215 55 63 / 8%);
+  --color-danger-surface-faint: rgb(215 55 63 / 6%);
+  --color-danger-border-soft: rgb(215 55 63 / 30%);
+  --color-danger-ring: rgb(215 55 63 / 22%);
+  --color-success: #268e6c;
+  --color-success-strong: #1e7a5c;
+  --color-success-alt: #2e7d32;
+  --color-success-surface: #ecf8f4;
+  --color-success-surface-alt: #e6f4ec;
+  --color-success-badge: #d4f0e7;
+  --color-success-border-soft: rgb(38 142 108 / 30%);
+  --color-success-surface-soft: rgb(38 142 108 / 10%);
+  --color-success-surface-faint: rgb(38 142 108 / 12%);
+  --color-warning: #e68619;
+  --color-warning-strong: #b26e00;
+  --color-warning-alt: #d17f00;
+  --color-warning-surface: #fff5e6;
+  --color-warning-surface-soft: #fff9e6;
+  --color-warning-surface-strong: #fff3cd;
+  --color-warning-badge: #fde8c0;
+  --color-warning-text-soft: #faeeda;
+  --color-warning-border: #fec700;
+  --color-warning-border-strong: #f0b429;
+  --color-warning-chip: #854f0b;
+  --color-warning-list-border: #ba7517;
+  --color-warning-good: #b07800;
+  --color-warning-fair: #da7b11;
+  --color-info: #1473e6;
+  --color-info-hover: #0d66d0;
+  --color-info-strong: #0c447c;
+  --color-info-surface: #f4f8ff;
+  --color-info-surface-alt: #e8f0fe;
+  --color-info-surface-strong: #eef6ff;
+  --color-info-badge: #d8eaff;
+  --color-info-border-soft: #e6f1fb;
+  --color-info-list-border: #185fa5;
+  --color-info-ring: rgb(37 99 235 / 15%);
+  --color-code-bg: #1e1e1e;
+  --color-code-text: #d4d4d4;
+  --color-code-line-numbers: rgb(212 212 212 / 30%);
+  --color-code-line-numbers-border: rgb(212 212 212 / 15%);
+  --color-code-overlay: rgb(255 255 255 / 10%);
+  --color-code-scrollbar: rgb(212 212 212 / 20%);
+  --color-code-scrollbar-thumb: rgb(212 212 212 / 22%);
+  --color-code-text-muted: rgb(212 212 212 / 60%);
+  --color-code-text-faint: rgb(212 212 212 / 28%);
+  --color-code-divider: rgb(212 212 212 / 12%);
+  --color-lang-html: #e44d26;
+  --color-lang-html-soft: #e44d2622;
+  --color-lang-css: #2965f1;
+  --color-lang-css-soft: #2965f122;
+  --color-lang-js: #f0db4f;
+  --color-lang-js-soft: #f0db4f22;
+  --color-lang-ts: #007acc;
+  --color-lang-ts-soft: #007acc22;
+  --color-lang-ts-text: #6ab0f5;
+  --color-lang-python: #3572a5;
+  --color-lang-python-soft: #3572a522;
+  --color-lang-python-text: #87c1e8;
+  --color-lang-java: #b07219;
+  --color-lang-java-soft: #b0721922;
+  --color-lang-java-text: #d4a24a;
+  --color-lang-csharp: #7b2fbe;
+  --color-lang-csharp-soft: #7b2fbe22;
+  --color-lang-csharp-text: #c07ef7;
+  --color-lang-kotlin: #e10098;
+  --color-lang-kotlin-soft: #e1009822;
+  --color-lang-kotlin-text: #f07ac8;
+  --color-lang-go: #00acd7;
+  --color-lang-go-soft: #00acd722;
+  --color-lang-go-text: #29d0f7;
+  --color-lang-dart: #0175c2;
+  --color-lang-dart-soft: #0175c222;
+  --color-lang-dart-text: #4db9f5;
+  --color-lang-swift: #e38c00;
+  --color-lang-swift-soft: #e38c0022;
+  --color-lang-php: #4eaa25;
+  --color-lang-php-soft: #4eaa2522;
+  --color-lang-php-text: #82d45d;
+  --color-lang-bash: #555;
+  --color-lang-bash-soft: #5552;
+  --color-lang-bash-text: #aaa;
+  --color-lang-ruby: #f34b7d;
+  --color-lang-ruby-soft: #f34b7d22;
+  --color-lang-neutral: #888;
+  --color-lang-neutral-soft: #8882;
+  --color-lang-neutral-text: #b0b0b0;
+  --color-lang-css-text: #7aa3f7;
+  --color-focus-info-soft: rgb(20 115 230 / 20%);
+  --color-review-info-bg: #fff8e1;
+  --color-review-info-border: #ffcc02;
+  --color-review-info-text: #795800;
+  --color-review-info-icon: #f59e0b;
+  --color-review-info-icon-hover: #d97706;
+  --color-review-success-hover: #1b5e20;
+  --color-shadow-base: rgb(0 0 0 / 6%);
+  --color-shadow-soft: rgb(0 0 0 / 8%);
+  --color-shadow-medium: rgb(0 0 0 / 10%);
+  --color-shadow-strong: rgb(0 0 0 / 14%);
+  --color-shadow-overlay: rgb(0 0 0 / 15%);
+  --color-shadow-overlay-strong: rgb(0 0 0 / 18%);
+  --color-shadow-dialog: rgb(0 0 0 / 20%);
+  --color-shadow-modal: rgb(0 0 0 / 25%);
+  --color-shadow-deep: rgb(0 0 0 / 45%);
+  --shadow-fab: 0 4px 16px var(--color-accent-shadow-fab), 0 2px 6px var(--color-shadow-overlay);
+  --shadow-fab-hover: 0 6px 20px var(--color-accent-shadow-fab-hover), 0 3px 8px var(--color-shadow-overlay-strong);
 
   /* =============================================
      PROTOTYPE NEW STYLING TOKENS (Remapped to Spectrum)
@@ -18,17 +181,17 @@
   --text2:     var(--sp-gray-700);
   --text3:     var(--sp-gray-500);
   --accent:    var(--sp-red-600);
-  --accent-bg: #ffeaea;
+  --accent-bg: var(--color-accent-soft);
   --accent2:   var(--sp-blue-600);
   --accent2-bg:var(--sp-blue-100);
-  --green:     #16a34a;
-  --green-bg:  #f0fdf4;
-  --amber:     #e68619;
-  --amber-bg:  #fffbeb;
+  --green:     var(--color-success-alt);
+  --green-bg:  var(--color-success-surface-alt);
+  --amber:     var(--color-warning);
+  --amber-bg:  var(--color-warning-surface-soft);
   --radius:    var(--sp-radius-md);
   --radius-lg: var(--sp-radius-lg);
-  --shadow:    0 1px 3px rgb(0 0 0 / 6%), 0 4px 16px rgb(0 0 0 / 6%);
-  --shadow-lg: 0 8px 40px rgb(0 0 0 / 14%);
+  --shadow:    0 1px 3px var(--color-shadow-base), 0 4px 16px var(--color-shadow-base);
+  --shadow-lg: 0 8px 40px var(--color-shadow-strong);
   --font:      var(--body-font-family);
   --mono:      var(--post-code-font);
 
@@ -39,32 +202,32 @@
      ============================================= */
 
   /* Spectrum gray palette */
-  --sp-gray-50: #fff;
-  --sp-gray-75: #fafafa;
-  --sp-gray-100: #f5f5f5;
-  --sp-gray-200: #eaeaea;
-  --sp-gray-300: #d3d3d3;
+  --sp-gray-50: var(--color-white);
+  --sp-gray-75: var(--color-surface-alt);
+  --sp-gray-100: var(--color-surface-muted);
+  --sp-gray-200: var(--color-border-soft);
+  --sp-gray-300: var(--color-border-default);
   --sp-gray-400: #b3b3b3;
-  --sp-gray-500: #909090;
-  --sp-gray-600: #6e6e6e;
+  --sp-gray-500: var(--color-text-muted);
+  --sp-gray-600: var(--color-text-secondary);
   --sp-gray-700: #4b4b4b;
   --sp-gray-800: #2c2c2c;
-  --sp-gray-900: #1c1c1c;
+  --sp-gray-900: var(--color-text-primary);
 
   /* Spectrum blue (accent-color) */
   --sp-blue-100: #e0f0ff;
   --sp-blue-400: #4b9cf5;
   --sp-blue-500: #2680eb;
-  --sp-blue-600: #1473e6;
-  --sp-blue-700: #0d66d0;
+  --sp-blue-600: var(--color-info);
+  --sp-blue-700: var(--color-info-hover);
   --sp-blue-900: #0265dc;
 
   /* Spectrum negative (red) */
   --sp-red-400: #e34850;
   --sp-red-500: #e34850;
-  --sp-red-600: #d7373f;
-  --sp-red-700: #c9252d;
-  --sp-red-900: #c9252d;
+  --sp-red-600: var(--color-danger);
+  --sp-red-700: var(--color-danger-hover);
+  --sp-red-900: var(--color-danger-hover);
 
   /* Spectrum geometry (medium scale) */
   --sp-radius-sm: 2px;
@@ -87,13 +250,13 @@
   --spectrum-gray-900: var(--sp-gray-900);
 
   /* Brand Colors */
-  --spectrum-accent-color-900: #DA1F26;
+  --spectrum-accent-color-900: var(--color-accent);
 
   /* Adobe Red */
-  --spectrum-accent-color-1000: #B81219;
+  --spectrum-accent-color-1000: var(--color-accent-hover);
 
   /* Darker Red */
-  --nav-active-bg: #F5F5F5;
+  --nav-active-bg: var(--color-surface-muted);
 
   /* --- Spacing & Borders --- */
   --spectrum-spacing-100: 4px;
@@ -469,7 +632,14 @@ footer {
   z-index: 20;
 }
 
-@media (width >=900px) {
+@media (width > 1024px) {
+  footer {
+    margin-left: var(--nav-width);
+    width: calc(100% - var(--nav-width));
+  }
+}
+
+@media (width >=1024px) {
   :root {
     --body-font-size-m: 18px;
     --body-font-size-s: 16px;

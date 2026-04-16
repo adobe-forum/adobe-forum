@@ -2,6 +2,77 @@
 
 > **Rule:** Add an entry here whenever a significant design decision is made or changed.
 
+## [2026-04-08] SPA Router and Shareable Post URLs
+
+### Context
+Post navigation was already SPA-like inside the homepage, but it depended on custom events and temporary session storage instead of stable URLs. That meant refresh and share-link behavior for an individual forum post was inconsistent, and different entry points (`cards-display`, `sidebar`, `header`) were using different navigation patterns.
+
+### Decisions Made
+
+**1. Client routing is centralized in `scripts/router.js`**
+A lightweight router now owns URL parsing, `history.pushState` / `replaceState`, `popstate`, and route broadcasting. Blocks should react to a single route source instead of duplicating pathname logic.
+
+**2. Post detail URLs use `/?post=<id>`**
+The canonical post route is now `/?post=<postId>`, where `postId` is the backend Mongo `_id` already returned by `/api/posts` and accepted by `/api/posts/:id`. Using the guaranteed homepage entry avoids EDS page-resolution issues on fresh tabs while keeping the URL shareable everywhere.
+
+**3. Legacy navigation inputs are kept as compatibility shims**
+Existing `sessionStorage('af_open_post')`, `?openPost=...`, and `load-forum-post` / `show-cards` event flows are translated into the new router so current sidebar and header navigation keep working while the URL model becomes canonical.
+
+---
+
+## [2026-04-08] Shared Color Token System
+
+### Context
+The application still had repeated hardcoded colors across block CSS and inline JS markup even after responsive behavior was centralized. That made consistency updates harder, especially in shared UI such as header state, forum-post code badges, and review banners.
+
+### Decisions Made
+
+**1. Shared colors live in `styles/styles.css`**
+A global `--color-*` palette now owns application-level text, surface, border, status, code, and shadow values. Spectrum aliases remain available, but app styling should resolve through the shared color layer first.
+
+**2. JS color usage is centralized in `scripts/utils/colors.js`**
+When block JS needs inline colors for SVGs or status UI, it should import from `scripts/utils/colors.js` instead of embedding raw literals.
+
+**3. Blocks can keep local semantic aliases**
+Files like `forum-post.css` can still define local aliases for language badges or review states, but those aliases should point back to shared global tokens instead of repeating literal colors in selectors.
+
+---
+
+## [2026-04-08] Responsive System Fix — Centralized responsive.css with EDS-safe load order
+
+### Context
+Mobile styles were breaking after block-level `@media` rules were centralized into `styles/responsive.css`. In Adobe EDS, global styles load first, but each block stylesheet is injected later when the block is decorated. That meant centralized responsive rules could be missing entirely if they were not migrated, and even when present they could still be overridden by the later-loaded block base CSS.
+
+### Decisions Made
+
+**1. Centralized responsive rules stay in `styles/responsive.css`**
+Responsive rules for `sidebar`, `header`, `create-post`, `edit-post`, `cards-display`, `auth-form`, `search-bar`, `footer`, and `forum-post` are kept in one global stylesheet so the application has a single responsive source of truth.
+
+**2. Non-canonical breakpoints normalized**
+| Old value | Normalized to | Affected file |
+|-----------|--------------|---------------|
+| `440px` | `480px` (xs) | `auth-form.css` — 2-col form collapses to 1-col |
+| `600px` | `768px` (sm) | `auth-form.css` card padding; `cards-display.css` grid 1-col |
+| `900px` | `1024px` (md) | `footer.css` padding; `styles.css` gutter |
+
+**3. EDS load order is corrected centrally**
+`styles/responsive.css` is loaded as a dedicated stylesheet by the client and re-appended after block CSS loads. This keeps the centralized responsive layer last in the cascade, including the sidebar CSS path that is loaded manually from `header.js`.
+
+**4. CSS limitation acknowledged**
+CSS custom properties cannot be used inside `@media` expressions. All pixel values remain literals in CSS. `BREAKPOINTS` in `scripts/utils/constants.js` and the comment header in `responsive.css` remain the documented source of truth.
+
+---
+
+## [2026-04-08] ArrowIcon Moved to Global Icon Library
+
+### Context
+`forum-post.js` defined `ArrowIcon` (the Spectrum 18×18 send arrow) locally with a comment saying "ArrowIcon remains local". This violated the project convention of all icons living in `scripts/utils/icons.js`.
+
+### Decision
+Added `ArrowIcon` as a named export in `scripts/utils/icons.js` under the *Navigation & Actions* section. `forum-post.js` now imports it alongside `BackIcon`, `EditIcon`, `HeartIcon`. The local definition and its stale comment are removed.
+
+---
+
 ## [2026-04-07] Global Refactor — Icon Centralization, Constants & Responsive Utilities
 
 ### Context
@@ -16,7 +87,7 @@ All icon SVG components are now exported from one canonical file. Blocks import 
 `API_BASE`, `AUTH_API_BASE`, `BREAKPOINTS`, `Z_INDEX`, and `SPACING` are exported from one file. This eliminates environment-specific URL literals being hardcoded in multiple components and provides a single place to swap the production API URL on deployment.
 
 **3. `styles/responsive.css` — Canonical Breakpoint Documentation**
-A new global stylesheet documents the three canonical breakpoints (`xs: 480px`, `sm: 768px`, `md: 1024px`) and provides shared utility classes (`.hide-mobile`, `.hide-desktop`). This file is imported via `@import` at the bottom of `styles/styles.css`. CSS custom properties cannot be used inside `@media` query expressions (a CSS spec limitation), so block CSS files still use literal pixel values — but all values are documented in one authoritative place.
+A new global stylesheet documents the three canonical breakpoints (`xs: 480px`, `sm: 768px`, `md: 1024px`) and provides shared utility classes (`.hide-mobile`, `.hide-desktop`). This file is imported via `@import` at the bottom of ``styles/styles.css``. CSS custom properties cannot be used inside `@media` query expressions (a CSS spec limitation), so block CSS files still use literal pixel values — but all values are documented in one authoritative place.
 
 ---
 
@@ -577,3 +648,5 @@ The sidebar overlay becomes **`top: 0; height: 100vh`** — covers the full view
 - Cookies with `httpOnly` prevent client-side JS access to the session token
 
 **Trade-off:** Stateful server — horizontal scaling requires a shared session store (e.g. `connect-mongo`). Currently running on a single Node process so this is acceptable.
+
+

@@ -110,65 +110,10 @@
     width: 100%;
     box-sizing: border-box;
 
-    @media (width <=1024px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    @media (width <=600px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
+    /* grid breakpoints live in styles/responsive.css (md ≤ 1024px, sm ≤ 768px) */
   }
 
-  @media (width <= 768px) {
-    padding: 8px 0 80px; /* 8px top (+ 4px from search-bar = 12px total gap), 80px bottom (FAB clearance) */
-
-    /* ── Section title ── */
-    .cards-title {
-      font-size: 18px;
-      line-height: 22px;
-      margin: 0; /* remove bottom margin so it aligns with sort dropdown in the flex row */
-
-      .cards-count-badge {
-        font-size: 11px;
-        height: 22px;
-        min-width: 24px;
-        padding: 0 8px;
-      }
-    }
-
-    /* ── Subtitle ── */
-    .cards-subtitle {
-      font-size: 12px;
-    }
-
-    /* ── Keep title + sort on ONE row — no wrapping ── */
-    .cards-title-row {
-      flex-wrap: nowrap;
-      align-items: center;
-      gap: var(--spectrum-spacing-200);
-    }
-
-    /* ── Sort wrapper: compact on mobile ── */
-    .cards-sort-wrapper {
-      flex-shrink: 0;
-      font-size: 12px;
-
-      .cards-sort-label {
-        display: none; /* hide "Sort by:" label — just show the select */
-      }
-
-      .cards-sort-select {
-        font-size: 12px;
-        padding: 5px 26px 5px 8px;
-        background-position: right 8px center;
-      }
-    }
-
-    /* ── Tighter card grid row gap ── */
-    .cards-grid {
-      gap: 20px;
-    }
-  }
+  /* Mobile overrides live in styles/responsive.css (sm ≤ 768px) */
 }
 
 /* ── Card Component ── */
@@ -555,69 +500,7 @@
   }
 }
 
-/* ── Card Mobile Overrides ── */
-@media (width <= 768px) {
-  .card {
-    /* Shorter image on mobile */
-    .card-img-box {
-      height: 160px;
-    }
-
-    /* Placeholder image: less padding */
-    /* stylelint-disable-next-line selector-class-pattern */
-    .card-img--placeholder {
-      padding: 28px;
-    }
-
-    /* Tighter card body */
-    .card-body {
-      padding: var(--spectrum-spacing-300); /* 12px instead of 16px */
-    }
-
-    /* Card title: smaller on mobile */
-    .card-title {
-      font-size: 15px;
-      line-height: 20px;
-      min-height: auto;
-    }
-
-    /* Card meta: smaller author/category */
-    .card-meta {
-      font-size: 12px;
-      line-height: 18px;
-      gap: var(--spectrum-spacing-100);
-
-      /* stylelint-disable-next-line selector-class-pattern */
-      .spectrum-Avatar {
-        width: 26px;
-        height: 26px;
-      }
-
-      /* stylelint-disable-next-line selector-class-pattern */
-      .spectrum-Avatar-initials {
-        font-size: 10px;
-      }
-    }
-
-    /* Card description: slightly smaller */
-    .card-desc {
-      font-size: 13px;
-      line-height: 19px;
-      min-height: auto;
-    }
-
-    /* Tags: already 12px — just tighten padding */
-    .card-tags .card-tag {
-      font-size: 11px;
-      padding: 2px 6px;
-    }
-
-    /* No hover lift animation on touch devices */
-    &:hover {
-      transform: none;
-    }
-  }
-}
+/* ── Card Mobile Overrides — live in styles/responsive.css (sm ≤ 768px) ── */
 
 /* ── States & Pagination ── */
 .cards-no-results {
@@ -861,11 +744,4 @@
   stroke-width: 2.5px;
 }
 
-@media (width <= 768px) {
-  .back-to-top-btn {
-    bottom: 96px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-  }
-}
+/* .back-to-top-btn mobile override lives in styles/responsive.css (sm ≤ 768px) */
