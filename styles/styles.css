@@ -285,6 +285,65 @@
   --page-v-bottom-lg: 72px;       /* vertical bottom padding, desktop   */
 
 
+  /* =============================================
+     SIZING TOKENS
+     Component-level size variables used by responsive.css.
+     Group them here so a single edit updates every usage site.
+     ============================================= */
+
+  /* Touch / tap targets */
+  --size-tap-target: 44px;         /* min tap target (WCAG 2.5.5) */
+  --size-tapbar-height: 44px;      /* mobile sidebar tap bar */
+  --size-nav-btn-md: 36px;         /* nav icon button – tablet */
+
+  /* Floating Action Button */
+  --size-fab: 56px;                /* FAB diameter, mobile */
+  --size-fab-icon: 24px;           /* icon inside FAB */
+
+  /* Back-to-top button */
+  --size-back-to-top: 56px;        /* same footprint as FAB */
+  --size-back-to-top-bottom: 96px; /* bottom offset on mobile */
+
+  /* Rich-text / CE toolbar */
+  --size-toolbar-btn-sm: 24px;     /* toolbar button (compact, ≤768px) */
+  --size-toolbar-btn-icon: 14px;   /* SVG inside compact toolbar btn */
+  --size-toolbar-select-sm: 24px;  /* block-format select height (compact) */
+  --size-toolbar-select-min: 60px; /* block-format select min-width */
+
+  /* Table-toolbar buttons */
+  --size-table-btn-min-height: 32px;
+
+  /* Tag / chip */
+  --size-tag-chip-font-sm: 12px;   /* tag chip font-size, mobile */
+  --size-tags-input-font-sm: 13px; /* tags input font-size, mobile */
+  --size-tags-input-min: 60px;     /* tags input min-width */
+
+  /* Code viewer */
+  --size-code-body-height-sm: 260px; /* code panel height, mobile */
+
+  /* Toast */
+  --size-toast-max-desktop: 480px; /* max toast width on desktop */
+  --size-toast-bottom-desktop: 32px;
+
+  /* Profile-page modal */
+  --size-pp-modal-padding-x: 20px;
+  --size-pp-modal-padding-y-top: 24px;
+  --size-pp-modal-padding-y-bot: 28px;
+
+  /* Dropdowns */
+  --size-dropdown-top-sm: 64px;    /* fixed-position dropdown top, ≤768px */
+  --size-dropdown-inset-sm: 12px;  /* left/right inset */
+
+  /* Card image box */
+  --size-card-img-sm: 160px;       /* card thumbnail height, mobile */
+
+  /* Avatar */
+  --size-avatar-sm: 26px;          /* card meta avatar, mobile */
+  --size-avatar-font-sm: 10px;     /* avatar initial font-size, mobile */
+
+  /* Session warning banner */
+  --size-session-banner-bottom-sm: 90px;
+
   /* Font Sizes */
   --body-font-size-m: 18px;
   --body-font-size-s: 16px;

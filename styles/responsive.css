@@ -111,7 +111,7 @@
     display: flex;
     align-items: center;
     width: 100%;
-    height: 44px;
+    height: var(--size-tapbar-height);
     padding: 0 var(--sn-padding-x);
     gap: var(--sn-icon-gap);
     background: var(--sp-gray-75);
@@ -198,8 +198,8 @@
   }
 
   .nav-button.spectrum-button {
-    width: 36px;
-    height: 36px;
+    width: var(--size-nav-btn-md);
+    height: var(--size-nav-btn-md);
     padding: 0;
     border-radius: 50%;
     gap: 0;
@@ -215,8 +215,8 @@
     bottom: 24px;
     right: 20px;
     z-index: 400;
-    width: 56px;
-    height: 56px;
+    width: var(--size-fab);
+    height: var(--size-fab);
     border-radius: 50%;
     padding: 0;
     display: flex;
@@ -231,8 +231,8 @@
     }
 
     & svg {
-      width: 24px;
-      height: 24px;
+      width: var(--size-fab-icon);
+      height: var(--size-fab-icon);
     }
 
     &:hover {
@@ -246,8 +246,8 @@
   }
 
   .spectrum-action-button {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--size-tap-target);
+    min-height: var(--size-tap-target);
     padding: 10px;
   }
 
@@ -259,9 +259,9 @@
   .nd-trigger-wrap .pd-dropdown,
   .pd-trigger-wrap .pd-dropdown {
     position: fixed;
-    top: 64px;
-    right: 12px;
-    left: 12px;
+    top: var(--size-dropdown-top-sm);
+    right: var(--size-dropdown-inset-sm);
+    left: var(--size-dropdown-inset-sm);
     width: auto;
     max-width: 100%;
     max-height: calc(100vh - 80px);
@@ -269,10 +269,10 @@
   }
 
   .session-warning-banner {
-    left: 16px;
-    right: 16px;
+    left: var(--spectrum-spacing-400);
+    right: var(--spectrum-spacing-400);
     transform: none;
-    bottom: 90px;
+    bottom: var(--size-session-banner-bottom-sm);
     white-space: normal;
     flex-wrap: wrap;
     justify-content: center;
@@ -301,7 +301,7 @@
   }
 
   .pp-body {
-    padding: 24px 20px 28px;
+    padding: var(--size-pp-modal-padding-y-top) var(--size-pp-modal-padding-x) var(--size-pp-modal-padding-y-bot);
   }
 
   .pp-actions {
@@ -367,7 +367,7 @@
 
   .card {
     & .card-img-box {
-      height: 160px;
+      height: var(--size-card-img-sm);
     }
 
     /* stylelint-disable-next-line selector-class-pattern */
@@ -392,13 +392,13 @@
 
       /* stylelint-disable-next-line selector-class-pattern */
       & .spectrum-Avatar {
-        width: 26px;
-        height: 26px;
+        width: var(--size-avatar-sm);
+        height: var(--size-avatar-sm);
       }
 
       /* stylelint-disable-next-line selector-class-pattern */
       & .spectrum-Avatar-initials {
-        font-size: 10px;
+        font-size: var(--size-avatar-font-sm);
       }
     }
 
@@ -467,10 +467,10 @@
 
 @media (width <= 768px) {
   .back-to-top-btn {
-    bottom: 96px;
+    bottom: var(--size-back-to-top-bottom);
     right: 20px;
-    width: 56px;
-    height: 56px;
+    width: var(--size-back-to-top);
+    height: var(--size-back-to-top);
   }
 }
 
@@ -523,8 +523,8 @@
     }
 
     & .code-body {
-      height: 260px;
-      font-size: 12px;
+      height: var(--size-code-body-height-sm);
+      font-size: var(--size-tag-chip-font-sm);
 
       & .tabs-content {
         overflow-x: auto;
@@ -583,8 +583,8 @@
   }
 
   .cp-toast {
-    bottom: 32px;
-    max-width: 480px;
+    bottom: var(--size-toast-bottom-desktop);
+    max-width: var(--size-toast-max-desktop);
   }
 
   .preview-shell {
@@ -628,19 +628,19 @@
   }
 
   .ce-toolbar-btn {
-    width: 24px;
-    height: 24px;
+    width: var(--size-toolbar-btn-sm);
+    height: var(--size-toolbar-btn-sm);
     border-radius: 5px;
   }
 
   .ce-toolbar-btn svg {
-    width: 14px;
-    height: 14px;
+    width: var(--size-toolbar-btn-icon);
+    height: var(--size-toolbar-btn-icon);
   }
 
   .ce-size-select {
-    height: 24px;
-    min-width: 60px;
+    height: var(--size-toolbar-select-sm);
+    min-width: var(--size-toolbar-select-min);
     font-size: 11px;
     flex: 0 0 auto;
   }
@@ -680,7 +680,7 @@
   }
 
   .table-toolbar-btn {
-    min-height: 32px;
+    min-height: var(--size-table-btn-min-height);
     padding: 5px 10px;
   }
 
@@ -709,10 +709,10 @@
 
   .cp-toast {
     max-width: calc(100vw - 32px);
-    padding: 16px;
+    padding: var(--spectrum-spacing-400);
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--spectrum-spacing-300);
   }
 
   .cp-toast-msg {
@@ -730,23 +730,23 @@
   .cp-toast-confirm,
   .cp-toast-dismiss {
     flex: 1;
-    padding: 8px 12px;
-    min-height: 32px;
+    padding: var(--spectrum-spacing-200) var(--spectrum-spacing-300);
+    min-height: var(--size-table-btn-min-height);
   }
 
   .tags-input-container {
-    padding: 8px 10px;
-    gap: 4px;
+    padding: var(--spectrum-spacing-200) 10px;
+    gap: var(--spectrum-spacing-100);
   }
 
   .tag-chip {
-    padding: 3px 8px;
-    font-size: 12px;
+    padding: 3px var(--spectrum-spacing-200);
+    font-size: var(--size-tag-chip-font-sm);
   }
 
   .tags-input {
-    min-width: 60px;
-    font-size: 13px;
+    min-width: var(--size-tags-input-min);
+    font-size: var(--size-tags-input-font-sm);
     flex: 1 1 auto;
   }
 
@@ -850,8 +850,8 @@
   }
 
   .edit-post .cp-toast {
-    bottom: 32px;
-    max-width: 480px;
+    bottom: var(--size-toast-bottom-desktop);
+    max-width: var(--size-toast-max-desktop);
   }
 }
 
@@ -874,19 +874,19 @@
   }
 
   .edit-post .ce-toolbar-btn {
-    width: 24px;
-    height: 24px;
+    width: var(--size-toolbar-btn-sm);
+    height: var(--size-toolbar-btn-sm);
     border-radius: 5px;
   }
 
   .edit-post .ce-toolbar-btn svg {
-    width: 14px;
-    height: 14px;
+    width: var(--size-toolbar-btn-icon);
+    height: var(--size-toolbar-btn-icon);
   }
 
   .edit-post .ce-size-select {
-    height: 24px;
-    min-width: 60px;
+    height: var(--size-toolbar-select-sm);
+    min-width: var(--size-toolbar-select-min);
     font-size: 11px;
     flex: 0 0 auto;
   }
@@ -926,7 +926,7 @@
   }
 
   .edit-post .table-toolbar-btn {
-    min-height: 32px;
+    min-height: var(--size-table-btn-min-height);
     padding: 5px 10px;
   }
 
@@ -949,27 +949,27 @@
   }
 
   .edit-post .tags-input-container {
-    padding: 8px 10px;
-    gap: 4px;
+    padding: var(--spectrum-spacing-200) 10px;
+    gap: var(--spectrum-spacing-100);
   }
 
   .edit-post .tag-chip {
-    padding: 3px 8px;
-    font-size: 12px;
+    padding: 3px var(--spectrum-spacing-200);
+    font-size: var(--size-tag-chip-font-sm);
   }
 
   .edit-post .tags-input {
-    min-width: 60px;
-    font-size: 13px;
+    min-width: var(--size-tags-input-min);
+    font-size: var(--size-tags-input-font-sm);
     flex: 1 1 auto;
   }
 
   .edit-post .cp-toast {
     max-width: calc(100vw - 32px);
-    padding: 16px;
+    padding: var(--spectrum-spacing-400);
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: var(--spectrum-spacing-300);
   }
 
   .edit-post .cp-toast-msg {
@@ -981,14 +981,14 @@
   .edit-post .cp-toast-actions {
     width: 100%;
     flex-direction: row;
-    gap: 8px;
+    gap: var(--spectrum-spacing-200);
   }
 
   .edit-post .cp-toast-confirm,
   .edit-post .cp-toast-dismiss {
     flex: 1;
-    padding: 8px 12px;
-    min-height: 32px;
+    padding: var(--spectrum-spacing-200) var(--spectrum-spacing-300);
+    min-height: var(--size-table-btn-min-height);
   }
 }
 

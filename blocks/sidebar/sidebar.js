@@ -1,4 +1,4 @@
-import { html, render } from '../../vendor/htm-preact.js';
+﻿import { html, render } from '../../vendor/htm-preact.js';
 import { useState, useRef, useEffect } from '../../vendor/preact-hooks.js';
 import {
   TrashIcon, ChevronIcon, FolderIcon, FileIcon, CloseIcon,
@@ -354,21 +354,23 @@ function Sidebar() {
   const [expandedCategories, setExpandedCategories] = useState({});
   const [expandedFolders, setExpandedFolders] = useState({});
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Auth state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Auth state —
+  // ============================================
   // null  = not yet checked
   // false = checked, not logged in
   // {...} = checked, logged in user object
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Ref that always holds the current isOpen value Ã¢â‚¬â€ used inside resize handler
+  // Ref that always holds the current isOpen value – used inside resize handler
   // to avoid the stale-closure problem (resize useEffect has empty dep array).
   const isOpenRef = useRef(isOpen);
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch current user on mount Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Fetch current user on mount —
+  // ============================================
   // Calls GET /api/auth/me (session cookie sent automatically).
-  // If 401, the user is not logged in Ã¢â‚¬â€ set to false so we stop loading.
+  // If 401, the user is not logged in – set to false so we stop loading.
   // Re-runs whenever the forum-auth-changed event fires (login/logout).
   const fetchCurrentUser = async () => {
     try {
@@ -393,8 +395,9 @@ function Sidebar() {
     return () => window.removeEventListener('forum-auth-changed', onAuthChanged);
   }, []);
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar open/close Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Sidebar open/close —
+  // ============================================
   const applyBodyOffset = (open) => {
     if (open) {
       document.body.classList.add('sidebar-is-open');
@@ -406,7 +409,7 @@ function Sidebar() {
     window.dispatchEvent(new CustomEvent('sidebar-state-changed', { detail: { isOpen: open } }));
   };
 
-  // Closes the sidebar when in overlay mode (mobile / tablet Ã¢â€°Â¤ 1024px)
+  // Closes the sidebar when in overlay mode (mobile / tablet ≤ 1024px)
   const closeIfOverlay = () => {
     if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
       setIsOpen(false);
@@ -430,7 +433,7 @@ function Sidebar() {
   useEffect(() => {
     applyBodyOffset(isOpen);
     const onResize = () => {
-      // Use ref instead of isOpen to avoid stale closure Ã¢â‚¬â€ the effect has [] deps
+      // Use ref instead of isOpen to avoid stale closure – the effect has [] deps
       // so isOpen would always be the mount-time value (true), meaning the sidebar
       // would never re-open when resizing from mobile back to desktop.
       if (window.innerWidth > 1024 && !isOpenRef.current) {
@@ -442,8 +445,9 @@ function Sidebar() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch sidebar data Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Fetch sidebar data —
+  // ============================================
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -490,8 +494,9 @@ function Sidebar() {
     };
   }, []);
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch pending reviews (reviewer side) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Fetch pending reviews (reviewer side) —
+  // ============================================
   const fetchPendingReviews = async () => {
     if (!currentUser) return;
     try {
@@ -505,8 +510,9 @@ function Sidebar() {
     }
   };
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Fetch my review requests (author side) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Fetch my review requests (author side) —
+  // ============================================
   const fetchMyRequests = async () => {
     if (!currentUser) return;
     try {
@@ -539,8 +545,9 @@ function Sidebar() {
     return () => window.removeEventListener('refresh-sidebar', refreshAll);
   }, [currentUser]);
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Handlers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Handlers —
+  // ============================================
 
   const handleSubcategoryClick = (subcategoryId, postId) => {
     setActiveSubcategory(subcategoryId);
@@ -635,8 +642,9 @@ function Sidebar() {
     }
   };
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Navigation handlers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Navigation handlers —
+  // ============================================
   const handlePendingReviewClick = (review) => {
     if (!review.postId) return;
     // eslint-disable-next-line no-underscore-dangle
@@ -657,8 +665,9 @@ function Sidebar() {
     navigateTo(postId, { source: 'sidebar-review-item' });
   };
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Search filter Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Search filter —
+  // ============================================
 
   const filterItems = (items, term) => items.reduce((acc, item) => {
     const matches = item.title.toLowerCase().includes(term);
@@ -680,8 +689,9 @@ function Sidebar() {
     }).filter(Boolean)
     : categories;
 
-  // eslint-disable-next-line max-len
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Render Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ============================================
+  // — Render —
+  // ============================================
 
   const toggleSidebar = () => {
     const next = !isOpen;
@@ -786,7 +796,7 @@ function Sidebar() {
 
         <div class="sidebar-section">Topics</div>
 
-        ${loading && html`<div class="loading">LoadingÃ¢â‚¬Â¦</div>`}
+        ${loading && html`<div class="loading">Loading</div>`}
         ${error && html`
           <div class="error-state">
             <p>Failed to load: ${error}</p>
