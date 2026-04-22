@@ -112,7 +112,41 @@ async function loadLazy(doc) {
   loadFonts();
 }
 
+export async function loadIms() {
+  const { default: getConfig } = await import('./config.js');
+  window.adobeid = window.adobeid || {
+    client_id: getConfig().ims.client_id,
+    scope: 'AdobeID,openid',
+    locale: 'en_US',
+    environment: getConfig().ims.environment,
+    useLocalStorage: true,
+    redirect_uri: `${window.location.origin}/`,
+  };
+  return new Promise((resolve, reject) => {
+    if (window.adobeIMS && window.adobeIMS.initialized) {
+      resolve();
+      return;
+    }
+    window.adobeid.onReady = resolve;
+    if (document.querySelector('script[src*="imslib.min.js"]')) {
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://auth.services.adobe.com/imslib/imslib.min.js';
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
 async function loadPage() {
+  await loadIms();
+  const isAuth = window?.adobeIMS?.isSignedInUser() || false;
+  if (!isAuth) {
+    document.body.style.display = 'none'; // Prevent flash of content
+    window.adobeIMS.signIn();
+    return;
+  }
+
   await loadEager(document);
   await loadLazy(document);
 }

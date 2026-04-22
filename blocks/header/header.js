@@ -1,14 +1,11 @@
 /* eslint-disable max-len */
 import { html, render } from '../../vendor/htm-preact.js';
-import { useState, useEffect, useRef } from '../../vendor/preact-hooks.js';
+import { useState, useEffect } from '../../vendor/preact-hooks.js';
 import { ensureResponsiveCSSLast } from '../../scripts/aem.js';
-import clearClientAuthState from '../../scripts/auth-state.js';
 import { COLOR_TOKENS } from '../../scripts/utils/colors.js';
-import { API_BASE } from '../../scripts/utils/constants.js';
-import { navigateToPost as navigateToPostRoute } from '../../scripts/router.js';
 import {
-  PlusIcon, CloseIcon, EditIcon, LogoutIcon, LockIcon, PostsIcon,
-  UserIcon, ChevronIcon, CheckIcon, AlertIcon, EyeIcon, EyeOffIcon,
+  PlusIcon, CloseIcon, EditIcon, LogoutIcon, PostsIcon,
+  UserIcon, ChevronIcon, CheckIcon, AlertIcon,
   BellIcon,
 } from '../../scripts/utils/icons.js';
 
@@ -35,99 +32,7 @@ function formatTimeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-// ============================================
-// PASSWORD FIELD
-// ============================================
-
-function PwField({
-  id, label, placeholder, value, error, onChange, onBlur,
-}) {
-  const [show, setShow] = useState(false);
-  return html`
-    <div class="pp-field${error ? ' is-invalid' : ''}">
-      <label class="pp-label" for=${id}>${label}</label>
-      <div class="pp-input-wrap">
-        <input id=${id} type=${show ? 'text' : 'password'}
-          class="pp-input pp-input--icon" placeholder=${placeholder} value=${value}
-          onInput=${(e) => onChange(e.target.value)} onBlur=${onBlur}/>
-        <button type="button" class="pp-pw-toggle"
-          aria-label=${show ? 'Hide' : 'Show'} onClick=${() => setShow((s) => !s)}>
-          ${show ? html`<${EyeOffIcon}/>` : html`<${EyeIcon}/>`}
-        </button>
-      </div>
-      ${error && html`<p class="pp-field-error"><${AlertIcon}/>${error}</p>`}
-    </div>`;
-}
-
-// ============================================
-// CHANGE PASSWORD VIEW
-// ============================================
-
-function ChangePasswordView({ userId, onBack, onSuccess }) {
-  const [current, setCurrent] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [globalErr, setGlobalErr] = useState(null);
-
-  const handleSubmit = async () => {
-    const e = {};
-    if (!current) e.current = 'Current password is required.';
-    if (!newPw || newPw.length < 8) e.newPw = 'Min. 8 characters.';
-    if (confirm !== newPw) e.confirm = 'Passwords do not match.';
-    if (Object.keys(e).length) { setErrors(e); return; }
-    setLoading(true);
-    setGlobalErr(null);
-    try {
-      const res = await fetch(`${API_BASE}/auth/change-password`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, currentPassword: current, newPassword: newPw }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Failed.');
-      onSuccess();
-    } catch (cpErr) {
-      setGlobalErr(cpErr.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return html`
-    <div class="pp-body">
-      <button type="button" class="pp-back" onClick=${onBack}>â† Back to Profile</button>
-      <h2 class="pp-section-title">Change Password</h2>
-      ${globalErr && html`<div class="pp-msg pp-msg--error"><${AlertIcon}/><span>${globalErr}</span></div>`}
-      <${PwField} id="cp-cur" label="Current password" placeholder="Enter current password"
-        value=${current} error=${errors.current}
-        onChange=${(v) => { setCurrent(v); setErrors((er) => ({ ...er, current: undefined })); }}
-        onBlur=${() => !current && setErrors((er) => ({ ...er, current: 'Required.' }))}/>
-      <${PwField} id="cp-new" label="New password" placeholder="Min. 8 characters"
-        value=${newPw} error=${errors.newPw}
-        onChange=${(v) => { setNewPw(v); setErrors((er) => ({ ...er, newPw: undefined })); }}
-        onBlur=${() => newPw.length < 8 && setErrors((er) => ({ ...er, newPw: 'Min. 8 characters.' }))}/>
-      <${PwField} id="cp-con" label="Confirm new password" placeholder="Repeat password"
-        value=${confirm} error=${errors.confirm}
-        onChange=${(v) => { setConfirm(v); setErrors((er) => ({ ...er, confirm: undefined })); }}
-        onBlur=${() => confirm !== newPw && setErrors((er) => ({ ...er, confirm: 'Passwords do not match.' }))}/>
-      <div class="pp-actions">
-        <button type="button" class="pp-btn pp-btn--ghost" onClick=${onBack}>Cancel</button>
-        <button type="button" class="pp-btn pp-btn--primary${loading ? ' is-loading' : ''}"
-          disabled=${loading} onClick=${handleSubmit}>
-          <span class="pp-spinner" aria-hidden="true"/>
-          <span class="pp-btn-label">${loading ? 'Savingâ€¦' : 'Update Password'}</span>
-        </button>
-      </div>
-    </div>`;
-}
-
-// ============================================
-// PROFILE VIEW
-// ============================================
-
-function ProfileView({ user, onLogout, onChangePassword }) {
+function ProfileView({ user, onLogout }) {
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user.firstName || '');
   const [lastName, setLastName] = useState(user.lastName || '');
@@ -144,10 +49,10 @@ function ProfileView({ user, onLogout, onChangePassword }) {
     setLoading(true);
     setGlobalErr(null);
     try {
-      // eslint-disable-next-line no-underscore-dangle
-      const res = await fetch(`${API_BASE}/auth/profile`, {
+      const res = await fetch(`${AUTH_API_BASE}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ userId: user._id, firstName, lastName }), // eslint-disable-line no-underscore-dangle
       });
       const data = await res.json().catch(() => ({}));
@@ -208,7 +113,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
         <label class="pp-label" for="pf-email">Email Address</label>
         <input id="pf-email" type="email" class="pp-input pp-input--disabled"
           value=${user.email} disabled/>
-        <span class="pp-field-hint">Email cannot be changed.</span>
+        <span class="pp-field-hint">Email is managed by Adobe IMS and cannot be changed here.</span>
       </div>
 
       <div class="pp-actions">
@@ -221,15 +126,11 @@ function ProfileView({ user, onLogout, onChangePassword }) {
           <button type="button" class="pp-btn pp-btn--primary${loading ? ' is-loading' : ''}"
             disabled=${loading} onClick=${handleSave}>
             <span class="pp-spinner" aria-hidden="true"/>
-            <span class="pp-btn-label">${loading ? 'Savingâ€¦' : 'Save Changes'}</span>
+            <span class="pp-btn-label">${loading ? 'Saving...' : 'Save Changes'}</span>
           </button>
         `}
       </div>
 
-      <div class="pp-divider"></div>
-      <button type="button" class="pp-text-btn pp-text-btn--blue" onClick=${onChangePassword}>
-        <${LockIcon}/> Change Password
-      </button>
       <div class="pp-divider"></div>
       <button type="button" class="pp-text-btn pp-text-btn--red" onClick=${onLogout}>
         <${LogoutIcon}/> Sign Out
@@ -237,12 +138,7 @@ function ProfileView({ user, onLogout, onChangePassword }) {
     </div>`;
 }
 
-// ============================================
-// PROFILE POPUP
-// ============================================
-
 function ProfilePopup({ onClose }) {
-  const [view, setView] = useState('profile');
   const user = getStoredUser();
 
   useEffect(() => {
@@ -263,43 +159,15 @@ function ProfilePopup({ onClose }) {
   const handleOverlay = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const handleLogout = () => {
-    // Always destroy the server session first — otherwise the session cookie
-    // remains valid and auth-form's getMe() call returns 200, which immediately
-    // redirects back to '/' causing a redirect loop.
-    fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' })
-      .finally(() => {
-        localStorage.removeItem('af_user');
-        window.location.replace('/auth-form');
-      });
+    localStorage.removeItem('af_user');
+    if (window.adobeIMS) {
+      window.adobeIMS.signOut();
+    } else {
+      window.location.replace('/');
+    }
   };
 
   if (!user) { handleLogout(); return null; }
-
-  const renderContent = () => {
-    if (view === 'change-password') {
-      // eslint-disable-next-line no-underscore-dangle
-      const { _id: uid } = user;
-      return html`<${ChangePasswordView}
-        userId=${uid}
-        onBack=${() => setView('profile')}
-        onSuccess=${() => setView('pw-success')}/>`;
-    }
-    if (view === 'pw-success') {
-      return html`
-        <div class="pp-body pp-success-view">
-          <div class="pp-success-icon"><${CheckIcon}/></div>
-          <h2 class="pp-section-title">Password Updated!</h2>
-          <p class="pp-success-desc">Your password has been changed successfully.</p>
-          <button type="button" class="pp-btn pp-btn--primary" onClick=${() => setView('profile')}>
-            Back to Profile
-          </button>
-        </div>`;
-    }
-    return html`<${ProfileView}
-      user=${user}
-      onLogout=${handleLogout}
-      onChangePassword=${() => setView('change-password')}/>`;
-  };
 
   return html`
     <div class="pp-overlay" onClick=${handleOverlay} role="dialog" aria-modal="true" aria-label="Profile">
@@ -307,14 +175,10 @@ function ProfilePopup({ onClose }) {
         <button type="button" class="pp-close" aria-label="Close" onClick=${onClose}>
           <${CloseIcon}/>
         </button>
-        ${renderContent()}
+        <${ProfileView} user=${user} onLogout=${handleLogout}/>
       </div>
     </div>`;
 }
-
-// ============================================
-// PROFILE DROPDOWN
-// ============================================
 
 function ProfileDropdown({ user, onClose, onOpenProfile }) {
   const initials = getInitials(user.firstName, user.lastName);
@@ -331,19 +195,16 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
   }, [onClose]);
 
   const handleLogout = () => {
-    // Always destroy the server session first â€” otherwise the session cookie
-    // remains valid and auth-form's getMe() call returns 200, which immediately
-    // redirects back to '/' causing a redirect loop.
-    fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' })
-      .finally(() => {
-        localStorage.removeItem('af_user');
-        window.location.replace('/auth-form');
-      });
+    localStorage.removeItem('af_user');
+    if (window.adobeIMS) {
+      window.adobeIMS.signOut();
+    } else {
+      window.location.replace('/');
+    }
   };
 
   const handleMyPosts = () => {
-    // eslint-disable-next-line no-underscore-dangle
-    window.location.href = `/?author=${user._id}`;
+    window.location.href = `/?author=${user._id}`; // eslint-disable-line no-underscore-dangle
     onClose();
   };
 
@@ -382,19 +243,14 @@ function ProfileDropdown({ user, onClose, onOpenProfile }) {
     </div>`;
 }
 
-// ============================================
-// NOTIFICATIONS DROPDOWN
-// ============================================
 function NotificationsDropdown({ onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
-      // Get the current logged-in user's ID for ownership checks below
       const currentUser = getStoredUser();
-      // eslint-disable-next-line no-underscore-dangle
-      const currentUserId = currentUser?._id ? String(currentUser._id) : null;
+      const currentUserId = currentUser?._id ? String(currentUser._id) : null; // eslint-disable-line no-underscore-dangle
 
       try {
         const fetchSafe = (url) => fetch(url, { credentials: 'include' })
@@ -410,17 +266,14 @@ function NotificationsDropdown({ onClose }) {
 
         const combined = [];
 
-        // Reviewer side: posts assigned to ME for review.
-        // Filter: postId & authorId must be populated, and the review must
-        // belong to the current user as the reviewer (reviewerId match).
         if (pendingRes.success) {
           pendingRes.reviews
             .filter((r) => {
               if (!r.postId || !r.authorId) return false;
-              // If the backend already scopes to the session user this is a no-op,
-              // but guard client-side too in case the endpoint returns all reviews.
               if (currentUserId) {
-                const reviewerId = r.reviewerId ? String(typeof r.reviewerId === 'object' ? r.reviewerId._id : r.reviewerId) : null; // eslint-disable-line no-underscore-dangle
+                const reviewerId = r.reviewerId
+                  ? String(typeof r.reviewerId === 'object' ? r.reviewerId._id : r.reviewerId) // eslint-disable-line no-underscore-dangle
+                  : null;
                 if (reviewerId && reviewerId !== currentUserId) return false;
               }
               return true;
@@ -428,20 +281,12 @@ function NotificationsDropdown({ onClose }) {
             .forEach((r) => combined.push({ type: 'reviewer_pending', data: r }));
         }
 
-        // Author side: use author-notifications as the primary source for
-        // both approved AND changes_requested â€” it is the authoritative
-        // dismissed/undismissed list maintained by the backend.
-        // CRITICAL: only show notifications where the post's authorId matches
-        // the current logged-in user â€” prevents reviewer accounts from seeing
-        // author-side notifications that belong to someone else.
-        // my-requests is kept as a fallback only when author-notifications fails.
         if (notifRes.success && notifRes.reviews) {
           notifRes.reviews
             .filter((r) => {
               if (!r.postId) return false;
-              if (!currentUserId) return true; // can't check, allow through
-              // authorId may be a populated object or a raw string ID
-              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+              if (!currentUserId) return true;
+              const authorId = r.authorId
                 ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
                 : null;
               return !authorId || authorId === currentUserId;
@@ -453,7 +298,7 @@ function NotificationsDropdown({ onClose }) {
               if (!r.postId) return false;
               if (r.overallStatus !== 'approved' && r.overallStatus !== 'changes_requested') return false;
               if (!currentUserId) return true;
-              const authorId = r.authorId // eslint-disable-line no-underscore-dangle
+              const authorId = r.authorId
                 ? String(typeof r.authorId === 'object' ? r.authorId._id : r.authorId) // eslint-disable-line no-underscore-dangle
                 : null;
               return !authorId || authorId === currentUserId;
@@ -466,7 +311,6 @@ function NotificationsDropdown({ onClose }) {
             .forEach((notification) => combined.push({ type: 'post_like', data: notification }));
         }
 
-        // sort by most recent updatedAt/createdAt
         combined.sort((a, b) => new Date(b.data.updatedAt || b.data.createdAt)
           - new Date(a.data.updatedAt || a.data.createdAt));
         setItems(combined);
@@ -491,20 +335,17 @@ function NotificationsDropdown({ onClose }) {
 
   const navigateToPost = (postId) => {
     if (!postId) return;
-    // If not on the home page, navigate there and carry the postId
-    if (
-      window.location.pathname !== '/'
-      && window.location.pathname !== '/index'
-    ) {
-      window.location.href = `/?post=${encodeURIComponent(postId)}`;
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index') {
+      window.location.href = `/?openPost=${postId}`;
       return;
     }
-    // Already on home page â€” same DOM + event pattern as sidebar
-    navigateToPostRoute(postId, { source: 'header-notification' });
+    const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
+    cardsWrappers.forEach((el) => { el.style.display = 'none'; });
+    const postWrappers = document.querySelectorAll('.forum-post-wrapper, .forum-post-container, .forum-post');
+    postWrappers.forEach((el) => { el.style.display = 'block'; });
+    window.dispatchEvent(new CustomEvent('load-forum-post', { detail: { postId } }));
   };
 
-  // Safe accessors: backend may return postId/authorId as a populated object OR a raw string ID.
-  // Using these helpers prevents crashes when population is missing or partial.
   const getId = (ref) => (ref && typeof ref === 'object' ? ref._id : ref); // eslint-disable-line no-underscore-dangle
   const getTitle = (ref) => (ref && typeof ref === 'object' ? ref.title : null);
   const getFirstName = (ref) => (ref && typeof ref === 'object' ? ref.firstName : '');
@@ -513,7 +354,6 @@ function NotificationsDropdown({ onClose }) {
 
   const handlePendingClick = async (e, postId, reviewId) => {
     e.preventDefault();
-    // Dismiss the reviewer-side notification so the badge clears after clicking
     if (reviewId) {
       try {
         await fetch(`${API_BASE}/reviews/${reviewId}/dismiss-notification`, {
@@ -582,9 +422,8 @@ function NotificationsDropdown({ onClose }) {
         ${!loading && items.map((item) => {
     if (item.type === 'reviewer_pending') {
       const r = item.data;
-      // eslint-disable-next-line no-underscore-dangle
       const pId = getId(r.postId);
-      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const rId = getId(r);
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const authorFirst = getFirstName(r.authorId);
       const authorLast = getLastName(r.authorId);
@@ -599,7 +438,7 @@ function NotificationsDropdown({ onClose }) {
                     </svg>
                     <span class="nd-pill nd-pill--pending">Review Request</span>
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> Â· ${timeAgo}</span></span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                   <span class="nd-tl-meta">Requested by ${authorFirst} ${authorLast}</span>
                 </a>
               </li>`;
@@ -607,8 +446,8 @@ function NotificationsDropdown({ onClose }) {
     if (item.type === 'author_update') {
       const r = item.data;
       const isApproved = r.overallStatus === 'approved';
-      const pId = getId(r.postId); // eslint-disable-line no-underscore-dangle
-      const rId = getId(r); // eslint-disable-line no-underscore-dangle
+      const pId = getId(r.postId);
+      const rId = getId(r);
       const postTitle = getTitle(r.postId) || 'Untitled Post';
       const timeAgo = formatTimeAgo(r.updatedAt);
       const statusIcon = isApproved ? approvedIcon : changesIcon;
@@ -622,14 +461,14 @@ function NotificationsDropdown({ onClose }) {
                     ${statusIcon}
                     <span class="nd-pill ${pillClass}">${pillLabel}</span>
                   </span>
-                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> Â· ${timeAgo}</span></span>
+                  <span class="nd-tl-title">${postTitle}<span class="nd-tl-time-inline"> · ${timeAgo}</span></span>
                 </a>
               </li>`;
     }
     if (item.type === 'post_like') {
       const n = item.data;
-      const pId = getId(n.post); // eslint-disable-line no-underscore-dangle
-      const nId = getId(n); // eslint-disable-line no-underscore-dangle
+      const pId = getId(n.post);
+      const nId = getId(n);
       const postTitle = getTitle(n.post) || 'Untitled Post';
       const actorName = getFullName(n.actor) || 'Someone';
       const timeAgo = formatTimeAgo(n.createdAt);
@@ -650,18 +489,12 @@ function NotificationsDropdown({ onClose }) {
     </div>`;
 }
 
-// ============================================
-// HEADER COMPONENT
-// ============================================
-
 function HeaderComponent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [sessionWarning, setSessionWarning] = useState(false);
-  const authRedirectedRef = useRef(false);
   const user = getStoredUser();
   const initials = user ? getInitials(user.firstName, user.lastName) : '?';
 
@@ -671,10 +504,8 @@ function HeaderComponent() {
         .then((r) => (r.ok ? r.json() : { success: false }))
         .catch(() => ({ success: false }));
 
-      // eslint-disable-next-line no-underscore-dangle
-      const currentUserId = user._id ? String(user._id) : null;
-      // Helper: extract string ID from a populated object or raw string
-      const toStrId = (ref) => { // eslint-disable-line no-underscore-dangle
+      const currentUserId = user._id ? String(user._id) : null; // eslint-disable-line no-underscore-dangle
+      const toStrId = (ref) => {
         if (!ref) return null;
         return typeof ref === 'object' ? String(ref._id) : String(ref); // eslint-disable-line no-underscore-dangle
       };
@@ -687,7 +518,6 @@ function HeaderComponent() {
       ]).then(([pendingRes, myRequestsRes, notifRes, postNotifRes]) => {
         let count = 0;
 
-        // Reviewer badge: only count pending reviews assigned to THIS user
         if (pendingRes.success) {
           count += pendingRes.reviews.filter((r) => {
             if (!r.postId || !r.authorId) return false;
@@ -697,7 +527,6 @@ function HeaderComponent() {
           }).length;
         }
 
-        // Author badge: only count notifications where THIS user is the post author
         if (notifRes.success && notifRes.reviews) {
           count += notifRes.reviews.filter((r) => {
             if (!r.postId) return false;
@@ -732,151 +561,10 @@ function HeaderComponent() {
     return () => window.removeEventListener('sidebar-state-changed', onSidebarStateChange);
   }, []);
 
-  // â”€â”€ Session timeout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Reads loginAt from /me (authoritative) or localStorage (fallback).
-  // At 25 min: show warning banner. At 30 min: logout and redirect.
-  // The effect re-runs whenever the stored user changes so timers are
-  // always anchored to the current loginAt â€” not a stale captured value.
-  useEffect(() => {
-    const SESSION_MS = 30 * 60 * 1000; // 30 min
-    const WARNING_MS = 5 * 60 * 1000; //  5 min before logout = 25 min mark
-    let warnTimer;
-    let logoutTimer;
-
-    // Read user fresh from localStorage each time the effect runs
-    const storedUser = (() => {
-      try { return JSON.parse(localStorage.getItem('af_user') || 'null'); } catch { return null; }
-    })();
-
-    // No user in localStorage at all â€” nothing to time out, don't touch session
-    if (!storedUser) return () => { };
-
-    const doLogout = () => {
-      if (window.location.pathname.startsWith('/auth-form')) return;
-      fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' })
-        .finally(() => {
-          localStorage.removeItem('af_user');
-          window.location.replace('/auth-form');
-        });
-    };
-
-    const handleUnauthorized = (retryCount = 0) => {
-      console.warn('⚠️ Header: /api/auth/me returned 401 (attempt', retryCount + 1, ')');
-      
-      // If this is the first 401, wait a bit and retry in case session is still being written
-      if (retryCount === 0) {
-        console.log('⏳ Retrying auth check after 500ms (session may still be persisting)...');
-        setTimeout(() => {
-          fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-            .then((r) => {
-              console.log('🔄 Retry: /api/auth/me returned', r.status);
-              if (r.status === 401) {
-                handleUnauthorized(1); // Second attempt failed, now redirect
-              } else if (r.ok) {
-                return r.json().then(data => {
-                  console.log('✅ Retry succeeded, user:', data.user?.email);
-                  const serverLoginAt = data.loginAt;
-                  if (serverLoginAt) scheduleTimers(serverLoginAt);
-                });
-              }
-            })
-            .catch((err) => {
-              console.error('🔄 Retry failed with network error:', err);
-              if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
-            });
-        }, 500);
-        return;
-      }
-
-      // Second attempt failed, now clear auth
-      setSessionWarning(false);
-      clearClientAuthState();
-
-      if (authRedirectedRef.current) {
-        console.log('ℹ️ Already redirected, skipping duplicate redirect');
-        return;
-      }
-      authRedirectedRef.current = true;
-
-      if (!window.location.pathname.startsWith('/auth-form')) {
-        console.log('🔐 Session invalid after retry, redirecting to auth-form');
-        window.location.replace('/auth-form');
-      }
-    };
-
-    const scheduleTimers = (loginAt) => {
-      clearTimeout(warnTimer);
-      clearTimeout(logoutTimer);
-      const now = Date.now();
-      const elapsed = now - loginAt;
-      const remaining = SESSION_MS - elapsed;
-
-      // loginAt is in the future or wildly wrong â€” treat as fresh login
-      const safeRemaining = (remaining > SESSION_MS || remaining < 0) ? SESSION_MS : remaining;
-
-      if (safeRemaining <= 0) {
-        doLogout();
-        return;
-      }
-
-      const warnIn = safeRemaining - WARNING_MS;
-      if (warnIn <= 0) {
-        // Already past the 25-min mark â€” show warning immediately
-        setSessionWarning(true);
-      } else {
-        warnTimer = setTimeout(() => setSessionWarning(true), warnIn);
-      }
-      logoutTimer = setTimeout(doLogout, safeRemaining);
-    };
-
-    // Ask the server for the authoritative loginAt from the session store.
-    // 200 → schedule from server loginAt (most accurate).
-    // 401 → session gone, clear stale client auth and redirect once.
-    // network error → fall back to localStorage loginAt, do NOT logout.
-    fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-      .then((r) => {
-        if (r.status === 401) {
-          handleUnauthorized();
-          return null;
-        }
-        if (!r.ok) return null; // other server error â€” skip, don't logout
-        return r.json();
-      })
-      .then((data) => {
-        if (!data) return;
-        const serverLoginAt = data.loginAt;
-        if (serverLoginAt) {
-          // Keep localStorage in sync
-          try {
-            const s = JSON.parse(localStorage.getItem('af_user') || 'null');
-            if (s) localStorage.setItem('af_user', JSON.stringify({ ...s, loginAt: serverLoginAt }));
-          } catch { /* ignore */ }
-          scheduleTimers(serverLoginAt);
-        } else {
-          // Session alive but loginAt missing â€” fall back to localStorage
-          scheduleTimers(storedUser.loginAt || Date.now());
-        }
-      })
-      .catch(() => {
-        // Network error â€” keep the user logged in, schedule from localStorage
-        if (storedUser.loginAt) scheduleTimers(storedUser.loginAt);
-      });
-
-    return () => { clearTimeout(warnTimer); clearTimeout(logoutTimer); };
-  }, []);
-
   const toggleSidebar = () => {
     const next = !sidebarOpen;
     setSidebarOpen(next);
     window.dispatchEvent(new CustomEvent('toggle-sidebar', { detail: { isOpen: next } }));
-  };
-
-  const handleSessionRelogin = async () => {
-    try {
-      await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
-    } catch (e) { /* ignore network errors */ }
-    localStorage.removeItem('af_user');
-    window.location.replace('/auth-form');
   };
 
   return html`
@@ -930,28 +618,8 @@ function HeaderComponent() {
       </div>
     </nav>
 
-    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}
-
-    ${sessionWarning && html`
-      <div class="session-warning-banner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Your session expires in 5 minutes.${' '}
-        <button
-          type="button"
-          class="session-warning-login-btn"
-          onClick=${handleSessionRelogin}
-        >Log in again</button>${' '}
-        to stay signed in.
-        <button type="button" class="session-warning-close" onClick=${() => setSessionWarning(false)}>âœ•</button>
-      </div>`}`;
+    ${profileModalOpen && html`<${ProfilePopup} onClose=${() => setProfileModalOpen(false)}/>`}`;
 }
-
-// ============================================
-// HELPERS
-// ============================================
 
 function loadCSS(href) {
   return new Promise((resolve, reject) => {
@@ -975,12 +643,7 @@ function loadCSS(href) {
   });
 }
 
-// ============================================
-// AEM BLOCK DECORATOR
-// ============================================
-
 export default async function decorate(block) {
-  // Purge legacy view tracking tokens now that the engine is migrated to the backend
   localStorage.removeItem('af_viewed_posts');
 
   block.textContent = '';

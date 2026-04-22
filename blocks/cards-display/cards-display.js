@@ -3,12 +3,10 @@ import { h, render } from '../../vendor/preact.js';
 import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import clearClientAuthState from '../../scripts/auth-state.js';
-import { API_BASE } from '../../scripts/utils/constants.js';
 import { getCurrentRoute, navigateHome, navigateToPost } from '../../scripts/router.js';
+import { API_BASE, AUTH_API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
-
-const AUTH_API_BASE = `${API_BASE}/auth`;
 
 const PAGE_SIZE = 12;
 const domParser = new DOMParser();
@@ -629,8 +627,9 @@ export default async function decorate(block) {
       clearClientAuthState();
       sessionStorage.removeItem('af_user_session'); // Clear fallback on auth failure
       if (err.status === 401) {
-        console.log('🔐 Server returned 401 Not authenticated, redirecting to auth-form');
-        window.location.replace('/auth-form');
+        if (window.adobeIMS) {
+          window.adobeIMS.signIn();
+        }
         return;
       }
       // For other errors (network issues), don't block the user
