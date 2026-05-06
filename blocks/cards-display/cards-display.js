@@ -20,6 +20,9 @@ function extractExcerpt(body, max = 100) {
   if (!body) return '';
   const doc = domParser.parseFromString(body, 'text/html');
 
+  // Card excerpts should show readable post text, not embedded code samples.
+  doc.querySelectorAll('pre, code, script, style').forEach((el) => el.remove());
+
   doc.querySelectorAll('p, li, div, h1, h2, h3, h4, h5, h6, br, td, th, dt, dd').forEach((el) => {
     el.appendChild(doc.createTextNode(' '));
   });

@@ -406,6 +406,7 @@
     margin: 0;
     min-width: 0;
     overflow: hidden;
+    min-height: 32px;
 
     /* stylelint-disable-next-line selector-class-pattern */
     .spectrum-Avatar {
@@ -467,7 +468,7 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: break-word;
-    min-height: 3em;
+    min-height: 42px;
   }
 
   /* Card Read More must come BEFORE the global card hover state */
