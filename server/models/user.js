@@ -97,6 +97,6 @@ userSchema.methods.comparePassword = function comparePassword(plain) {
 // The unique:true on email already creates an index — no need to add one manually.
 userSchema.index({ resetToken: 1 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 export default User;
