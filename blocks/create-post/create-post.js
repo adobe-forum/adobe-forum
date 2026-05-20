@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from '../../vendor/preact-hooks.js';
 import htm from '../../vendor/htm.js';
 import { decorateBlock, loadBlock } from '../../scripts/aem.js';
 import renderTabbedCodeBlocks from '../../scripts/code-tabs.js';
+import { API_BASE } from '../../scripts/utils/constants.js';
 
 const html = htm.bind(h);
 
@@ -1756,7 +1757,18 @@ function ReviewerPickerDialog({ isOpen, onSubmit, onBack }) {
 
 // INLINE PREVIEW
 function InlinePreview({
-  title, category, body, tags, onBack, onPost,
+  title,
+  category,
+  body,
+  tags,
+  onBack,
+  onPost,
+  aiCheckResult,
+  aiCheckLoading,
+  aiPreviewDocs,
+  aiPreviewDocsLoading,
+  aiPreviewDocsError,
+  onRegenerateDocs,
 }) {
   const bodyRef = useRef(null);
 
@@ -1780,8 +1792,92 @@ function InlinePreview({
             Back to Edit
           </button>
           <button type="button" className="btn btn-submit btn-ready preview-post-btn" onClick=${onPost}>
-            Post
+            ${aiCheckResult?.skipped ? 'Submit for Manual Review' : 'Post'}
           </button>
+        </div>
+
+        <div className="cp-ai-preview-note" style="margin:0 0 20px;padding:14px 16px;border:1px solid #d7dce3;border-radius:12px;background:#f7f9fb;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <strong>AI documentation preview</strong>
+            <button
+              type="button"
+              onClick=${onRegenerateDocs}
+              disabled=${aiPreviewDocsLoading}
+              style="font-size:12px;padding:4px 10px;border:1px solid #d7dce3;border-radius:6px;background:${aiPreviewDocsLoading ? '#f3f4f6' : '#fff'};color:#374151;cursor:${aiPreviewDocsLoading ? 'not-allowed' : 'pointer'};display:flex;align-items:center;gap:5px;"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                style="${aiPreviewDocsLoading ? 'animation:spin 1s linear infinite' : ''}">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              ${aiPreviewDocsLoading ? 'Regenerating…' : 'Regenerate'}
+            </button>
+          </div>
+          <p style="margin:0 0 8px;font-size:14px;color:#4b5563;">
+            ${aiPreviewDocsLoading ? 'Generating code documentation preview...' : 'Generated documentation for detected code blocks appears here before the submission check.'}
+          </p>
+          ${aiPreviewDocsError ? html`
+            <p style="margin:0;font-size:14px;color:#7c2d12;">${aiPreviewDocsError}</p>
+          ` : null}
+          ${Array.isArray(aiPreviewDocs) && aiPreviewDocs.length > 0 ? html`
+            <div style="font-size:14px;color:#1f2937;">
+              ${aiPreviewDocs.map((entry, index) => html`
+                <div style="margin-top:${index === 0 ? '0' : '14px'};padding-top:${index === 0 ? '0' : '14px'};border-top:${index === 0 ? 'none' : '1px solid #e5e7eb'};">
+                  <strong style="display:block;margin-bottom:6px;">Code Block ${index + 1} · ${(entry.language || 'plaintext').toUpperCase()}</strong>
+                  <p style="margin:0 0 8px;">${entry.docs?.summary || 'No summary available yet.'}</p>
+                  ${entry.docs?.returns ? html`<p style="margin:0 0 6px;"><strong>Returns:</strong> ${entry.docs.returns}</p>` : null}
+                  ${entry.docs?.dependencies?.length ? html`<p style="margin:0 0 6px;"><strong>Dependencies:</strong> ${entry.docs.dependencies.join(', ')}</p>` : null}
+                  ${entry.docs?.notes?.length ? html`
+                    <div>
+                      <strong>Notes:</strong>
+                      <ul style="margin:6px 0 0 18px;">
+                        ${entry.docs.notes.map((note) => html`<li>${note}</li>`)}
+                      </ul>
+                    </div>
+                  ` : null}
+                </div>
+              `)}
+            </div>
+          ` : null}
+          ${!aiPreviewDocsLoading && !aiPreviewDocsError && Array.isArray(aiPreviewDocs) && aiPreviewDocs.length === 0 ? html`
+            <p style="margin:0;font-size:14px;color:#4b5563;">No code blocks were detected in this draft, so there is no AI documentation preview to show.</p>
+          ` : null}
+        </div>
+
+        <div className="cp-ai-preview-note" style="margin:0 0 20px;padding:14px 16px;border:1px solid #d7dce3;border-radius:12px;background:#f7f9fb;">
+          <strong style="display:block;margin-bottom:6px;">AI submission checks</strong>
+          <p style="margin:0 0 8px;font-size:14px;color:#4b5563;">
+            ${aiCheckLoading ? 'Running the AI advisory check…' : 'A full AI review will run automatically after submission.'}
+          </p>
+          ${aiCheckResult && html`
+            <div style="font-size:14px;color:#1f2937;">
+              <p style="margin:0 0 8px;">${aiCheckResult.summary}</p>
+              ${aiCheckResult.skipped ? html`
+                <p style="margin:0 0 8px;color:#7c2d12;">
+                  AI check is unavailable right now. You can still continue and submit this post for manual human review.
+                </p>
+              ` : null}
+              ${aiCheckResult.codeIssues?.length ? html`
+                <div style="margin-bottom:8px;">
+                  <strong>Code notes:</strong>
+                  <ul style="margin:6px 0 0 18px;">
+                    ${aiCheckResult.codeIssues.map((issue) => html`<li>${issue}</li>`)}
+                  </ul>
+                </div>
+              ` : null}
+              ${aiCheckResult.docIssues?.length ? html`
+                <div style="margin-bottom:8px;">
+                  <strong>Documentation notes:</strong>
+                  <ul style="margin:6px 0 0 18px;">
+                    ${aiCheckResult.docIssues.map((issue) => html`<li>${issue}</li>`)}
+                  </ul>
+                </div>
+              ` : null}
+              ${aiCheckResult.suggestedTags?.length ? html`
+                <p style="margin:0;"><strong>Suggested tags:</strong> ${aiCheckResult.suggestedTags.join(', ')}</p>
+              ` : null}
+            </div>
+          `}
         </div>
 
         ${tags.length > 0 && html`
@@ -1843,6 +1939,14 @@ function CreatePost() {
   const [showPreview, setShowPreview] = useState(false);
   const [showAgreement, setShowAgreement] = useState(false);
   const [showReviewerPicker, setShowReviewerPicker] = useState(false);
+  const [aiCheckResult, setAiCheckResult] = useState(null);
+  const [aiCheckLoading, setAiCheckLoading] = useState(false);
+  const [aiPreviewDocs, setAiPreviewDocs] = useState(null);
+  const [aiPreviewDocsLoading, setAiPreviewDocsLoading] = useState(false);
+  const [aiPreviewDocsError, setAiPreviewDocsError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState(0);
+  const isSubmittingRef = useRef(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success', onConfirm = null) => {
@@ -1892,7 +1996,7 @@ function CreatePost() {
   // On mount: restore draft from sessionStorage (survives page refresh in the same tab)
   useEffect(() => {
     const restoreFolderId = (draftCategory) => {
-      fetch('http://localhost:5000/api/sidebar/categories', { credentials: 'include' })
+      fetch(`${API_BASE}/sidebar/categories`, { credentials: 'include' })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (!data?.success) return;
@@ -1925,10 +2029,92 @@ function CreatePost() {
   if (tags.length === 0) missingFields.push('Tags (at least 1)');
   const isFormValid = missingFields.length === 0;
 
-  const handleSubmit = (e) => {
+  const runAiCheck = async () => {
+    setAiCheckLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/agent/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: title.trim(),
+          category,
+          body,
+          tags: tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`)),
+        }),
+      });
+
+      const result = await response.json();
+      setAiCheckResult(result);
+    } catch (error) {
+      setAiCheckResult({
+        passed: true,
+        summary: 'AI advisory check could not be completed, but you can still continue to preview and submit.',
+        codeIssues: [],
+        docIssues: [],
+        suggestedTags: [],
+        reviewerHint: 'Proceed with normal human review.',
+        skipped: true,
+      });
+    } finally {
+      setAiCheckLoading(false);
+    }
+  };
+
+  const runAiPreviewDocs = async () => {
+    setAiPreviewDocsLoading(true);
+    setAiPreviewDocsError('');
+
+    try {
+      const response = await fetch(`${API_BASE}/agent/preview-docs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ body }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to generate preview docs');
+      setAiPreviewDocs(Array.isArray(result.aiDocs) ? result.aiDocs : []);
+    } catch (error) {
+      setAiPreviewDocs([]);
+      setAiPreviewDocsError('AI documentation preview could not be generated right now.');
+    } finally {
+      setAiPreviewDocsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
-    setShowPreview(true);
+    // Guard against multiple rapid clicks — only one submission at a time
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    setSubmitProgress(0);
+
+    // Both docs and AI check run in parallel — estimate based on docs (the slower of the two)
+    const numBlocks = (body.match(/<pre\b/gi) || []).length;
+    const estimatedMs = Math.max(numBlocks * 30 * 1000, 15000);
+    const startTime = Date.now();
+
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      setSubmitProgress(Math.min(90, Math.round((elapsed / estimatedMs) * 90)));
+    }, 300);
+
+    try {
+      // Run docs generation and AI advisory check simultaneously
+      await Promise.all([runAiPreviewDocs(), runAiCheck()]);
+      clearInterval(progressInterval);
+      setSubmitProgress(100);
+      setShowPreview(true);
+    } finally {
+      clearInterval(progressInterval);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   const handlePost = async (reviewerIds) => {
@@ -1944,7 +2130,7 @@ function CreatePost() {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/posts', {
+      const response = await fetch(`${API_BASE}/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1955,18 +2141,20 @@ function CreatePost() {
 
       if (response.ok) {
         const { post: createdPost } = result;
+        // eslint-disable-next-line no-underscore-dangle
+        const createdPostId = createdPost._id;
         const catName = category.split(' > ')[0];
 
         // Add to sidebar
         try {
-          await fetch('http://localhost:5000/api/sidebar-items/smart-add', {
+          await fetch(`${API_BASE}/sidebar-items/smart-add`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
               title: title.trim(),
               category: catName,
-              postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+              postId: createdPostId,
               parentId: folderId || null,
             }),
           });
@@ -1976,12 +2164,12 @@ function CreatePost() {
 
         // Create review document
         try {
-          await fetch('http://localhost:5000/api/reviews', {
+          await fetch(`${API_BASE}/reviews`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-              postId: createdPost._id, // eslint-disable-line no-underscore-dangle
+              postId: createdPostId,
               reviewerIds,
             }),
           });
@@ -1989,9 +2177,21 @@ function CreatePost() {
           /* post was created; review creation failed silently */
         }
 
+        fetch(`${API_BASE}/agent/auto-review/${createdPostId}`, {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => { /* AI review stays best-effort */ });
+
+        // Persist the preview docs to the post so reviewers see them immediately
+        // without triggering a second generation run.
+        fetch(`${API_BASE}/agent/generate-docs/${createdPostId}`, {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => { /* best-effort */ });
+
         window.dispatchEvent(new CustomEvent('refresh-sidebar'));
         window.dispatchEvent(new CustomEvent('refresh-cards'));
-        showToast('Your post has been submitted for review!', 'success');
+        showToast('Your post has been submitted for review and the AI pass is running in the background.', 'success');
         sessionStorage.removeItem('create-post-draft');
         setTimeout(() => { window.history.back(); }, 2000);
       } else {
@@ -2017,6 +2217,12 @@ function CreatePost() {
           category=${category}
           body=${body}
           tags=${tags}
+          aiCheckResult=${aiCheckResult}
+          aiCheckLoading=${aiCheckLoading}
+          aiPreviewDocs=${aiPreviewDocs}
+          aiPreviewDocsLoading=${aiPreviewDocsLoading}
+          aiPreviewDocsError=${aiPreviewDocsError}
+          onRegenerateDocs=${runAiPreviewDocs}
           onBack=${() => setShowPreview(false)}
           onPost=${() => setShowAgreement(true)}
         />
@@ -2128,11 +2334,16 @@ function CreatePost() {
             <div className="submit-btn-wrapper">
               <button
                 type="submit"
-                className=${`btn btn-submit ${isFormValid ? 'btn-ready' : 'btn-incomplete'}`}
-                disabled=${!isFormValid}
+                className=${`btn btn-submit ${isFormValid && !isSubmitting ? 'btn-ready' : 'btn-incomplete'}`}
+                disabled=${!isFormValid || isSubmitting}
               >
-                Preview
+                ${isSubmitting ? `Analyzing\u2026 ${submitProgress}%` : 'Preview'}
               </button>
+              ${isSubmitting && html`
+                <div style="margin-top:6px;height:3px;background:#e5e7eb;border-radius:2px;overflow:hidden;">
+                  <div style=${{ width: `${submitProgress}%`, height: '100%', background: 'linear-gradient(90deg,#0265dc,#6cb4f5)', borderRadius: '2px', transition: 'width 0.3s ease' }}></div>
+                </div>
+              `}
               ${!isFormValid && html`
                 <div className="submit-tooltip">
                   <strong>Missing fields:</strong>

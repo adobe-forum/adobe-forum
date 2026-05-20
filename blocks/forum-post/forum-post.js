@@ -40,6 +40,138 @@ function isOwner(post, currentUser) {
   return String(post.createdBy) === String(currentUser._id);
 }
 
+function normalizeAiRecommendation(recommendation) {
+  if (recommendation === 'approve') return 'Approve';
+  if (recommendation === 'reject') return 'Reject';
+  return 'Needs Revision';
+}
+
+function getAiScoreTone(score) {
+  if (score >= 8) return 'strong';
+  if (score >= 5) return 'medium';
+  return 'soft';
+}
+
+function getAiDocsEntry(aiDocs, index) {
+  if (!Array.isArray(aiDocs)) return null;
+  return aiDocs.find((entry) => Number(entry.blockIndex) === index) || null;
+}
+
+function createDocsSection({
+  entry,
+  loading,
+  error,
+}) {
+  const section = document.createElement('div');
+  section.className = 'code-docs-section';
+
+  const title = document.createElement('div');
+  title.className = 'code-docs-title';
+  title.textContent = 'AI Docs';
+  section.appendChild(title);
+
+  if (loading) {
+    const loadingEl = document.createElement('p');
+    loadingEl.className = 'code-docs-empty';
+    loadingEl.textContent = 'Generating documentation for this code block...';
+    section.appendChild(loadingEl);
+    return section;
+  }
+
+  if (error) {
+    const errorEl = document.createElement('p');
+    errorEl.className = 'code-docs-empty';
+    errorEl.textContent = error;
+    section.appendChild(errorEl);
+    return section;
+  }
+
+  if (!entry?.docs) {
+    const emptyEl = document.createElement('p');
+    emptyEl.className = 'code-docs-empty';
+    emptyEl.textContent = 'No generated documentation is available for this block yet.';
+    section.appendChild(emptyEl);
+    return section;
+  }
+
+  const { docs } = entry;
+
+  const summary = document.createElement('p');
+  summary.className = 'code-docs-summary';
+  summary.textContent = docs.summary || 'No summary available.';
+  section.appendChild(summary);
+
+  if (Array.isArray(docs.parameters) && docs.parameters.length > 0) {
+    const table = document.createElement('table');
+    table.className = 'code-docs-table';
+
+    const head = document.createElement('thead');
+    head.innerHTML = '<tr><th class="code-docs-th">Name</th><th class="code-docs-th">Type</th><th class="code-docs-th">Description</th></tr>';
+    table.appendChild(head);
+
+    const body = document.createElement('tbody');
+    docs.parameters.forEach((param) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td class="code-docs-td">${param.name || ''}</td><td class="code-docs-td">${param.type || ''}</td><td class="code-docs-td">${param.description || ''}</td>`;
+      body.appendChild(row);
+    });
+    table.appendChild(body);
+    section.appendChild(table);
+  }
+
+  const addTextBlock = (label, value, className = 'code-docs-copy') => {
+    if (!value) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-docs-block';
+
+    const heading = document.createElement('div');
+    heading.className = 'code-docs-block-label';
+    heading.textContent = label;
+    wrapper.appendChild(heading);
+
+    const content = document.createElement(className === 'code-docs-usage' ? 'pre' : 'p');
+    content.className = className;
+    content.textContent = value;
+    wrapper.appendChild(content);
+    section.appendChild(wrapper);
+  };
+
+  const addListBlock = (label, items) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-docs-block';
+
+    const heading = document.createElement('div');
+    heading.className = 'code-docs-block-label';
+    heading.textContent = label;
+    wrapper.appendChild(heading);
+
+    const list = document.createElement('ul');
+    list.className = 'code-docs-list';
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      list.appendChild(li);
+    });
+
+    wrapper.appendChild(list);
+    section.appendChild(wrapper);
+  };
+
+  addTextBlock('Returns', docs.returns);
+  addTextBlock('Usage', docs.usage, 'code-docs-usage');
+  addListBlock('Dependencies', docs.dependencies);
+  addListBlock('Notes', docs.notes);
+
+  const label = document.createElement('div');
+  label.className = 'code-docs-generated-label';
+  label.textContent = 'AI generated';
+  section.appendChild(label);
+
+  return section;
+}
+
 // ============================================
 // FORUM POST
 // ============================================
@@ -52,6 +184,14 @@ const ForumPost = ({ blockEl }) => {
   const [sidebarItemId, setSidebarItemId] = useState(null); // the SidebarItem linking this post
   const [reviewData, setReviewData] = useState(null);
   const [reviewComment, setReviewComment] = useState('');
+  const [aiReviewData, setAiReviewData] = useState(null);
+  const [aiReviewStatus, setAiReviewStatus] = useState(null);
+  const [aiReviewError, setAiReviewError] = useState('');
+  const [aiReviewLoading, setAiReviewLoading] = useState(false);
+  const [aiDocsData, setAiDocsData] = useState(null);
+  const [aiDocsLoading, setAiDocsLoading] = useState(false);
+  const [aiDocsError, setAiDocsError] = useState('');
+  const [aiDocsRegenerating, setAiDocsRegenerating] = useState(false);
 
   // Local state for likes and views to allow optimistic updates
   const [likesCount, setLikesCount] = useState(0);
@@ -61,6 +201,34 @@ const ForumPost = ({ blockEl }) => {
   const commentsListRef = useRef(null);
   const sidebarItemIdRef = useRef(null);
   const activePostIdRef = useRef(null);
+
+  const loadAiDocs = async (postId, { force = false } = {}) => {
+    setAiDocsLoading(true);
+    setAiDocsError('');
+
+    try {
+      const url = force
+        ? `${API_BASE}/agent/docs/${postId}/regenerate`
+        : `${API_BASE}/agent/docs/${postId}`;
+      const response = await fetch(url, force
+        ? { method: 'POST', credentials: 'include' }
+        : {});
+      if (!response.ok) throw new Error('Failed to load AI docs');
+      const docsData = await response.json();
+
+      if (!docsData?.success) {
+        setAiDocsData([]);
+        return;
+      }
+
+      setAiDocsData(Array.isArray(docsData.aiDocs) ? docsData.aiDocs : []);
+    } catch (error) {
+      setAiDocsData([]);
+      setAiDocsError(force ? 'AI docs could not be regenerated right now.' : 'AI docs are unavailable right now.');
+    } finally {
+      setAiDocsLoading(false);
+    }
+  };
 
   useEffect(() => {
     sidebarItemIdRef.current = sidebarItemId;
@@ -111,6 +279,8 @@ const ForumPost = ({ blockEl }) => {
   // Build tabbed code viewer from all <pre> tags in the post body
   useEffect(() => {
     if (!post || !post.body) return;
+
+    document.querySelectorAll('.code-tabs-wrapper').forEach((wrapper) => wrapper.remove());
 
     const preTags = document.querySelectorAll('.post-body-raw pre');
     if (preTags.length === 0) return;
@@ -179,6 +349,7 @@ const ForumPost = ({ blockEl }) => {
       // Panel
       const panel = document.createElement('div');
       panel.className = `code-panel${i === 0 ? ' active' : ''}`;
+      panel.dataset.panelIdx = String(i);
 
       // Language badge (top-right)
       const badge = document.createElement('span');
@@ -209,6 +380,11 @@ const ForumPost = ({ blockEl }) => {
       codeBody.appendChild(content);
       panel.appendChild(codeBody);
 
+      // Docs section container
+      const docsWrapper = document.createElement('div');
+      docsWrapper.className = 'code-docs-container';
+      panel.appendChild(docsWrapper);
+
       panelsContainer.appendChild(panel);
     });
 
@@ -237,7 +413,25 @@ const ForumPost = ({ blockEl }) => {
     if (!postBody) return;
 
     postBody.appendChild(wrapper);
-  }, [post]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.id]);
+
+  // Patch AI docs sections into existing code panels whenever docs state changes.
+  // This is intentionally separate from the tab-building effect above so it never
+  // re-runs the tab logic, removes <pre> tags, or causes the body to go blank.
+  useEffect(() => {
+    const panels = document.querySelectorAll('.post-body-raw .code-docs-container');
+    if (panels.length === 0) return;
+    panels.forEach((container, i) => {
+      // eslint-disable-next-line no-param-reassign
+      container.innerHTML = '';
+      container.appendChild(createDocsSection({
+        entry: getAiDocsEntry(aiDocsData, i),
+        loading: aiDocsLoading,
+        error: aiDocsError,
+      }));
+    });
+  }, [aiDocsData, aiDocsLoading, aiDocsError]);
 
   // Also listen for edit-post:saved so we can refresh the view after a save
   useEffect(() => {
@@ -292,6 +486,8 @@ const ForumPost = ({ blockEl }) => {
           const data = await response.json();
           if (data.success && data.post) {
             const fetchedPost = data.post;
+            // eslint-disable-next-line no-underscore-dangle
+            const fetchedPostId = fetchedPost._id;
             const cb = fetchedPost.createdBy;
             // Build author name from populated createdBy or fall back
             const authorName = (cb?.firstName)
@@ -355,7 +551,7 @@ const ForumPost = ({ blockEl }) => {
 
             // Fetch review data for this post
             // eslint-disable-next-line no-underscore-dangle
-            const reviewUrl = `${API_BASE}/reviews/by-post/${fetchedPost._id}`;
+            const reviewUrl = `${API_BASE}/reviews/by-post/${fetchedPostId}`;
             fetch(reviewUrl, { credentials: 'include' })
               .then((r) => { if (r.ok) return r.json(); return null; })
               .then((d) => {
@@ -363,6 +559,34 @@ const ForumPost = ({ blockEl }) => {
                 else setReviewData(null);
               })
               .catch(() => setReviewData(null));
+
+            setAiReviewLoading(true);
+            setAiReviewError('');
+            setAiDocsRegenerating(false);
+            fetch(`${API_BASE}/agent/review-result/${fetchedPostId}`, { credentials: 'include' })
+              .then(async (aiResponse) => {
+                if (aiResponse.status === 403) return null;
+                if (!aiResponse.ok) throw new Error('Failed to load AI review');
+                return aiResponse.json();
+              })
+              .then((aiData) => {
+                if (!aiData?.success) {
+                  setAiReviewData(null);
+                  setAiReviewStatus(null);
+                  return;
+                }
+
+                setAiReviewData(aiData.aiReview || null);
+                setAiReviewStatus(aiData.aiReviewStatus || null);
+              })
+              .catch(() => {
+                setAiReviewData(null);
+                setAiReviewStatus(null);
+                setAiReviewError('AI review is unavailable right now.');
+              })
+              .finally(() => setAiReviewLoading(false));
+
+            loadAiDocs(fetchedPostId);
 
             // If sidebarItemId wasn't supplied by the event (e.g. opened from cards view),
             // look it up so the Edit button can use it for location-move support.
@@ -387,6 +611,14 @@ const ForumPost = ({ blockEl }) => {
       setPost(null);
       setSidebarItemId(null);
       setReviewData(null);
+      setAiReviewData(null);
+      setAiReviewStatus(null);
+      setAiReviewError('');
+      setAiReviewLoading(false);
+      setAiDocsData(null);
+      setAiDocsError('');
+      setAiDocsLoading(false);
+      setAiDocsRegenerating(false);
       if (blockEl) blockEl.style.display = 'none';
       const cardsWrappers = document.querySelectorAll('.cards-wrapper, .cards-container, .cards-display, .cards');
       cardsWrappers.forEach((el) => { el.style.display = ''; });
@@ -509,6 +741,16 @@ const ForumPost = ({ blockEl }) => {
   const postStatus = post.status || 'published';
   const showReviewPanel = isReviewer && (postStatus === 'pending_review' || postStatus === 'changes_requested');
   const showChangesRequestedBanner = canEdit && postStatus === 'changes_requested';
+  const showAiReviewPanel = canEdit || isReviewer;
+  const aiScoreTone = getAiScoreTone(Number(aiReviewData?.overallScore) || 0);
+  const hasUsableAiReview = !!(aiReviewData && !aiReviewData.skipped && aiReviewStatus === 'completed');
+
+  const handleRegenerateDocs = async () => {
+    if (!canEdit || !post?.id || aiDocsRegenerating) return;
+    setAiDocsRegenerating(true);
+    await loadAiDocs(post.id, { force: true });
+    setAiDocsRegenerating(false);
+  };
 
   const handleReviewAction = async (actionStatus) => {
     if (!reviewData) return;
@@ -645,6 +887,141 @@ const ForumPost = ({ blockEl }) => {
         class="post-body-raw"
         dangerouslySetInnerHTML=${{ __html: post.body }}
       />
+
+      ${canEdit && html`
+        <div class="code-docs-toolbar">
+          <button
+            class="code-docs-regenerate-btn"
+            onClick=${handleRegenerateDocs}
+            disabled=${aiDocsLoading || aiDocsRegenerating}
+            title="Regenerate AI docs for the code blocks in this post"
+          >
+            ${aiDocsRegenerating ? 'Regenerating Docs...' : 'Regenerate Docs'}
+          </button>
+        </div>
+      `}
+
+      ${showAiReviewPanel && html`
+        <div class="ai-review-panel">
+          <div class="ai-review-header">
+            <div>
+              <h3 class="ai-review-title">AI Review</h3>
+              <p class="ai-review-desc">A first-pass automated review to help authors and human reviewers start from the same baseline.</p>
+            </div>
+            ${hasUsableAiReview && html`
+              <div class="ai-review-badges">
+                <span class=${`ai-review-badge ai-review-badge-score ai-review-badge-${aiScoreTone}`}>
+                  Score ${aiReviewData.overallScore ?? 'N/A'}
+                </span>
+                <span class="ai-review-badge ai-review-badge-recommendation">
+                  ${normalizeAiRecommendation(aiReviewData.recommendation)}
+                </span>
+              </div>
+            `}
+          </div>
+
+          ${aiReviewLoading || aiReviewStatus === 'pending' ? html`
+            <div class="ai-review-empty-state">
+              The AI review is still running for this post.
+            </div>
+          ` : null}
+
+          ${!aiReviewLoading && aiReviewError ? html`
+            <div class="ai-review-empty-state">
+              ${aiReviewError} Manual review is still available below.
+            </div>
+          ` : null}
+
+          ${!aiReviewLoading && !aiReviewError && !hasUsableAiReview ? html`
+            <div class="ai-review-empty-state">
+              AI review is unavailable for this post right now. You can continue with manual review.
+            </div>
+          ` : null}
+
+          ${hasUsableAiReview && html`
+            <div class="ai-review-body">
+              <p class="ai-review-reasoning">${aiReviewData.reasoning}</p>
+
+              <details class="ai-review-section" open>
+                <summary>Code Review</summary>
+                ${aiReviewData.codeReview?.issues?.length ? html`
+                  <div class="ai-review-subsection">
+                    <span class="ai-review-subsection-label">Issues</span>
+                    <ul class="ai-review-section-list">
+                      ${aiReviewData.codeReview.issues.map((issue) => html`<li class="ai-review-list-item">${issue}</li>`)}
+                    </ul>
+                  </div>
+                ` : null}
+                ${aiReviewData.codeReview?.suggestions?.length ? html`
+                  <div class="ai-review-subsection">
+                    <span class="ai-review-subsection-label">Suggestions</span>
+                    <ul class="ai-review-section-list">
+                      ${aiReviewData.codeReview.suggestions.map((item) => html`<li class="ai-review-list-item">${item}</li>`)}
+                    </ul>
+                  </div>
+                ` : null}
+                ${aiReviewData.codeReview?.positives?.length ? html`
+                  <div class="ai-review-subsection">
+                    <span class="ai-review-subsection-label">Positives</span>
+                    <ul class="ai-review-section-list">
+                      ${aiReviewData.codeReview.positives.map((item) => html`<li class="ai-review-list-item">${item}</li>`)}
+                    </ul>
+                  </div>
+                ` : null}
+              </details>
+
+              <details class="ai-review-section">
+                <summary>Documentation Review</summary>
+                <p class="ai-review-scoreline">
+                  Completeness score: <span class="ai-review-score-value">${aiReviewData.documentationReview?.completenessScore ?? 'N/A'}</span>
+                </p>
+                ${aiReviewData.documentationReview?.issues?.length ? html`
+                  <div class="ai-review-subsection">
+                    <span class="ai-review-subsection-label">Issues</span>
+                    <ul class="ai-review-section-list">
+                      ${aiReviewData.documentationReview.issues.map((issue) => html`<li class="ai-review-list-item">${issue}</li>`)}
+                    </ul>
+                  </div>
+                ` : null}
+                ${aiReviewData.documentationReview?.suggestions?.length ? html`
+                  <div class="ai-review-subsection">
+                    <span class="ai-review-subsection-label">Suggestions</span>
+                    <ul class="ai-review-section-list">
+                      ${aiReviewData.documentationReview.suggestions.map((item) => html`<li class="ai-review-list-item">${item}</li>`)}
+                    </ul>
+                  </div>
+                ` : null}
+              </details>
+
+              <details class="ai-review-section">
+                <summary>Security Flags</summary>
+                ${aiReviewData.securityFlags?.length ? html`
+                  <ul class="ai-review-list">
+                    ${aiReviewData.securityFlags.map((flag) => html`<li class="ai-review-list-item">${flag}</li>`)}
+                  </ul>
+                ` : html`<p class="ai-review-empty-copy">No security flags were identified.</p>`}
+              </details>
+
+              <div class="ai-review-checklist">
+                <h4 class="ai-review-checklist-title">Checklist</h4>
+                ${aiReviewData.checklist?.length ? html`
+                  ${aiReviewData.checklist.map((item) => html`
+                    <div class="ai-review-checklist-item">
+                      <span class=${`ai-review-check-icon ${item.passed ? 'passed' : 'failed'}`}>
+                        ${item.passed ? 'Passed' : 'Needs work'}
+                      </span>
+                      <div>
+                        <div class="ai-review-check-item-title">${item.item}</div>
+                        <p class="ai-review-check-item-note">${item.note}</p>
+                      </div>
+                    </div>
+                  `)}
+                ` : html`<p class="ai-review-empty-copy">No checklist items were returned.</p>`}
+              </div>
+            </div>
+          `}
+        </div>
+      `}
 
       ${showReviewPanel && html`
         <div class="review-panel">

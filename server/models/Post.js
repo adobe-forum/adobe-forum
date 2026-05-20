@@ -45,6 +45,32 @@ const postSchema = new mongoose.Schema({
     ref: 'User',
     default: null,
   },
+  aiReviewId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Review',
+    default: null,
+  },
+  aiReview: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
+  aiReviewStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'skipped'],
+    default: null,
+  },
+  aiReviewGeneratedAt: {
+    type: Date,
+    default: null,
+  },
+  aiDocs: {
+    type: Array,
+    default: null,
+  },
+  aiDocsGeneratedAt: {
+    type: Date,
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
